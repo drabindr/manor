@@ -25,7 +25,7 @@ class WebSocketService {
   private commandMinInterval: number = 1500;
   private lastMessageReceived: number = 0;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
-  private maxMessageAge: number = 180000; // Increased from 60s to 3 minutes for better tolerance
+  private maxMessageAge: number = 300000; // Increased from 3 minutes to 5 minutes for even better tolerance
   private serverErrorCount: number = 0;
   private lastServerError: number = 0;
   private serverErrorBackoffTime: number = 5000;
@@ -48,8 +48,8 @@ class WebSocketService {
     }
   > = new Map();
 
-  // Command timeout in ms (30 seconds instead of 15)
-  private commandTimeout = 30000;
+  // Command timeout in ms (45 seconds instead of 30)
+  private commandTimeout = 45000;
 
   // Command queue for when connection is down
   private commandQueue: Array<{
@@ -250,7 +250,7 @@ class WebSocketService {
     this.permanentlyFailed = false;
 
     if (this.pingInterval) clearInterval(this.pingInterval);
-    this.pingInterval = setInterval(() => this.sendPing(), 45000); // Increased from 30s to 45s
+    this.pingInterval = setInterval(() => this.sendPing(), 60000); // Increased from 45s to 60s
 
     // Send queued commands
     while (this.commandQueue.length > 0) {
@@ -545,7 +545,7 @@ class WebSocketService {
           })
         );
       }
-    }, 30000); // Increased from 10s to 30s to check less frequently
+    }, 60000); // Increased from 30s to 60s to check even less frequently
   }
 
   // Stop connection health check

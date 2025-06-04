@@ -39,9 +39,10 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const disconnectNotificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastConnectionStatusRef = useRef<boolean>(true); // Track last known connection status
+  const queueNotificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const MAX_RETRY_ATTEMPTS = 3;
-  const COMMAND_ACK_TIMEOUT = 12000; // 12 seconds
+  const COMMAND_ACK_TIMEOUT = 20000; // Increased from 12 to 20 seconds
 
   const updateArmModeFromSystemState = useCallback(
     (state: string | undefined) => {
@@ -123,7 +124,7 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
             showNotification("Disconnected from security system", "error");
             lastConnectionStatusRef.current = false;
           }
-        }, 15000); // Wait 15 seconds before showing disconnect notification
+        }, 45000); // Wait 45 seconds before showing disconnect notification
       } else if (eventData.type === "command_ack") {
         const { command, state, success } = eventData.data;
         
@@ -193,7 +194,18 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
         }
       } else if (eventData.type === "command_queued") {
         const { command } = eventData.data;
-        showNotification(`${command} queued, awaiting connection`, "info", command);
+        
+        // Debounce queued notifications to avoid showing them during brief interruptions
+        if (queueNotificationTimeoutRef.current) {
+          clearTimeout(queueNotificationTimeoutRef.current);
+        }
+        
+        queueNotificationTimeoutRef.current = setTimeout(() => {
+          // Only show queued notification if we're still disconnected
+          if (!wsService.isOnline()) {
+            showNotification(`${command} queued, awaiting connection`, "info", command);
+          }
+        }, 10000); // Wait 10 seconds before showing queued notification
       }
     },
     [
@@ -230,7 +242,7 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       if (isCurrentlyOnline && !isOnline) {
         wsService.sendCommand("GetSystemState");
       }
-    }, 30000); // Increased from 10s to 30s
+    }, 60000); // Increased from 30s to 60s
     
     return () => {
       wsService.off("event", listener);
@@ -239,6 +251,11 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       // Clean up disconnect notification timeout
       if (disconnectNotificationTimeoutRef.current) {
         clearTimeout(disconnectNotificationTimeoutRef.current);
+      }
+      
+      // Clean up queued notification timeout
+      if (queueNotificationTimeoutRef.current) {
+        clearTimeout(queueNotificationTimeoutRef.current);
       }
     };
   }, [handleWsEvent, isOnline]);
