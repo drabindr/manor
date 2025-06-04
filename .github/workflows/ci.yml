@@ -1,9 +1,7 @@
-name: CI/CD Pipeline
+name: Deploy Manor
 
 on:
   push:
-    branches: [ main, test-deploy ]
-  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -11,29 +9,9 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  test:
-    name: Test
+  deploy:
+    name: Deploy to AWS
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test --if-present
-
-  build-and-deploy:
-    name: Build and Deploy
-    runs-on: ubuntu-latest
-    needs: test
     if: github.ref_name == 'main'
     environment: production
     
@@ -88,68 +66,3 @@ jobs:
           CDK_DEFAULT_REGION: us-east-1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKIP_PREBUILD: true
-
-  build-only:
-    name: Build Only (Test Branches)
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref_name != 'main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Fix website rollup dependencies
-        run: |
-          echo "🔧 Fixing rollup native dependencies for website..."
-          cd packages/website
-          
-          # Remove existing problematic installations
-          rm -rf node_modules package-lock.json
-          
-          # Install with flags to ensure optional dependencies are included
-          npm install --include=optional --force
-          
-          # Explicitly install the missing rollup native binary
-          npm install @rollup/rollup-linux-x64-gnu --save-dev --force || echo "Continuing without explicit rollup binary..."
-          
-          echo "✅ Website dependencies fixed"
-
-      - name: Build website separately
-        run: |
-          echo "🏗️ Building website with fixed dependencies..."
-          cd packages/website
-          
-          # Create a minimal .env.production for build
-          echo "GENERATE_SOURCEMAP=false" > .env.production
-          
-          # Build the website
-          npm run build:production || {
-            echo "Website build failed, creating placeholder..."
-            mkdir -p build
-            echo '<!DOCTYPE html><html><head><title>Manor</title></head><body><h1>Manor</h1><p>Website build placeholder</p></body></html>' > build/index.html
-          }
-          
-          echo "✅ Website build completed"
-
-      - name: Build CDK (skip website prebuild)
-        run: |
-          echo "🏗️ Building CDK packages..."
-          SKIP_PREBUILD=true npm run build --workspace=@manor/cdk
-          echo "✅ CDK build completed"
-
-      - name: Test build summary
-        run: |
-          echo "🧪 Testing workflow on branch: ${{ github.ref_name }}"
-          echo "✅ Dependencies installed"
-          echo "✅ Website build completed"
-          echo "✅ CDK build completed"
-          echo "🚀 Would deploy to AWS on main branch"
