@@ -20,8 +20,10 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       entry: 'lambda/casa-integrations/integrationHandler.ts',
       bundling: {
         externalModules: ['@aws-sdk/*'], // Use the '@aws-sdk/*' available in the Lambda runtime
-        nodeModules: ['ws', 'node-apn'], // Include these modules with native dependencies
+        nodeModules: ['ws', 'node-apn', 'axios', 'uuid'], // Include all required modules
         platform: 'linux',
+        minify: false, // Disable minification to help with debugging
+        sourceMap: false, // Disable source maps to simplify output
       },
       timeout: cdk.Duration.seconds(10),
     });
