@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand, PutCommand, GetCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const region = process.env.AWS_REGION || 'us-east-1';
 const dynamoDBClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
@@ -118,7 +118,7 @@ async function handleCommand(
   if (!command && body.event) command = body.event;  // Handle if sent as 'event' instead of 'command'
   
   const homeId = body.homeId || '720frontrd';
-  const commandId = body.commandId || body.id || uuidv4(); // Use existing commandId or id if provided
+  const commandId = body.commandId || body.id || randomUUID(); // Use existing commandId or id if provided
   
   console.log(`Processing command: ${command} for home ${homeId} with ID ${commandId}`);
   
