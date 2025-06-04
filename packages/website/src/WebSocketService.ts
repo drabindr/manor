@@ -25,7 +25,7 @@ class WebSocketService {
   private commandMinInterval: number = 1500;
   private lastMessageReceived: number = 0;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
-  private maxMessageAge: number = 60000;
+  private maxMessageAge: number = 180000; // Increased from 60s to 3 minutes for better tolerance
   private serverErrorCount: number = 0;
   private lastServerError: number = 0;
   private serverErrorBackoffTime: number = 5000;
@@ -250,7 +250,7 @@ class WebSocketService {
     this.permanentlyFailed = false;
 
     if (this.pingInterval) clearInterval(this.pingInterval);
-    this.pingInterval = setInterval(() => this.sendPing(), 30000);
+    this.pingInterval = setInterval(() => this.sendPing(), 45000); // Increased from 30s to 45s
 
     // Send queued commands
     while (this.commandQueue.length > 0) {
@@ -506,7 +506,7 @@ class WebSocketService {
     }, delay);
   }
 
-  // Start connection health check
+  // Start connection health check - runs less frequently for better tolerance
   private startConnectionHealthCheck(): void {
     this.stopConnectionHealthCheck();
     this.connectionHealthCheckInterval = setInterval(() => {
@@ -545,7 +545,7 @@ class WebSocketService {
           })
         );
       }
-    }, 10000);
+    }, 30000); // Increased from 10s to 30s to check less frequently
   }
 
   // Stop connection health check

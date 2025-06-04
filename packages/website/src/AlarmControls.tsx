@@ -37,6 +37,8 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const disconnectNotificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastConnectionStatusRef = useRef<boolean>(true); // Track last known connection status
   
   const MAX_RETRY_ATTEMPTS = 3;
   const COMMAND_ACK_TIMEOUT = 12000; // 12 seconds
@@ -92,12 +94,36 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       if (eventData.type === "connected" || eventData.type === "pong") {
         setIsOnline(true);
         
+        // Clear any pending disconnect notification since we're connected
+        if (disconnectNotificationTimeoutRef.current) {
+          clearTimeout(disconnectNotificationTimeoutRef.current);
+          disconnectNotificationTimeoutRef.current = null;
+        }
+        
+        // If we were previously offline, show a brief reconnect notification
+        if (!lastConnectionStatusRef.current) {
+          showNotification("Reconnected to security system", "success");
+          lastConnectionStatusRef.current = true;
+        }
+        
         if (eventData.type === "connected") {
           wsService.sendCommand("GetSystemState");
         }
       } else if (eventData.type === "disconnected" || eventData.type === "error") {
         setIsOnline(false);
-        showNotification("Disconnected from security system", "error");
+        
+        // Only show disconnect notification after a delay to avoid brief interruption alerts
+        if (disconnectNotificationTimeoutRef.current) {
+          clearTimeout(disconnectNotificationTimeoutRef.current);
+        }
+        
+        disconnectNotificationTimeoutRef.current = setTimeout(() => {
+          // Only show if we're still disconnected after the delay
+          if (!wsService.isOnline()) {
+            showNotification("Disconnected from security system", "error");
+            lastConnectionStatusRef.current = false;
+          }
+        }, 15000); // Wait 15 seconds before showing disconnect notification
       } else if (eventData.type === "command_ack") {
         const { command, state, success } = eventData.data;
         
@@ -195,7 +221,7 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       wsService.sendCommand("GetSystemState");
     }
     
-    // Periodic connection check
+    // Periodic connection check - less frequent to reduce resource usage
     const connectionCheckInterval = setInterval(() => {
       const isCurrentlyOnline = wsService.isOnline();
       setIsOnline(isCurrentlyOnline);
@@ -204,11 +230,16 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       if (isCurrentlyOnline && !isOnline) {
         wsService.sendCommand("GetSystemState");
       }
-    }, 10000);
+    }, 30000); // Increased from 10s to 30s
     
     return () => {
       wsService.off("event", listener);
       clearInterval(connectionCheckInterval);
+      
+      // Clean up disconnect notification timeout
+      if (disconnectNotificationTimeoutRef.current) {
+        clearTimeout(disconnectNotificationTimeoutRef.current);
+      }
     };
   }, [handleWsEvent, isOnline]);
 
