@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UilUser, UilHome, UilSignout, UilPen, UilCheck } from '@iconscout/react-unicons';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 interface UserHomeStatusProps {
   status: 'home' | 'away' | null;
@@ -15,12 +16,15 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
   const [newDisplayName, setNewDisplayName] = useState(displayName || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   
   // Admin API URL
   const ADMIN_API_BASE_URL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod";
   
-  // Get display name with fallback
-  const userName = displayName || userId.substring(0, 5) + '...';
+  // Get display name with improved fallback that uses actual user name when available
+  const userName = displayName || 
+    (user && userId === user.sub ? `${user.givenName} ${user.familyName}` : null) ||
+    userId.substring(0, 5) + '...';
   
   // Get status indicator based on user's status
   const getStatusIndicator = () => {
@@ -64,7 +68,10 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
   // Handle double click to open edit mode
   const handleDoubleClick = () => {
     setIsEditing(true);
-    setNewDisplayName(displayName || '');
+    // Initialize with current display name, or if none exists and this is the current user, use their actual name
+    const initialDisplayName = displayName || 
+      (user && userId === user.sub ? `${user.givenName} ${user.familyName}` : '');
+    setNewDisplayName(initialDisplayName);
     setError(null);
   };
 
