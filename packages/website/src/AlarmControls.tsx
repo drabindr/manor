@@ -37,9 +37,11 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const disconnectNotificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const MAX_RETRY_ATTEMPTS = 3;
   const COMMAND_ACK_TIMEOUT = 12000; // 12 seconds
+  const DISCONNECT_NOTIFICATION_DELAY = 8000; // 8 seconds
 
   const updateArmModeFromSystemState = useCallback(
     (state: string | undefined) => {
@@ -92,12 +94,28 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
       if (eventData.type === "connected" || eventData.type === "pong") {
         setIsOnline(true);
         
+        // Cancel any pending disconnect notification when connection is restored
+        if (disconnectNotificationTimeoutRef.current) {
+          clearTimeout(disconnectNotificationTimeoutRef.current);
+          disconnectNotificationTimeoutRef.current = null;
+        }
+        
         if (eventData.type === "connected") {
           wsService.sendCommand("GetSystemState");
         }
       } else if (eventData.type === "disconnected" || eventData.type === "error") {
         setIsOnline(false);
-        showNotification("Disconnected from security system", "error");
+        
+        // Use delayed notification mechanism to avoid noise during brief interruptions
+        if (!disconnectNotificationTimeoutRef.current) {
+          disconnectNotificationTimeoutRef.current = setTimeout(() => {
+            // Double-check that connection is still offline before showing notification
+            if (!wsService.isOnline()) {
+              showNotification("Disconnected from security system", "error");
+            }
+            disconnectNotificationTimeoutRef.current = null;
+          }, DISCONNECT_NOTIFICATION_DELAY);
+        }
       } else if (eventData.type === "command_ack") {
         const { command, state, success } = eventData.data;
         
@@ -209,6 +227,12 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
     return () => {
       wsService.off("event", listener);
       clearInterval(connectionCheckInterval);
+      
+      // Clean up disconnect notification timeout on unmount
+      if (disconnectNotificationTimeoutRef.current) {
+        clearTimeout(disconnectNotificationTimeoutRef.current);
+        disconnectNotificationTimeoutRef.current = null;
+      }
     };
   }, [handleWsEvent, isOnline]);
 
