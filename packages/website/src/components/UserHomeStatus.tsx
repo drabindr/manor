@@ -23,7 +23,9 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
   
   // Get display name with improved fallback that uses actual user name when available
   const userName = displayName || 
-    (user && userId === user.sub ? `${user.givenName} ${user.familyName}` : null) ||
+    (user && userId === user.sub && user.givenName && user.familyName 
+      ? `${user.givenName} ${user.familyName}`.trim() 
+      : null) ||
     userId.substring(0, 5) + '...';
   
   // Get status indicator based on user's status
@@ -70,7 +72,9 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
     setIsEditing(true);
     // Initialize with current display name, or if none exists and this is the current user, use their actual name
     const initialDisplayName = displayName || 
-      (user && userId === user.sub ? `${user.givenName} ${user.familyName}` : '');
+      (user && userId === user.sub && user.givenName && user.familyName 
+        ? `${user.givenName} ${user.familyName}`.trim() 
+        : '');
     setNewDisplayName(initialDisplayName);
     setError(null);
   };
