@@ -1,5 +1,12 @@
 # Manor - Unified Home Automation Platform
 
+[![CI/CD Status](https://github.com/drabindr/manor/actions/workflows/ci.yml/badge.svg)](https://github.com/drabindr/manor/actions/workflows/ci.yml)
+[![GitHub Issues](https://img.shields.io/github/issues/drabindr/manor)](https://github.com/drabindr/manor/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/drabindr/manor)](https://github.com/drabindr/manor/stargazers)
+[![License](https://img.shields.io/badge/license-Private-red)](LICENSE)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](package.json)
+[![AWS CDK](https://img.shields.io/badge/AWS-CDK-orange)](packages/cdk)
+
 Manor is a comprehensive monorepo that combines a React-based frontend web application with AWS CDK infrastructure for a complete home automation and management platform.
 
 ## Repository Structure
@@ -99,6 +106,19 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE
 
 ## Architecture
 
+### System Overview
+
+Manor uses a serverless, cloud-native architecture on AWS with seamless integration between frontend and backend components:
+
+```
+Frontend (React) ↔ REST API ↔ Lambda (API Handlers)
+Frontend (React) ↔ WebSocket API ↔ Lambda (WebSocket Handler)
+iOS App ↔ REST API ↔ Lambda (API Handlers)
+Lambda ↔ DynamoDB (EventLogs, AlarmState, UserHomeStates, Homes)
+Lambda ↔ External Services (Google Nest, TP-Link, Airthings, APNs)
+Python Scripts ↔ S3 (Video Storage)
+```
+
 ### Frontend (Website)
 - **Framework**: React with TypeScript
 - **Build Tool**: Vite
@@ -113,6 +133,28 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE
 - **Authentication**: Cognito User Pools
 - **Real-time**: WebSocket API Gateway
 - **Device Integration**: IoT device management and control
+
+### 📋 Detailed Architecture Documentation
+- **[System Design & Requirements](packages/cdk/doc/system_design_and_requirements.md)** - Complete system architecture and technical specifications
+- **[Data Flow Diagrams](packages/cdk/doc/system_design_and_requirements.md#6-data-flow)** - User interactions and real-time update flows
+- **[Security Architecture](packages/cdk/doc/system_design_and_requirements.md#7-security)** - Authentication, authorization, and data encryption details
+
+## 🔄 Key Workflows
+
+### Home Automation Flow
+1. **User Command** → Frontend/iOS App → REST API → Lambda Function
+2. **Lambda** → External Service API (Nest, TP-Link) → Device Action
+3. **Status Update** → DynamoDB → WebSocket → Real-time UI Update
+
+### Security Management Flow
+1. **Security Event** → Device/Sensor → Lambda Function → DynamoDB (EventLogs)
+2. **Alert Processing** → WebSocket Push → Connected Clients
+3. **Mobile Notifications** → APNs → iOS App Push Notification
+
+### Location-based Automation
+1. **Location Update** → iOS App → REST API → Lambda Function
+2. **Geofence Logic** → Update UserHomeStates → Trigger Automation
+3. **Automated Actions** → Device Control → Status Updates
 
 ## Git History
 
@@ -165,13 +207,23 @@ Automated CI/CD pipeline with GitHub Actions:
 
 ## 📚 Documentation
 
+### Getting Started
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment setup guide
-- **[CI/CD Pipeline](.github/workflows/ci.yml)** - GitHub Actions workflow
+- **[SETUP_SUMMARY.md](SETUP_SUMMARY.md)** - Quick deployment status and commands
 - **[Setup Script](setup-deployment.sh)** - Automated deployment configuration
 
-## 🔧 Troubleshooting
+### Architecture & Technical Details
+- **[System Design & Requirements](packages/cdk/doc/system_design_and_requirements.md)** - Complete system architecture
+- **[CI/CD Pipeline](.github/workflows/ci.yml)** - GitHub Actions workflow
+- **[CDK Deployment Guide](packages/cdk/DEPLOYMENT_SETUP_GUIDE.md)** - CDK-specific deployment instructions
 
-**Quick fixes:**
+### Component Documentation
+- **[Website Package](packages/website/README.md)** - Frontend React application details
+- **[CDK Package](packages/cdk/)** - Infrastructure and Lambda functions
+
+## 🔧 Troubleshooting & FAQ
+
+### Quick Fixes
 ```bash
 # Update CDK CLI
 npm install -g aws-cdk@latest
@@ -181,9 +233,57 @@ cdk bootstrap aws://ACCOUNT_ID/us-east-1
 
 # Check GitHub Actions
 gh run list
+
+# Reset dependencies
+npm run install:all
 ```
 
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed troubleshooting.
+### Common Issues
+
+#### Q: Deployment fails with "AWS credentials not configured"
+**A:** Ensure your AWS credentials are properly set up:
+```bash
+# Check AWS configuration
+aws configure list
+
+# For GitHub Actions, verify secrets are set
+gh secret list
+```
+
+#### Q: CDK deployment fails with bootstrap error
+**A:** Bootstrap CDK for your account and region:
+```bash
+cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1
+```
+
+#### Q: Website build fails locally
+**A:** Check Node.js version and dependencies:
+```bash
+# Verify Node.js version (>=18.0.0 required)
+node --version
+
+# Clean and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+#### Q: Lambda functions not deploying correctly
+**A:** Verify Lambda dependencies are installed:
+```bash
+cd packages/cdk/lambda
+npm install
+```
+
+#### Q: Real-time updates not working
+**A:** Check WebSocket API Gateway configuration and connection status in browser dev tools.
+
+#### Q: External integrations (Nest, TP-Link) failing
+**A:** Verify API credentials are properly configured in environment variables or AWS SSM parameters.
+
+### Getting Help
+- **Detailed Troubleshooting**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md#troubleshooting)
+- **CDK Issues**: Check [CDK Deployment Guide](packages/cdk/DEPLOYMENT_SETUP_GUIDE.md#troubleshooting)
+- **GitHub Issues**: Create an issue in this repository for additional support
 
 ## License
 
