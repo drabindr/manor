@@ -47,9 +47,12 @@ const calculatePollingInterval = (lgStatus: Record<string, LGDeviceStatus>): num
       } else if (remainingTime <= 5) {
         // Last 5 minutes: check every 30 seconds
         minInterval = Math.min(minInterval, 30000);
+      } else if (remainingTime <= 10) {
+        // 5-10 minutes: check every 1 minute
+        minInterval = Math.min(minInterval, 60000);
       } else if (remainingTime <= 20) {
-        // 5-20 minutes: check every 1-2 minutes
-        minInterval = Math.min(minInterval, 90000); // 1.5 minutes
+        // 10-20 minutes: check every 2 minutes
+        minInterval = Math.min(minInterval, 120000);
       } else {
         // >20 minutes: check every 5 minutes
         minInterval = Math.min(minInterval, 300000);
@@ -475,10 +478,10 @@ const LGAppliances: React.FC = () => {
       
       // Calculate optimal polling interval based on current device states
       const newInterval = calculatePollingInterval(newStatus);
-      if (newInterval !== currentPollingInterval) {
+      if (Math.abs(newInterval - currentPollingInterval) > 1000) { // Only update if difference is >1s to avoid noise
         console.log(`LG Polling interval changed: ${currentPollingInterval/1000}s -> ${newInterval/1000}s`);
+        setCurrentPollingInterval(newInterval);
       }
-      setCurrentPollingInterval(newInterval);
     } catch(err:any) {
       console.error("fetchLGDevices error", err);
       setLgError("Failed to load LG appliances");
