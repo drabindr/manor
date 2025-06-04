@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import AlarmControls from '../AlarmControls';
-import UserProfile from './UserProfile';
 import HouseDropdown from './HouseDropdown';
 import { useNotifications } from './NotificationsProvider';
 
@@ -80,7 +79,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             {getArmModeDisplay()}
           </div>
           <AlarmControls {...alarmControlsProps} />
-          <UserProfile />
         </div>
       </div>
     </div>
