@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, memo, useRef } from "react";
 import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell } from "@iconscout/react-unicons";
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
@@ -282,6 +282,71 @@ const LGAppliances: React.FC = () => {
   const [lgError, setLgError] = useState<string|null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Ref to track the current polling timeout
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Calculate optimal polling interval based on device states
+  const calculatePollingInterval = (): number => {
+    if (lgDevices.length === 0) return 600000; // 10 minutes if no devices
+    
+    let shortestInterval = 600000; // Default: 10 minutes for idle devices
+    
+    lgDevices.forEach(device => {
+      const status = lgStatus[device.deviceId];
+      if (!status) return;
+      
+      const isActive = isRunningState(status.currentState);
+      
+      if (!isActive || !status.isPoweredOn) {
+        // Idle/off devices: 10-minute intervals
+        return; // Keep shortestInterval at 10 minutes
+      }
+      
+      // Device is running - check remaining time
+      const remainingTimeStr = status.remainingTime;
+      if (!remainingTimeStr) {
+        // Running but no time info: use 5-minute intervals (conservative)
+        shortestInterval = Math.min(shortestInterval, 300000);
+        return;
+      }
+      
+      const remainingMinutes = parseInt(remainingTimeStr);
+      if (isNaN(remainingMinutes)) {
+        // Invalid time format: use 5-minute intervals
+        shortestInterval = Math.min(shortestInterval, 300000);
+        return;
+      }
+      
+      if (remainingMinutes < 2) {
+        // <2 min remaining: 15-second intervals (critical finishing period)
+        shortestInterval = Math.min(shortestInterval, 15000);
+      } else if (remainingMinutes <= 20) {
+        // 2-20 min remaining: 2-minute intervals
+        shortestInterval = Math.min(shortestInterval, 120000);
+      } else {
+        // >20 min remaining: 5-minute intervals
+        shortestInterval = Math.min(shortestInterval, 300000);
+      }
+    });
+    
+    return shortestInterval;
+  };
+
+  // Schedule the next poll with adaptive interval
+  const scheduleNextPoll = () => {
+    // Clear any existing timeout
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
+    
+    const interval = calculatePollingInterval();
+    console.log(`Next LG poll scheduled in ${interval / 1000}s`);
+    
+    pollingTimeoutRef.current = setTimeout(() => {
+      fetchLGDevices(false);
+    }, interval);
+  };
 
   // Fetch devices list + status
   const fetchLGDevices = async (initialLoad = false) => {
@@ -442,6 +507,9 @@ const LGAppliances: React.FC = () => {
     } finally {
       setLgLoading(false);
       setIsRefreshing(false);
+      
+      // Always schedule next poll after update (except during component cleanup)
+      scheduleNextPoll();
     }
   };
 
@@ -535,11 +603,16 @@ const LGAppliances: React.FC = () => {
     }
   };
 
-  // Initial + 60s polling
+  // Initial load + adaptive polling
   useEffect(() => {
     fetchLGDevices(true);
-    const iv = setInterval(() => fetchLGDevices(false), 15000); // Reduced from 60s to 15s for more responsive updates
-    return () => clearInterval(iv);
+    
+    return () => {
+      // Clean up any pending timeout
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (
