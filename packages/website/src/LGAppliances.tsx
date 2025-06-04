@@ -291,6 +291,7 @@ const LGAppliances: React.FC = () => {
     if (lgDevices.length === 0) return 600000; // 10 minutes if no devices
     
     let shortestInterval = 600000; // Default: 10 minutes for idle devices
+    let intervalReason = "idle devices";
     
     lgDevices.forEach(device => {
       const status = lgStatus[device.deviceId];
@@ -307,29 +308,45 @@ const LGAppliances: React.FC = () => {
       const remainingTimeStr = status.remainingTime;
       if (!remainingTimeStr) {
         // Running but no time info: use 5-minute intervals (conservative)
-        shortestInterval = Math.min(shortestInterval, 300000);
+        if (300000 < shortestInterval) {
+          shortestInterval = 300000;
+          intervalReason = `${device.deviceId} running (no time info)`;
+        }
         return;
       }
       
       const remainingMinutes = parseInt(remainingTimeStr);
       if (isNaN(remainingMinutes)) {
         // Invalid time format: use 5-minute intervals
-        shortestInterval = Math.min(shortestInterval, 300000);
+        if (300000 < shortestInterval) {
+          shortestInterval = 300000;
+          intervalReason = `${device.deviceId} running (invalid time format)`;
+        }
         return;
       }
       
       if (remainingMinutes < 2) {
         // <2 min remaining: 15-second intervals (critical finishing period)
-        shortestInterval = Math.min(shortestInterval, 15000);
+        if (15000 < shortestInterval) {
+          shortestInterval = 15000;
+          intervalReason = `${device.deviceId} finishing (<2min remaining)`;
+        }
       } else if (remainingMinutes <= 20) {
         // 2-20 min remaining: 2-minute intervals
-        shortestInterval = Math.min(shortestInterval, 120000);
+        if (120000 < shortestInterval) {
+          shortestInterval = 120000;
+          intervalReason = `${device.deviceId} mid-cycle (${remainingMinutes}min remaining)`;
+        }
       } else {
         // >20 min remaining: 5-minute intervals
-        shortestInterval = Math.min(shortestInterval, 300000);
+        if (300000 < shortestInterval) {
+          shortestInterval = 300000;
+          intervalReason = `${device.deviceId} long-running (${remainingMinutes}min remaining)`;
+        }
       }
     });
     
+    console.log(`Adaptive polling: ${shortestInterval / 1000}s interval (${intervalReason})`);
     return shortestInterval;
   };
 
@@ -341,7 +358,6 @@ const LGAppliances: React.FC = () => {
     }
     
     const interval = calculatePollingInterval();
-    console.log(`Next LG poll scheduled in ${interval / 1000}s`);
     
     pollingTimeoutRef.current = setTimeout(() => {
       fetchLGDevices(false);
