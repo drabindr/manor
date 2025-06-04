@@ -1,0 +1,13 @@
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+thumbnails
+myenv
+downloaded_videos
+thumbnails.vtt
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+.DS_Store
+lambda/auth/node_modules/

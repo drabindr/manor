@@ -1,0 +1,14 @@
+{
+  "CasaDomainStack": {
+    "DomainName": "mymanor.click",
+    "HostedZoneId": "Z06748583JJSPMSKWRKGR",
+    "CertificateArn": "arn:aws:acm:us-east-1:680511694845:certificate/4ad4536d-cf91-40cd-ad22-4b2945d671a5",
+    "WildcardCertificateArn": "arn:aws:acm:us-east-1:680511694845:certificate/ebe7d4d5-d39c-46cf-9849-7f89dffc0650"
+  },
+  "ManorWebsiteStack": {
+    "VeeduCloudFrontDomainName": "d2dr4lwm3pjf64.cloudfront.net",
+    "VeeduWebsiteBucketName": "manorwebsitestack-veeduwebsitebucket7819d795-po6qacltuj1j",
+    "VeeduCloudFrontDistributionId": "E2HNEL8HAPZSV7",
+    "VeeduWebsiteUrl": "https://720frontrd.mymanor.click"
+  }
+}
