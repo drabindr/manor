@@ -57,9 +57,35 @@ const getRoomIcon = (groupName: string) => {
   return iconMap[groupName] || "💡";
 };
 
-// Priority device groups for highlighting essential devices
-const priorityDevices = {
-  essential: ["Coffee machine", "Bedroom", "Outdoor potlights", "Outdoor Lamps"],
+// Time-based priority device groups for highlighting essential devices
+const getTimeBasedPriorityDevices = () => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 6 && hour < 11) {
+    // Morning: Coffee machine, bathroom, bedroom
+    return {
+      essential: ["Coffee machine", "Shower light", "Bedroom", "Shower air vent"],
+      suggested: ["Bathroom", "Kitchen"]
+    };
+  } else if (hour >= 11 && hour < 17) {
+    // Afternoon: Office lights, kitchen
+    return {
+      essential: ["Office", "Office 2", "Office 3", "Coffee machine"],
+      suggested: ["Office", "Kitchen"]
+    };
+  } else if (hour >= 17 && hour < 22) {
+    // Evening: Outdoor lights, kitchen, bedroom
+    return {
+      essential: ["Outdoor potlights", "Outdoor Lamps", "Coffee machine", "Bedroom"],
+      suggested: ["Outdoor", "Kitchen", "Bedroom"]
+    };
+  } else {
+    // Night: Bedroom, bathroom, outdoor security
+    return {
+      essential: ["Bedroom", "Lamp", "Outdoor potlights", "Outdoor Lamps"],
+      suggested: ["Bedroom", "Bathroom", "Outdoor"]
+    };
+  }
 };
 
 const groupedLights: Record<string, string[]> = {
@@ -78,8 +104,42 @@ const groupedLights: Record<string, string[]> = {
   LukaRoom: ["Luka room lamp"],
 };
 
-// Fixed room order - no time-based logic
-const roomOrder = ["Kitchen", "Bedroom", "Outdoor", "Bathroom", "Garage", "Office", "Closet", "LukaRoom"];
+// Time-based priority system for room ordering
+const getTimeBasedRoomOrder = () => {
+  const hour = new Date().getHours();
+  
+  // Morning (6 AM - 11 AM): Prioritize Kitchen, Bathroom, Bedroom
+  if (hour >= 6 && hour < 11) {
+    return ["Kitchen", "Bathroom", "Bedroom", "Office", "Outdoor", "Garage", "Closet", "LukaRoom"];
+  }
+  // Afternoon/Work hours (11 AM - 5 PM): Prioritize Office, Kitchen
+  else if (hour >= 11 && hour < 17) {
+    return ["Office", "Kitchen", "Outdoor", "Bathroom", "Bedroom", "Garage", "Closet", "LukaRoom"];
+  }
+  // Evening (5 PM - 10 PM): Prioritize Kitchen, Outdoor, Bedroom
+  else if (hour >= 17 && hour < 22) {
+    return ["Kitchen", "Outdoor", "Bedroom", "Bathroom", "Office", "Garage", "Closet", "LukaRoom"];
+  }
+  // Night (10 PM - 6 AM): Prioritize Bedroom, Bathroom, Kitchen
+  else {
+    return ["Bedroom", "Bathroom", "Kitchen", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
+  }
+};
+
+// Get time-based contextual message
+const getTimeBasedPrompt = () => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 6 && hour < 11) {
+    return "☀️ Good morning! Start your day with coffee and lights.";
+  } else if (hour >= 11 && hour < 17) {
+    return "🏢 Afternoon productivity. Optimize your workspace lighting.";
+  } else if (hour >= 17 && hour < 22) {
+    return "🌅 Evening time. Set the mood with outdoor and ambient lights.";
+  } else {
+    return "🌙 Good night. Manage bedroom and security lighting.";
+  }
+};
 
 // Check if garage door should be at top (daytime) or bottom (nighttime)
 const shouldGarageDoorBeFirst = () => {
@@ -91,21 +151,43 @@ const DeviceControl: React.FC = () => {
   const [lights, setLights] = useState<LightDevice[]>([]);
   const [lightsError, setLightsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  
+  // Check for mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Check if garage door should be positioned first (daytime) or last (nighttime)
   const garageDoorFirst = shouldGarageDoorBeFirst();
+  
+  // Get time-based priorities and room order
+  const timeBasedPriorities = getTimeBasedPriorityDevices();
+  const roomOrder = getTimeBasedRoomOrder();
+  const timePrompt = getTimeBasedPrompt();
 
-  // Helper function to check if device is essential
+  // Helper function to check if device is essential (time-aware)
   const isEssentialDevice = (alias: string) => {
-    return priorityDevices.essential.includes(alias);
+    return timeBasedPriorities.essential.includes(alias);
   };
 
-  // Function to render a room card
-  const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean }) => {
+  // Helper function to check if room is suggested for current time
+  const isSuggestedRoom = (roomName: string) => {
+    return timeBasedPriorities.suggested.includes(roomName);
+  };
+
+  // Function to render a room card with time-based optimizations
+  const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean; isSuggested: boolean; inactiveCount: number }) => {
     return (
       <div
-        className={`relative p-3 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-200 hover:border-gray-600/50 ${
-          room.hasEssentialDevices ? 'border-yellow-600/50' : 'border-gray-700/50'
+        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-200 hover:border-gray-600/50 ${
+          room.hasEssentialDevices ? 'border-yellow-600/50' : room.isSuggested ? 'border-blue-600/50' : 'border-gray-700/50'
         }`}
       >
         {/* Priority indicator for essential devices */}
@@ -113,43 +195,73 @@ const DeviceControl: React.FC = () => {
           <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
         )}
         
-        {/* Glass effect overlay */}
-        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        {/* Suggested room indicator */}
+        {room.isSuggested && !room.hasEssentialDevices && (
+          <div className="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+        )}
         
-        {/* Room Title with emoji icons */}
-        <div className="flex justify-between items-center mb-3 sm:mb-4">
+        {/* Glass effect overlay */}
+        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        
+        {/* Room Title with emoji icons - Compact for better space utilization */}
+        <div className="flex justify-between items-center mb-2.5 sm:mb-4">
           <div className="text-gray-200 font-medium flex items-center space-x-2">
-            <span className="text-lg">{getRoomIcon(room.name)}</span>
-            <span className="text-sm sm:text-base">{room.name}</span>
+            <span className="text-base sm:text-lg">{getRoomIcon(room.name)}</span>
+            <span className="text-xs sm:text-base truncate">{room.name}</span>
+            {room.isSuggested && (
+              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30 hidden sm:inline">
+                Suggested
+              </span>
+            )}
           </div>
-          <div className="flex space-x-1 sm:space-x-2">
-            <div className="text-xs text-gray-400 bg-gray-800/60 px-2 py-1 rounded-full border border-gray-700/30">
+          <div className="flex space-x-1 sm:space-x-2 text-xs">
+            <div className="text-gray-400 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-700/30">
               {room.deviceCount}
             </div>
             {room.activeCount > 0 && (
-              <div className="text-xs text-yellow-300 bg-yellow-900/30 px-2 py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
+              <div className="text-yellow-300 bg-yellow-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
                 <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
                 <span>{room.activeCount}</span>
+              </div>
+            )}
+            {room.inactiveCount > 0 && (
+              <div className="text-gray-500 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/30">
+                <span className="hidden sm:inline">{room.inactiveCount} off</span>
+                <span className="sm:hidden">{room.inactiveCount}</span>
               </div>
             )}
           </div>
         </div>
         
-        {/* Light Controls - Optimized mobile grid */}
+        {/* Light Controls - Optimized mobile grid with inactive devices first */}
         <div
-          className="grid gap-2 sm:gap-3"
+          className="grid gap-1.5 sm:gap-3"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(85px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
           }}
         >
-          {room.lights.map((light) => (
-            <LightSwitch
-              key={light.deviceId}
-              light={light}
-              toggleLight={toggleLight}
-              iconPath={deviceIcons[light.alias]}
-            />
-          ))}
+          {/* Render inactive devices first for better visibility */}
+          {room.lights
+            .filter(light => light.relay_state === 0)
+            .map((light) => (
+              <LightSwitch
+                key={light.deviceId}
+                light={light}
+                toggleLight={toggleLight}
+                iconPath={deviceIcons[light.alias]}
+              />
+            ))}
+          {/* Then render active devices */}
+          {room.lights
+            .filter(light => light.relay_state === 1)
+            .map((light) => (
+              <LightSwitch
+                key={light.deviceId}
+                light={light}
+                toggleLight={toggleLight}
+                iconPath={deviceIcons[light.alias]}
+              />
+            ))}
         </div>
       </div>
     );
@@ -330,9 +442,14 @@ const DeviceControl: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Time-based contextual prompt - Enhanced mobile layout */}
+      <div className="mx-2 sm:mx-4 mb-3 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-800/40 shadow-lg">
+        <p className="text-blue-200 text-xs sm:text-sm text-center leading-relaxed">{timePrompt}</p>
+      </div>
       
-      {/* DEVICE CONTROLS - Flexible layout based on content size */}
-      <div className="grid gap-3 sm:gap-4 px-2 sm:px-4 pb-3" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'}}>
+      {/* DEVICE CONTROLS - Enhanced responsive layout with optimized condensed rows */}
+      <div className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))'}}>
         {/* Garage Door - Show at top during daytime (6 AM to 10 PM) */}
         {garageDoorFirst && (
           <div className="col-span-full">
@@ -340,37 +457,101 @@ const DeviceControl: React.FC = () => {
           </div>
         )}
         
-        {roomOrder.map((groupName) => {
-          const groupLights = getLightsByGroup(groupName);
-          if (groupLights.length === 0) return null;
-          
-          const activeCount = groupLights.filter(light => light.relay_state === 1).length;
-          const hasEssentialDevices = groupLights.some(light => isEssentialDevice(light.alias));
-          
-          const room = {
-            name: groupName,
-            lights: groupLights,
-            deviceCount: groupLights.length,
-            activeCount,
-            hasEssentialDevices
-          };
-          
-          // Rooms with many devices get full width
-          if (groupLights.length >= 4) {
-            return (
-              <div key={groupName} className="col-span-full">
-                {renderRoomCard(room)}
-              </div>
-            );
-          }
-          
-          // Small rooms use auto-fit layout
-          return (
-            <div key={groupName}>
-              {renderRoomCard(room)}
-            </div>
-          );
-        })}
+        {(() => {
+          const roomsWithData = roomOrder.map((groupName) => {
+            const groupLights = getLightsByGroup(groupName);
+            if (groupLights.length === 0) return null;
+            
+            const activeCount = groupLights.filter(light => light.relay_state === 1).length;
+            const inactiveCount = groupLights.length - activeCount;
+            const hasEssentialDevices = groupLights.some(light => isEssentialDevice(light.alias));
+            const isSuggested = isSuggestedRoom(groupName);
+            
+            return {
+              name: groupName,
+              lights: groupLights,
+              deviceCount: groupLights.length,
+              activeCount,
+              inactiveCount,
+              hasEssentialDevices,
+              isSuggested
+            };
+          }).filter(Boolean);
+
+          const elements = [];
+          let pendingSmallRooms = [];
+
+          roomsWithData.forEach((room, index) => {
+            // Rooms with many devices or essential/suggested rooms get full width
+            if (room.deviceCount >= 4 || room.hasEssentialDevices || room.isSuggested) {
+              // First, render any pending small rooms in a condensed row
+              if (pendingSmallRooms.length > 0) {
+                if (pendingSmallRooms.length === 1) {
+                  // Single small room gets normal layout
+                  elements.push(
+                    <div key={pendingSmallRooms[0].name}>
+                      {renderRoomCard(pendingSmallRooms[0])}
+                    </div>
+                  );
+                } else {
+                  // Multiple small rooms get condensed in a row - responsive columns
+                  const numCols = Math.min(pendingSmallRooms.length, isMobile ? 2 : 3);
+                  elements.push(
+                    <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
+                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${numCols}, 1fr)`}}>
+                        {pendingSmallRooms.map(smallRoom => (
+                          <div key={smallRoom.name}>
+                            {renderRoomCard(smallRoom)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                pendingSmallRooms = [];
+              }
+
+              // Render the current large/important room
+              elements.push(
+                <div key={room.name} className="col-span-full">
+                  {renderRoomCard(room)}
+                </div>
+              );
+            } else {
+              // Accumulate small rooms for condensed rows
+              pendingSmallRooms.push(room);
+              
+              // Create condensed rows with appropriate sizing for mobile
+              const maxRoomsPerRow = isMobile ? 2 : 3;
+              
+              // If we have reached max rooms per row or this is the last room, create a condensed row
+              if (pendingSmallRooms.length === maxRoomsPerRow || index === roomsWithData.length - 1) {
+                if (pendingSmallRooms.length === 1) {
+                  elements.push(
+                    <div key={pendingSmallRooms[0].name}>
+                      {renderRoomCard(pendingSmallRooms[0])}
+                    </div>
+                  );
+                } else {
+                  elements.push(
+                    <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
+                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${pendingSmallRooms.length}, 1fr)`}}>
+                        {pendingSmallRooms.map(smallRoom => (
+                          <div key={smallRoom.name}>
+                            {renderRoomCard(smallRoom)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                pendingSmallRooms = [];
+              }
+            }
+          });
+
+          return elements;
+        })()}
         
         {/* Garage Door - Show at bottom during nighttime (10 PM to 6 AM) */}
         {!garageDoorFirst && (
