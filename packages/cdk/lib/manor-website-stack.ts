@@ -25,13 +25,13 @@ export class ManorWebsiteStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create certificate for the subdomain
-    this.certificate = new certificatemanager.Certificate(this, 'VeeduWebsiteCertificate', {
+    this.certificate = new certificatemanager.Certificate(this, 'ManorWebsiteCertificate', {
       domainName: props.domainName, // 720frontrd.mymanor.click
       validation: certificatemanager.CertificateValidation.fromDns(props.hostedZone),
     });
 
-    // Create S3 bucket for Veedu website hosting (using REST API endpoint for OAC)
-    this.websiteBucket = new s3.Bucket(this, 'VeeduWebsiteBucket', {
+    // Create S3 bucket for Manor website hosting (using REST API endpoint for OAC)
+    this.websiteBucket = new s3.Bucket(this, 'ManorWebsiteBucket', {
       // Remove website configuration to use REST API endpoint for OAC
       publicReadAccess: false, // We'll use CloudFront OAC instead
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -45,10 +45,10 @@ export class ManorWebsiteStack extends cdk.Stack {
     });
 
     // Create CloudFront distribution with explicit S3 origin configuration for React SPA
-    this.distribution = new cloudfront.Distribution(this, 'VeeduWebsiteDistribution', {
+    this.distribution = new cloudfront.Distribution(this, 'ManorWebsiteDistribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(this.websiteBucket, {
-          originId: 'VeeduWebsiteS3Origin',
+          originId: 'ManorWebsiteS3Origin',
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
@@ -96,7 +96,7 @@ export class ManorWebsiteStack extends cdk.Stack {
     );
 
     // Create Route 53 records for the domain
-    new route53.ARecord(this, 'VeeduWebsiteARecord', {
+    new route53.ARecord(this, 'ManorWebsiteARecord', {
       zone: props.hostedZone,
       recordName: props.domainName,
       target: route53.RecordTarget.fromAlias(
@@ -107,28 +107,28 @@ export class ManorWebsiteStack extends cdk.Stack {
     // Note: 720frontrd.mymanor.click will be served by this CloudFront distribution
 
     // Outputs
-    new cdk.CfnOutput(this, 'VeeduWebsiteBucketName', {
+    new cdk.CfnOutput(this, 'ManorWebsiteBucketName', {
       value: this.websiteBucket.bucketName,
-      description: 'S3 bucket name for Veedu website',
-      exportName: 'VeeduWebsiteBucketName',
+      description: 'S3 bucket name for Manor website',
+      exportName: 'ManorWebsiteBucketName',
     });
 
-    new cdk.CfnOutput(this, 'VeeduCloudFrontDistributionId', {
+    new cdk.CfnOutput(this, 'ManorCloudFrontDistributionId', {
       value: this.distribution.distributionId,
-      description: 'CloudFront distribution ID for Veedu website',
-      exportName: 'VeeduCloudFrontDistributionId',
+      description: 'CloudFront distribution ID for Manor website',
+      exportName: 'ManorCloudFrontDistributionId',
     });
 
-    new cdk.CfnOutput(this, 'VeeduCloudFrontDomainName', {
+    new cdk.CfnOutput(this, 'ManorCloudFrontDomainName', {
       value: this.distribution.distributionDomainName,
-      description: 'CloudFront distribution domain name for Veedu website',
-      exportName: 'VeeduCloudFrontDomainName',
+      description: 'CloudFront distribution domain name for Manor website',
+      exportName: 'ManorCloudFrontDomainName',
     });
 
-    new cdk.CfnOutput(this, 'VeeduWebsiteUrl', {
+    new cdk.CfnOutput(this, 'ManorWebsiteUrl', {
       value: `https://${props.domainName}`,
-      description: 'Veedu website URL',
-      exportName: 'VeeduWebsiteUrl',
+      description: 'Manor website URL',
+      exportName: 'ManorWebsiteUrl',
     });
 
     // Automatically deploy website content from the built React app
@@ -136,7 +136,7 @@ export class ManorWebsiteStack extends cdk.Stack {
     // Skip deployment if explicitly requested (for CI/CD pipelines)
     if (!props.skipWebsiteDeployment) {
       const websiteBuildPath = props.websiteBuildPath || '../website/build';
-      const websiteDeployment = new s3deploy.BucketDeployment(this, 'VeeduWebsiteDeployment', {
+      const websiteDeployment = new s3deploy.BucketDeployment(this, 'ManorWebsiteDeployment', {
         sources: [s3deploy.Source.asset(websiteBuildPath)],
         destinationBucket: this.websiteBucket,
         distribution: this.distribution,
@@ -148,13 +148,13 @@ export class ManorWebsiteStack extends cdk.Stack {
       });
 
       // Output deployment info
-      new cdk.CfnOutput(this, 'VeeduWebsiteDeploymentComplete', {
+      new cdk.CfnOutput(this, 'ManorWebsiteDeploymentComplete', {
         value: 'Website deployed successfully',
         description: 'Confirms website content deployment',
       });
     } else {
       // Output info about skipped deployment
-      new cdk.CfnOutput(this, 'VeeduWebsiteDeploymentSkipped', {
+      new cdk.CfnOutput(this, 'ManorWebsiteDeploymentSkipped', {
         value: 'Website deployment skipped - handle separately',
         description: 'Website content deployment was skipped',
       });

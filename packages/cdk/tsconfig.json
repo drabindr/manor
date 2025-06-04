@@ -30,7 +30,7 @@
     "node_modules",
     "cdk.out",
     "dist",
-    "veedu-website",
+    "../website",
     "test",
     "**/*.d.ts"
   ]

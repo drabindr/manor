@@ -1,6 +1,6 @@
 # Program Management Scripts
 
-This directory contains scripts for managing and deploying programs in the Veedu CDK project.
+This directory contains scripts for managing and deploying programs in the Manor CDK project.
 
 ## Scripts
 
@@ -45,7 +45,7 @@ Specialized script for uploading garage door firmware with enhanced features.
 ## Directory Structure
 
 ```
-veedu-cdk/
+manor-cdk/
 ├── scripts/
 │   └── program-management/
 │       ├── README.md                          # This file
@@ -82,7 +82,7 @@ For garage door projects, these libraries are auto-installed:
 
 ### Quick Start - Upload Garage Door Firmware
 ```bash
-cd veedu-cdk/scripts/program-management
+cd manor-cdk/scripts/program-management
 ./upload-garage-door-firmware.sh
 ```
 
@@ -99,10 +99,10 @@ cd veedu-cdk/scripts/program-management
 The scripts handle relative paths, so you can run them from anywhere:
 ```bash
 # From workspace root
-./veedu-cdk/scripts/program-management/upload-garage-door-firmware.sh
+./manor-cdk/scripts/program-management/upload-garage-door-firmware.sh
 
 # From any directory
-/path/to/veedu-cdk/scripts/program-management/manage-programs.sh list
+/path/to/manor-cdk/scripts/program-management/manage-programs.sh list
 ```
 
 ## Troubleshooting
@@ -150,7 +150,7 @@ To add support for new programs:
 
 ## Integration with CDK
 
-These scripts are designed to work seamlessly with the Veedu CDK project structure:
+These scripts are designed to work seamlessly with the Manor CDK project structure:
 - All paths are relative to the CDK root
 - Scripts can be called from any directory
 - Compatible with CDK deployment workflows

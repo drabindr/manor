@@ -13,7 +13,7 @@ const HouseDropdown: React.FC = () => {
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="flex items-center space-x-1 sm:space-x-2 p-1 sm:p-2 rounded-lg hover:bg-white/10 transition-colors"
       >
-        <span className="veedu-text text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm">
+        <span className="manor-text text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm">
           720 Front
         </span>
         <svg 

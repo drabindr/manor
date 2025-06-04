@@ -1,5 +1,5 @@
 /**
- * Logger.ts - Centralized logging utility for veedu-website
+ * Logger.ts - Centralized logging utility for manor-website
  * 
  * This utility provides a consistent logging interface with configurable log levels.
  * By default, debug logs are suppressed unless explicitly enabled.

@@ -29,7 +29,7 @@ const authStack = new CasaAuthStack(app, 'CasaAuthStack', {
   },
 });
 
-// Website stack depends on domain stack - now serves Veedu website on subdomain
+// Website stack depends on domain stack - now serves Manor website on subdomain
 const skipWebsiteDeployment = process.env.SKIP_WEBSITE_DEPLOYMENT === 'true';
 
 const websiteStack = new ManorWebsiteStack(app, 'ManorWebsiteStack', {
