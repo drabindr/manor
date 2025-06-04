@@ -845,9 +845,9 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         </div>
         
         {/* Controls Container */}
-        <div className="flex items-center justify-between px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm gap-3 sm:gap-0">
           {/* Mode Control */}
-          <div className="relative">
+          <div className="relative order-1 sm:order-1">
             <button 
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)} 
               className="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
@@ -897,24 +897,24 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           </div>
           
           {/* Temperature Controls */}
-          <div className="flex space-x-4">
+          <div className="order-3 sm:order-2">
             {thermostatData?.mode === "HEATCOOL" ? (
-              /* Dual controls for HEATCOOL mode */
-              <>
+              /* Dual controls for HEATCOOL mode - responsive layout */
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 {/* Heat controls */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <button
                     onMouseDown={() => setIsTemperatureChanging(true)}
                     onMouseUp={() => setIsTemperatureChanging(false)}
                     onMouseLeave={() => setIsTemperatureChanging(false)}
                     onClick={() => adjustHeatSetpoint(-0.5)}
-                    className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1.5 focus:outline-none transition-colors duration-150 border border-red-700/30"
+                    className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-colors duration-150 border border-red-700/30"
                     title="Decrease heat setpoint"
                   >
-                    <UilMinusCircle size={20} />
+                    <UilMinusCircle size={18} className="sm:w-5 sm:h-5" />
                   </button>
-                  <div className="flex flex-col items-center">
-                    <UilFire size={16} className="text-red-400" />
+                  <div className="flex flex-col items-center px-1">
+                    <UilFire size={14} className="text-red-400 sm:w-4 sm:h-4" />
                     <span className="text-xs text-red-400">Heat</span>
                   </div>
                   <button
@@ -922,27 +922,27 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                     onMouseUp={() => setIsTemperatureChanging(false)}
                     onMouseLeave={() => setIsTemperatureChanging(false)}
                     onClick={() => adjustHeatSetpoint(0.5)}
-                    className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1.5 focus:outline-none transition-colors duration-150 border border-red-700/30"
+                    className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-colors duration-150 border border-red-700/30"
                     title="Increase heat setpoint"
                   >
-                    <UilPlusCircle size={20} />
+                    <UilPlusCircle size={18} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
                 
                 {/* Cool controls */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <button
                     onMouseDown={() => setIsTemperatureChanging(true)}
                     onMouseUp={() => setIsTemperatureChanging(false)}
                     onMouseLeave={() => setIsTemperatureChanging(false)}
                     onClick={() => adjustCoolSetpoint(-0.5)}
-                    className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1.5 focus:outline-none transition-colors duration-150 border border-blue-700/30"
+                    className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-colors duration-150 border border-blue-700/30"
                     title="Decrease cool setpoint"
                   >
-                    <UilMinusCircle size={20} />
+                    <UilMinusCircle size={18} className="sm:w-5 sm:h-5" />
                   </button>
-                  <div className="flex flex-col items-center">
-                    <UilSnowflake size={16} className="text-blue-400" />
+                  <div className="flex flex-col items-center px-1">
+                    <UilSnowflake size={14} className="text-blue-400 sm:w-4 sm:h-4" />
                     <span className="text-xs text-blue-400">Cool</span>
                   </div>
                   <button
@@ -950,16 +950,16 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                     onMouseUp={() => setIsTemperatureChanging(false)}
                     onMouseLeave={() => setIsTemperatureChanging(false)}
                     onClick={() => adjustCoolSetpoint(0.5)}
-                    className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1.5 focus:outline-none transition-colors duration-150 border border-blue-700/30"
+                    className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-colors duration-150 border border-blue-700/30"
                     title="Increase cool setpoint"
                   >
-                    <UilPlusCircle size={20} />
+                    <UilPlusCircle size={18} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
-              </>
+              </div>
             ) : (
               /* Single controls for other modes */
-              <>
+              <div className="flex space-x-4">
                 <button
                   onMouseDown={() => setIsTemperatureChanging(true)}
                   onMouseUp={() => setIsTemperatureChanging(false)}
@@ -982,23 +982,22 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 >
                   <UilPlusCircle size={24} />
                 </button>
-              </>
+              </div>
             )}
           </div>
           
           {/* Fan & Eco Controls */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 order-2 sm:order-3">
             {/* Fan Control */}
             <div className="relative">
               <button 
                 onClick={() => setFanDropdownOpen(!fanDropdownOpen)} 
-                className="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+                className="group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
               >
                 <UilWind
-                  className={thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"}
-                  size={22}
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"}`}
                 />
-                <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200">Fan</span>
+                <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Fan</span>
               </button>
               {fanDropdownOpen && (
                 <div className="absolute bottom-full mb-2 right-0 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 border border-gray-700 w-32 overflow-hidden">
@@ -1030,13 +1029,12 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             {/* Eco Mode Toggle */}
             <button 
               onClick={toggleEcoMode} 
-              className={`group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200`}
+              className={`group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200`}
             >
               <UilTrees
-                className={ecoModeActive ? "text-green-400" : "text-gray-500 group-hover:text-gray-300"}
-                size={22}
+                className={`w-5 h-5 sm:w-6 sm:h-6 ${ecoModeActive ? "text-green-400" : "text-gray-500 group-hover:text-gray-300"}`}
               />
-              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200">Eco</span>
+              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Eco</span>
             </button>
           </div>
         </div>
