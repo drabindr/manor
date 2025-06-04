@@ -333,6 +333,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       const validHeatSetpoint = Math.min(newHeatSetpoint, maxHeatSetpoint);
       console.log("Setting new heat setpoint to:", validHeatSetpoint);
       setLocalHeatSetpoint(validHeatSetpoint);
+    } else if (localHeatSetpoint !== null) {
+      // If only heat setpoint is available, adjust it directly
+      const newHeatSetpoint = localHeatSetpoint + delta;
+      console.log("Setting new heat setpoint to:", newHeatSetpoint);
+      setLocalHeatSetpoint(newHeatSetpoint);
     }
   };
 
@@ -347,6 +352,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       const validCoolSetpoint = Math.max(newCoolSetpoint, minCoolSetpoint);
       console.log("Setting new cool setpoint to:", validCoolSetpoint);
       setLocalCoolSetpoint(validCoolSetpoint);
+    } else if (localCoolSetpoint !== null) {
+      // If only cool setpoint is available, adjust it directly
+      const newCoolSetpoint = localCoolSetpoint + delta;
+      console.log("Setting new cool setpoint to:", newCoolSetpoint);
+      setLocalCoolSetpoint(newCoolSetpoint);
     }
   };
 
@@ -607,6 +617,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 <stop offset="0%" stopColor="#00BBFF" />
                 <stop offset="100%" stopColor="#0088DD" />
               </radialGradient>
+              <linearGradient id="dualModeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF5500" />
+                <stop offset="50%" stopColor="#4DDF4D" />
+                <stop offset="100%" stopColor="#00A0FF" />
+              </linearGradient>
               <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="5" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
@@ -649,16 +664,43 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             />
             
             {/* Active progress arc */}
-            <path 
-              d={progressPath}
-              stroke={getModeColor()}
-              strokeWidth="4"
-              fill="none"
-              strokeLinecap="round"
-              opacity={0.8}
-              className="transition-all duration-300"
-              filter={isHvacActive ? "url(#glow)" : "none"}
-            />
+            {thermostatData?.mode === "HEATCOOL" && localHeatSetpoint !== null && localCoolSetpoint !== null ? (
+              /* Range arc for HEATCOOL mode */
+              <>
+                {/* Background range indicator */}
+                <path 
+                  d={progressPath}
+                  stroke="#4DDF4D"
+                  strokeWidth="8"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity={0.3}
+                  className="transition-all duration-300"
+                />
+                <path 
+                  d={progressPath}
+                  stroke="#4DDF4D"
+                  strokeWidth="4"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity={0.8}
+                  className="transition-all duration-300"
+                  filter={isHvacActive ? "url(#glow)" : "none"}
+                />
+              </>
+            ) : (
+              /* Standard progress arc for other modes */
+              <path 
+                d={progressPath}
+                stroke={getModeColor()}
+                strokeWidth="4"
+                fill="none"
+                strokeLinecap="round"
+                opacity={0.8}
+                className="transition-all duration-300"
+                filter={isHvacActive ? "url(#glow)" : "none"}
+              />
+            )}
             
             {/* Tick marks */}
             {ticks}
@@ -679,22 +721,12 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                     const yHeatBaseRight = centerY + (halfNeedle - 1) * Math.sin(heatRad - Math.PI / 2);
                     
                     return (
-                      <>
-                        <polygon
-                          points={`${xHeat},${yHeat} ${xHeatBaseLeft},${yHeatBaseLeft} ${xHeatBaseRight},${yHeatBaseRight}`}
-                          fill="#FF5500"
-                          stroke="#222"
-                          strokeWidth="0.5"
-                        />
-                        <circle
-                          cx={centerX}
-                          cy={centerY}
-                          r={6}
-                          fill="#FF5500"
-                          stroke="#222"
-                          strokeWidth="0.5"
-                        />
-                      </>
+                      <polygon
+                        points={`${xHeat},${yHeat} ${xHeatBaseLeft},${yHeatBaseLeft} ${xHeatBaseRight},${yHeatBaseRight}`}
+                        fill="#FF5500"
+                        stroke="#222"
+                        strokeWidth="0.5"
+                      />
                     );
                   })()}
                 </g>
@@ -711,25 +743,25 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                     const yCoolBaseRight = centerY + (halfNeedle - 1) * Math.sin(coolRad - Math.PI / 2);
                     
                     return (
-                      <>
-                        <polygon
-                          points={`${xCool},${yCool} ${xCoolBaseLeft},${yCoolBaseLeft} ${xCoolBaseRight},${yCoolBaseRight}`}
-                          fill="#00A0FF"
-                          stroke="#222"
-                          strokeWidth="0.5"
-                        />
-                        <circle
-                          cx={centerX}
-                          cy={centerY}
-                          r={6}
-                          fill="#00A0FF"
-                          stroke="#222"
-                          strokeWidth="0.5"
-                        />
-                      </>
+                      <polygon
+                        points={`${xCool},${yCool} ${xCoolBaseLeft},${yCoolBaseLeft} ${xCoolBaseRight},${yCoolBaseRight}`}
+                        fill="#00A0FF"
+                        stroke="#222"
+                        strokeWidth="0.5"
+                      />
                     );
                   })()}
                 </g>
+                
+                {/* Central hub with dual color indicator */}
+                <circle
+                  cx={centerX}
+                  cy={centerY}
+                  r={8}
+                  fill="url(#dualModeGradient)"
+                  stroke="#222"
+                  strokeWidth="0.5"
+                />
               </g>
             ) : (
               /* Single needle for other modes */
