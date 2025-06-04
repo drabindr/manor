@@ -129,7 +129,7 @@ export const handler = async (): Promise<void> => {
 
     // Check if any casa-main instances haven't responded in the timeout period
     // This still runs every minute to ensure quick detection of disconnected homes
-    const timeoutSeconds = Math.max(pingIntervalMinutes * 60 * 3.0, 600); // At least 10 mins or 3 times ping interval
+    const timeoutSeconds = Math.max(pingIntervalMinutes * 60 * 1.5, 180); // At least 3 mins or 1.5 times ping interval
     console.log(`Using timeout of ${timeoutSeconds} seconds for casa-main connections`);
     const now = new Date();
     
