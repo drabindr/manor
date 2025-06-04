@@ -28,6 +28,28 @@ import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-id
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import UserHomeStatus from "./components/UserHomeStatus";
 
+// Loading skeleton component
+const EventSkeleton = React.memo(() => (
+  <div className="animate-pulse">
+    <div className="bg-gray-800/40 rounded-lg border border-gray-700/30 mb-3">
+      <div className="p-3 border-b border-gray-700/30">
+        <div className="h-4 bg-gray-700/50 rounded w-32"></div>
+      </div>
+      <div className="p-3 space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gray-700/50 rounded-lg"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-3 bg-gray-700/50 rounded w-3/4"></div>
+              <div className="h-2 bg-gray-700/30 rounded w-1/2"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+));
+
 type Event = {
   id: number;
   event: string;
@@ -97,6 +119,10 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingStatuses, setIsLoadingStatuses] = useState(true);
     const [statusError, setStatusError] = useState<string | null>(null);
+    
+    // Pagination state for better performance with large event lists
+    const [currentPage, setCurrentPage] = useState(1);
+    const [eventsPerPage] = useState(50); // Show 50 events per page
 
     const fetchUserHomeStatuses = useCallback(async () => {
       setIsLoadingStatuses(true);
@@ -175,7 +201,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
       [refreshData]
     );
 
-    const collapseEvents = (allEvents: Event[]): Event[] => {
+    const collapseEvents = useCallback((allEvents: Event[]): Event[] => {
       const collapsed: Event[] = [];
       const reversed = [...allEvents].reverse();
 
@@ -232,11 +258,11 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
       }
 
       return collapsed.reverse();
-    };
+    }, []); // Empty dependency array since it doesn't depend on any values
 
-    const collapsedEvents = useMemo(() => collapseEvents(events), [events]);
+    const collapsedEvents = useMemo(() => collapseEvents(events), [events, collapseEvents]);
 
-    // Group events by day
+    // Group events by day with pagination
     const eventsByDay = useMemo(() => {
       const grouped: Record<string, Event[]> = {};
 
@@ -253,6 +279,41 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
       return grouped;
     }, [collapsedEvents]);
+
+    // Paginate events for better performance
+    const paginatedEventsByDay = useMemo(() => {
+      const allDays = Object.keys(eventsByDay).sort((a, b) => {
+        // Sort by date descending (newest first)
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      const startIndex = (currentPage - 1) * eventsPerPage;
+      const endIndex = startIndex + eventsPerPage;
+      
+      let eventCount = 0;
+      const result: Record<string, Event[]> = {};
+      
+      for (const day of allDays) {
+        const dayEvents = eventsByDay[day];
+        const remainingCapacity = eventsPerPage - (eventCount % eventsPerPage);
+        
+        if (eventCount >= startIndex && eventCount < endIndex) {
+          result[day] = dayEvents.slice(0, Math.min(dayEvents.length, remainingCapacity));
+        } else if (eventCount < startIndex && eventCount + dayEvents.length > startIndex) {
+          const skipCount = startIndex - eventCount;
+          const takeCount = Math.min(dayEvents.length - skipCount, remainingCapacity);
+          result[day] = dayEvents.slice(skipCount, skipCount + takeCount);
+        }
+        
+        eventCount += dayEvents.length;
+        
+        if (eventCount >= endIndex) break;
+      }
+      
+      return result;
+    }, [eventsByDay, currentPage, eventsPerPage]);
 
     const getEventIcon = (eventName: string): JSX.Element | null => {
       if (eventName.includes("ALARM triggered")) {
@@ -276,12 +337,12 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     // Sort days in reverse chronological order (most recent first)
     const sortedDays = useMemo(() => {
-      return Object.keys(eventsByDay).sort((a, b) => {
+      return Object.keys(paginatedEventsByDay).sort((a, b) => {
         const dateA = new Date(a);
         const dateB = new Date(b);
         return dateB.getTime() - dateA.getTime();
       });
-    }, [eventsByDay]);
+    }, [paginatedEventsByDay]);
 
     // Count total events
     const totalEvents = useMemo(() => {
@@ -290,6 +351,11 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
         0
       );
     }, [eventsByDay]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalEvents / eventsPerPage);
+    const hasNextPage = currentPage < totalPages;
+    const hasPrevPage = currentPage > 1;
 
     // Add a handler for display name updates
     const handleDisplayNameUpdate = (userId: string, newDisplayName: string) => {
@@ -441,7 +507,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                   <div className="w-full overflow-x-auto">
                     <table className="min-w-full table-auto border-collapse">
                       <tbody>
-                        {eventsByDay[day].map((event: Event, index: number) => (
+                        {paginatedEventsByDay[day].map((event: Event, index: number) => (
                           <tr
                             key={event.id || index}
                             className={`border-b border-gray-800/30 transition-colors duration-300 hover:bg-gray-700/30 ${
@@ -472,7 +538,15 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
               </div>
             ))}
 
-            {sortedDays.length === 0 && (
+            {/* Show skeleton loading during initial load or refresh */}
+            {(isRefreshing && sortedDays.length === 0) && (
+              <div className="mx-4">
+                <EventSkeleton />
+                <EventSkeleton />
+              </div>
+            )}
+
+            {sortedDays.length === 0 && !isRefreshing && (
               <div className="text-center py-12 text-gray-400">
                 <div className="bg-gray-800/80 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center border border-gray-700/30">
                   <UilHistory size={32} className="text-gray-500" />
@@ -481,6 +555,50 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                 <p className="text-xs text-gray-500 mt-1">
                   Events will appear here as they occur
                 </p>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mx-4 mt-4 flex items-center justify-between bg-gray-800/50 rounded-lg p-3 border border-gray-700/30">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={!hasPrevPage}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 ${
+                    hasPrevPage
+                      ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
+                      : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="text-sm">Previous</span>
+                </button>
+
+                <div className="flex items-center space-x-2 text-gray-300">
+                  <span className="text-sm">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ({totalEvents} total events)
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={!hasNextPage}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 ${
+                    hasNextPage
+                      ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
+                      : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="text-sm">Next</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>

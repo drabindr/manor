@@ -26,6 +26,27 @@ const Thermostat = lazy(() => import('./Thermostat'));
 const DeviceControl = lazy(() => import('./DeviceControl'));
 const EventHistory = lazy(() => import('./EventHistory'));
 
+// Background prefetching for non-critical components
+// These will load in the background after the main component loads
+const prefetchComponents = () => {
+  // Use requestIdleCallback if available, otherwise setTimeout
+  const schedulePreload = (fn: () => void) => {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(fn, { timeout: 5000 });
+    } else {
+      setTimeout(fn, 100);
+    }
+  };
+
+  schedulePreload(() => {
+    // Prefetch components that aren't immediately visible
+    import('./Thermostat');
+    import('./DeviceControl'); 
+    import('./EventHistory');
+    import('./components/CameraPage');
+  });
+};
+
 // Locally load only the types
 import type { CameraDevice } from './components/CameraPage';
 
@@ -297,6 +318,9 @@ const CasaGuard: React.FC = () => {
     const fetchAllData = async () => {
       await Promise.all([fetchCameras(), fetchThermostatMinimal()]);
       fetchAlarmState(); // This doesn't need to be awaited as it uses the WebSocket
+      
+      // Start background prefetching of components after initial load
+      prefetchComponents();
     };
     fetchAllData();
   }, [fetchCameras, fetchThermostatMinimal, fetchAlarmState]);

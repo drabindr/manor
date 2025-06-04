@@ -198,6 +198,21 @@ class Logger {
       }
     }
   }
+
+  /**
+   * Performance-optimized logging methods that avoid string concatenation in production
+   */
+  public debugFast(messageFn: () => string, ...args: any[]): void {
+    if (this.config.minLevel <= LogLevel.DEBUG) {
+      this.debug(messageFn(), ...args);
+    }
+  }
+
+  public infoFast(messageFn: () => string, ...args: any[]): void {
+    if (this.config.minLevel <= LogLevel.INFO) {
+      this.info(messageFn(), ...args);
+    }
+  }
 }
 
 // Export a singleton instance

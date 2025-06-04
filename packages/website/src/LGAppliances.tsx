@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo } from "react";
 import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell, UilPlay, UilPause } from "@iconscout/react-unicons";
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
+import OptimizedImage from "./components/OptimizedImage";
 
 // Helper to check if a state is a running state
 const isRunningState = (state: string): boolean => {
@@ -170,11 +171,13 @@ const LGDeviceCard = memo(({
       {/* Enhanced Header */}
       <div className="p-4 flex items-center space-x-3">
         <div className="relative w-12 h-12 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl border border-gray-600/50 shadow-inner flex-shrink-0">
-          <img
+          <OptimizedImage
             src={`/device_icons/${iconMap[device.deviceType]}`}
             alt={device.deviceType}
             className="w-8 h-8 object-contain opacity-90 transition-opacity duration-300"
             onError={handleImgError}
+            loading="lazy"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none" />
         </div>
@@ -826,15 +829,42 @@ const LGAppliances: React.FC = () => {
     fetchLGDevices(true);
   }, []);
 
-  // Separate effect for adaptive polling
+  // Separate effect for adaptive polling with visibility optimization
   useEffect(() => {
     if (lgLoading) return; // Don't start polling until initial load is complete
     
-    const timeoutId = setTimeout(() => {
-      fetchLGDevices(false);
-    }, currentPollingInterval);
+    // Check if page is visible - pause polling when page is hidden
+    const isVisible = () => !document.hidden;
+    
+    const scheduleNext = () => {
+      if (isVisible()) {
+        const timeoutId = setTimeout(() => {
+          fetchLGDevices(false);
+        }, currentPollingInterval);
+        return timeoutId;
+      } else {
+        // If page is hidden, check visibility more frequently but don't poll data
+        const timeoutId = setTimeout(scheduleNext, 5000);
+        return timeoutId;
+      }
+    };
+    
+    const timeoutId = scheduleNext();
+    
+    // Listen for visibility changes
+    const handleVisibilityChange = () => {
+      if (isVisible()) {
+        // Resume polling immediately when page becomes visible
+        fetchLGDevices(false);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [currentPollingInterval, lgLoading]); // Removed lgStatus to prevent infinite loops
 
   return (
