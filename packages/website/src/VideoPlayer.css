@@ -1,0 +1,238 @@
+/* Ensure Tailwind base/components/utilities are imported first if this is separate */
+
+/* Base player container - slight adjustments */
+.player-container {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0,0,0,0.2); /* Enhanced shadow */
+  border-radius: 10px; /* Slightly larger radius */
+  overflow: hidden;
+  /* Define custom background color variable if needed, or use Tailwind bg-gray-850 directly */
+  /* background-color: hsl(216, 15%, 16%); /* Slightly darker/bluer gray */
+}
+
+/* Use Tailwind's bg-gray-850 or define it */
+.bg-gray-850 {
+   background-color: hsl(216, 15%, 16%);
+}
+
+
+/* --- Timeline Slider Styles --- */
+
+.range-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  height: 20px; /* Increase height slightly for easier interaction */
+  cursor: pointer;
+  position: relative;
+  z-index: 10;
+  outline: none;
+}
+.range-input:disabled {
+    cursor: not-allowed;
+}
+
+/* Track Styling */
+.range-input::-webkit-slider-runnable-track {
+  height: 6px; /* Slightly thinner track */
+  background: #4b5563; /* Tailwind gray-600 */
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+.range-input:hover:not(:disabled)::-webkit-slider-runnable-track {
+  background: #525e71; /* Slightly lighter gray on hover */
+}
+.range-input::-moz-range-track {
+  height: 6px;
+  background: #4b5563;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+.range-input:hover:not(:disabled)::-moz-range-track {
+  background: #525e71;
+}
+/* Add focus styles for the track itself if desired */
+.range-input:focus-visible::-webkit-slider-runnable-track {
+   /* Example: outline: 2px solid #63B3ED; */
+}
+.range-input:focus-visible::-moz-range-track {
+    /* Example: outline: 2px solid #63B3ED; */
+}
+
+
+/* Thumb (Slider Handle) Styling */
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -5px; /* (6px track - 16px thumb) / 2 */
+  height: 16px;
+  width: 16px;
+  background: #63B3ED; /* Tailwind blue-400 */
+  border-radius: 50%;
+  cursor: pointer;
+  border: none; /* Remove border for a flatter look */
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4); /* Subtle white glow */
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.range-input::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  background: #63B3ED;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Thumb Hover/Active/Focus States */
+.range-input:hover:not(:disabled)::-webkit-slider-thumb {
+  background: #90CDF4; /* blue-300 */
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5); /* Brighter glow */
+}
+.range-input:active:not(:disabled)::-webkit-slider-thumb {
+  background: #4299E1; /* blue-500 */
+  transform: scale(1.1);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+}
+/* Consistent focus ring using outline on the input itself (Tailwind handles this well with focus-visible usually) */
+/* If using custom CSS for focus on thumb: */
+ .range-input:focus-visible::-webkit-slider-thumb {
+   box-shadow: 0 0 0 3px hsl(216, 15%, 16%), 0 0 0 5px #63B3ED; /* Ring matching background + blue */
+ }
+.range-input:hover:not(:disabled)::-moz-range-thumb {
+  background: #90CDF4;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5);
+}
+.range-input:active:not(:disabled)::-moz-range-thumb {
+  background: #4299E1;
+  transform: scale(1.1);
+   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6);
+}
+ .range-input:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px hsl(216, 15%, 16%), 0 0 0 5px #63B3ED;
+ }
+
+/* Disabled thumb style */
+.range-input:disabled::-webkit-slider-thumb {
+    background: #718096; /* gray-500 */
+    box-shadow: none;
+    transform: scale(0.8);
+}
+.range-input:disabled::-moz-range-thumb {
+    background: #718096;
+    box-shadow: none;
+    transform: scale(0.8);
+}
+
+
+/* --- Time Markers --- */
+.time-marker {
+  position: absolute;
+  bottom: -3px; /* Position relative to track center (track height 6px / 2 = 3px) */
+  width: 3px;   /* Slightly wider */
+  height: 12px; /* Taller */
+  /* background-color: #4299E1; /* Tailwind blue-500 */
+  /* Use a slightly less saturated blue for markers */
+  background-color: #5a9bd6;
+  border-radius: 1px;
+  cursor: pointer;
+  pointer-events: auto; /* Ensure clickable */
+  z-index: 5; /* Below thumb */
+  transition: background-color 0.15s ease-in-out, height 0.15s ease-in-out, transform 0.15s ease;
+  transform: translateX(-50%); /* Center the marker */
+  border: none; /* Remove default button border */
+  padding: 0; /* Remove default button padding */
+  appearance: none; /* Remove default button appearance */
+}
+
+.time-marker:hover {
+  background-color: #90CDF4; /* Lighter blue on hover (blue-300) */
+  height: 14px; /* Slightly taller on hover */
+  bottom: -4px; /* Adjust bottom */
+  transform: translateX(-50%) scaleX(1.2); /* Slightly wider visual cue */
+}
+
+/* Style for the active time marker */
+.time-marker.active {
+    background-color: #f59e0b; /* Tailwind amber-500 for active clip */
+    height: 16px; /* Even taller for active */
+    bottom: -5px; /* Adjust bottom */
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
+}
+.time-marker.active:hover {
+    background-color: #fbbf24; /* Tailwind amber-400 */
+}
+
+/* --- Control Buttons (Prev/Next/Mute) --- */
+.control-button {
+  display: inline-flex; /* Use inline-flex for alignment */
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem; /* p-2 */
+  border-radius: 9999px; /* rounded-full */
+  color: #d1d5db; /* text-gray-300 */
+  background-color: transparent; /* Start transparent */
+  border: none; /* No border */
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.control-button:hover:not(:disabled) {
+  background-color: rgba(75, 85, 99, 0.7); /* hover:bg-gray-600/70 */
+  color: #ffffff; /* text-white */
+}
+.control-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.5); /* focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-opacity-50 */
+}
+.control-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+/* --- Loader --- */
+.loader {
+  border: 5px solid rgba(156, 163, 175, 0.2); /* gray-400 */
+  border-top: 5px solid #63B3ED; /* blue-400 */
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  animation: spin 0.8s linear infinite;
+}
+/* Smaller loader variant */
+.loader.small {
+    border-width: 4px;
+    width: 28px;
+    height: 28px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+/* --- Error Message --- */
+.error-message {
+  color: #fca5a5; /* Tailwind red-300 */
+  background-color: rgba(185, 28, 28, 0.3); /* Tailwind red-800 with opacity */
+  border: 1px solid rgba(220, 38, 38, 0.5); /* Tailwind red-700 border */
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-align: center;
+  max-width: 90%;
+  font-size: 0.9rem; /* Slightly smaller */
+}
+
+
+/* Remove default Vidstack controls if they appear unexpectedly */
+/* This might be needed if you don't want *any* default UI */
+/*
+  media-player[data-fullscreen] video {
+    cursor: none;
+  }
+  media-controls { display: none !important; }
+*/

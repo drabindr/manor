@@ -1,0 +1,23 @@
+{
+  "name": "manor",
+  "version": "1.0.0",
+  "description": "Manor - Unified home automation and management platform",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "dev": "npm run dev --workspace=@manor/website",
+    "deploy": "npm run deploy --workspace=@manor/cdk",
+    "install:all": "npm install --workspaces"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

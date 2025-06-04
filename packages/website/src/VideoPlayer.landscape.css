@@ -1,0 +1,104 @@
+/* VideoPlayer.landscape.css */
+
+/* 1) Full-screen absolute wrapper (underneath your fixed header) */
+.landscape-video-container {
+  position: absolute !important;
+  inset: 0 !important;               /* top:0; right:0; bottom:0; left:0 */
+  z-index:    0 !important;          /* header is z-50, so it sits on top */
+  background: #000 !important;
+  overflow:   hidden !important;
+}
+
+/* 2) Ensure the VideoPlayer root element fills that wrapper */
+.landscape-video-container > div {
+  display:        flex !important;
+  flex-direction: column !important;
+  min-height:     100% !important;
+}
+
+/* 3) Force the internal .player-container to stretch */
+.landscape-video-container .player-container {
+  display:        flex !important;
+  flex-direction: column !important;
+  height:         100% !important;
+}
+
+/* 4) Override the Tailwind h-[calc(100%-150px)] on the video wrapper */
+.landscape-video-container .player-container > .relative,
+.landscape-video-container .player-container > div[class*="h-[calc(100%-150px)]"] {
+  flex:           1 1 auto !important;
+  height:         auto     !important;
+  min-height:     0        !important;
+  width:          100%     !important;
+}
+
+/* 5) Make the <video> (or media-player) fit the container without cropping */
+.landscape-video-container video,
+.landscape-video-container media-player {
+  width:        100% !important;
+  height:       100% !important;
+  object-fit:   contain !important;
+  background:   #000 !important;     /* letterbox bars will be black */
+}
+
+/* 6) Gradient backdrop for the bottom controls */
+.landscape-video-container::after {
+  content:         "" !important;
+  position:        absolute !important;
+  bottom:          0 !important;
+  left:            0 !important;
+  right:           0 !important;
+  height:          40px !important;
+  background:      linear-gradient(to top, rgba(0,0,0,0.8), transparent) !important;
+  pointer-events:  none !important;
+  z-index:         10 !important;
+}
+
+/* 7) Pin your custom scrubber slider flush to bottom */
+.landscape-video-container .range-input {
+  position:       absolute !important;
+  bottom:         0 !important;
+  left:           10px !important;
+  right:          10px !important;
+  height:         20px !important;
+  z-index:        20 !important;
+  background:     transparent !important;
+}
+
+/* 8) Position the clickable time-marker dots just above the slider */
+.landscape-video-container .time-marker {
+  position: absolute !important;
+  bottom:   12px !important;
+  z-index:  21 !important;
+}
+
+/* 9) Pin the control bar (play/prev/next/mute) above the gradient and remove its border */
+.landscape-video-container .player-container > .p-3 {
+  position:       absolute !important;
+  bottom:         0 !important;
+  left:           0 !important;
+  right:          0 !important;
+  z-index:        15 !important;
+  border:         none      !important;
+  box-shadow:     none      !important;
+}
+
+/* 10) Keep any native VidStack controls fully visible on top */
+.landscape-video-container [data-part="controls"],
+.landscape-video-container media-controls {
+  position:       absolute !important;
+  bottom:         0 !important;
+  left:           0 !important;
+  right:          0 !important;
+  z-index:        25 !important;
+  opacity:        1         !important;
+  visibility:     visible   !important;
+}
+
+/* 11) Always show native controls in landscape */
+@media (orientation: landscape) {
+  .landscape-video-container [data-part="controls"],
+  .landscape-video-container media-controls {
+    display: block !important;
+  }
+}

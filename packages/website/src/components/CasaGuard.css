@@ -1,0 +1,389 @@
+@media only screen and (max-width: 393px) and (orientation: portrait) {
+  .veedu-text { font-size: 0.5rem !important; }
+}
+
+.tab-content { 
+  /* Use absolute positioning to fill the entire container */
+  position: absolute;
+  top: calc(5rem + var(--safe-area-inset-top) + var(--ios-extra-top-padding));
+  left: 0;
+  right: 0;
+  bottom: calc(var(--bottom-nav-height) + var(--safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  padding-bottom: 30px; /* Extra padding at the bottom for content visibility */
+}
+
+.ptr__pull-down { 
+  background-color: rgba(30, 30, 30, 0.8); 
+  backdrop-filter: blur(10px); 
+}
+
+.hidden-tab { 
+  position: absolute; 
+  opacity: 0; 
+  pointer-events: none; 
+  left: -9999px; 
+  height: 0; 
+  overflow: hidden; 
+  display: none !important;
+}
+
+/* iOS-specific variables */
+:root { 
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); 
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --bottom-nav-height: 70px;
+  --ios-extra-top-padding: 2rem;
+}
+
+/* Top app bar styling with improved iOS compatibility */
+.top-app-bar {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  z-index: 999;
+  background: linear-gradient(to right, rgba(10,10,10,0.95), rgba(20,20,20,0.95));
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(75, 75, 75, 0.3); 
+  isolation: isolate;
+  height: auto !important;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* iOS-specific top bar adjustments */
+.ios-webview .top-app-bar {
+  padding-top: calc(var(--safe-area-inset-top) + var(--ios-extra-top-padding));
+  min-height: calc(64px + var(--safe-area-inset-top));
+}
+
+.ios-webview .min-h-screen {
+  padding-top: calc(3.5rem + env(safe-area-inset-top) + 10px);
+}
+
+.camera-page-container { 
+  min-height: calc(100vh - 160px); 
+}
+
+.camera-card { 
+  transition: all 0.3s ease; 
+  transform-origin: center; 
+}
+
+.camera-card.aspect-video { 
+  aspect-ratio: 16/9; 
+  height: auto; 
+}
+
+.camera-card::before {
+  content: ''; 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  height: 40%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  z-index: 1; 
+  pointer-events: none; 
+  opacity: 0.5;
+}
+
+.camera-card::after {
+  content: ''; 
+  position: absolute; 
+  bottom: 0; 
+  left: 0; 
+  right: 0; 
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  z-index: 1; 
+  pointer-events: none; 
+  opacity: 0.5;
+}
+
+@keyframes ping-slow { 
+  75%, 100% { transform: scale(1.8); opacity: 0; } 
+}
+
+.animate-ping-slow { 
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; 
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+.fullscreen-enter { 
+  opacity: 0; 
+  transform: scale(0.95); 
+}
+
+.fullscreen-enter-active { 
+  opacity: 1; 
+  transform: scale(1); 
+  transition: opacity 300ms, transform 300ms; 
+}
+
+.fullscreen-exit { 
+  opacity: 1; 
+  transform: scale(1); 
+}
+
+.fullscreen-exit-active { 
+  opacity: 0; 
+  transform: scale(0.95); 
+  transition: opacity 300ms, transform 300ms; 
+}
+
+@keyframes border-pulse {
+  0% { border-color: rgba(220, 38, 38, 0.8); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
+  70% { border-color: rgba(220, 38, 38, 0.3); box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+  100% { border-color: rgba(220, 38, 38, 0.8); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.security-border { 
+  animation: border-pulse 2s infinite; 
+  border-color: rgba(255, 173, 51, 0.7);
+  will-change: opacity;
+  animation: pulse-border 2s infinite ease-in-out;
+}
+
+@keyframes gradient-x { 
+  0% { background-position: 0% 50%; } 
+  50% { background-position: 100% 50%; } 
+  100% { background-position: 0% 50%; } 
+}
+
+.animate-gradient-x { 
+  background-size: 200% 100%; 
+  animation: gradient-x 3s ease infinite; 
+  will-change: background-position;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-in-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* iOS-specific optimizations for better performance */
+
+/* Optimize scrolling on iOS devices */
+.ios-optimized {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+/* Prevent rubber-banding/overscroll effects that can cause performance issues */
+html, body {
+  overscroll-behavior-y: none;
+  height: 100%;
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Optimize animations for mobile devices */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hardware acceleration for animated elements */
+.animate-spin, 
+.animate-pulse,
+.animate-ping-slow,
+.animate-gradient-x {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Optimize pull-to-refresh component */
+.PullToRefresh {
+  will-change: transform;
+  transform: translateZ(0);
+  z-index: 1;
+  position: relative;
+}
+
+/* Better handling of full-screen elements */
+#fullscreen-root {
+  z-index: 9999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Allow clicks to pass through when not active */
+}
+
+#fullscreen-root:not(:empty) {
+  pointer-events: auto; /* Capture clicks when content is present */
+  background-color: rgba(0, 0, 0, 0.95);
+}
+
+/* Define custom animation for ping effect with better performance */
+@keyframes ping-optimized {
+  75%, 100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Optimize gradient animations */
+@keyframes gradient-x {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Enhanced iOS WebView compatibility for bottom navigation */
+.fixed.bottom-0 {
+  bottom: 0 !important;
+  padding-bottom: calc(12px + var(--safe-area-inset-bottom)) !important;
+  height: auto !important;
+  z-index: 999 !important;
+  display: flex !important;
+}
+
+/* Force the navigation to always be visible */
+nav.fixed.bottom-0 {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+}
+
+/* Adjust padding for the main container in WebView contexts */
+/* Parent container no longer needs bottom padding; content can extend under nav */
+.min-h-screen {
+  position: relative;
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow: hidden; /* Prevent scroll on main container */
+  /* Remove padding as we're using absolute positioning */
+  padding: 0;
+}
+
+/* iOS-specific optimizations and fixes */
+:root { 
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); 
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --bottom-nav-height: 70px;
+  --ios-extra-top-padding: 2rem;
+}
+
+/* Ensure proper viewport height on iOS */
+html {
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: -webkit-fill-available;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Main scrollable content area */
+.tab-content { 
+  /* Use absolute positioning to fill the entire container */
+  position: absolute;
+  top: calc(5rem + var(--safe-area-inset-top) + var(--ios-extra-top-padding));
+  left: 0;
+  right: 0;
+  bottom: 0; /* Let content extend behind the navigation */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-inset-bottom) + 130px); /* Extra padding to ensure content is visible above navigation */
+}
+
+/* Fixed bottom navigation bar */
+nav.fixed.bottom-0 {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 9999 !important;
+  padding-bottom: calc(12px + var(--safe-area-inset-bottom)) !important;
+  background: linear-gradient(to bottom, rgba(25,25,25,0.95), rgba(15,15,15,0.95)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  margin: 0 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+  height: auto !important;
+  min-height: calc(var(--bottom-nav-height) + var(--safe-area-inset-bottom)) !important;
+  border-top: 1px solid rgba(75, 75, 75, 0.3) !important;
+}
+
+/* Top app bar fixes */
+.top-app-bar {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  z-index: 999;
+  background: linear-gradient(to right, rgba(10,10,10,0.95), rgba(20,20,20,0.95));
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(75, 75, 75, 0.3); 
+  isolation: isolate;
+  padding-top: max(env(safe-area-inset-top), 20px);
+  height: auto !important;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Main container adjustments */
+.min-h-screen {
+  position: relative;
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow: hidden; /* Prevent scroll on main container */
+  /* Remove padding as we're using absolute positioning */
+  padding: 0;
+}
+
+/* Pull-to-refresh styling */
+.ptr__pull-down { 
+  background-color: rgba(30, 30, 30, 0.8); 
+  backdrop-filter: blur(10px); 
+}
+
+/* Prevent any unwanted scrolling/bouncing effects */
+.ios-optimized {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+/* Ensure camera tab content can overflow horizontally for grid */
+.camera-content {
+  overflow: visible !important;
+}
+
+/* Responsive camera buttons */
+@media (max-width: 540px) {
+  .camera-button {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  
+  .button-text {
+    display: none !important;
+  }
+}
