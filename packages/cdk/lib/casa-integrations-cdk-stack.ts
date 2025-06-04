@@ -19,7 +19,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     const integrationLambda = new NodejsFunction(this, 'IntegrationLambda', {
       entry: 'lambda/casa-integrations/integrationHandler.ts',
       bundling: {
-        externalModules: ['aws-sdk'], // Use the 'aws-sdk' available in the Lambda runtime
+        externalModules: ['@aws-sdk/*'], // Use the '@aws-sdk/*' available in the Lambda runtime
       },
       timeout: cdk.Duration.seconds(10),
     });
@@ -82,6 +82,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       bundling: {
         minify: true,
+        externalModules: ['@aws-sdk/*']
       },
       environment: {
         DEVICE_TOKENS_TABLE: deviceTokensTable.tableName,
@@ -95,6 +96,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       bundling: {
         minify: true,
+        externalModules: ['@aws-sdk/*']
       },
       environment: {
         DEVICE_TOKENS_TABLE: deviceTokensTable.tableName,
@@ -166,6 +168,9 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       environment: {
         CONN_TABLE_NAME: hueConnectionsTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Grant the Lambda function read/write access to the DynamoDB table
@@ -220,6 +225,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       bundling: {
         minify: true,
+        externalModules: ['@aws-sdk/*']
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
@@ -296,6 +302,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       bundling: {
         minify: true,
+        externalModules: ['@aws-sdk/*']
       },
       environment: {
         CONN_TABLE_NAME: garageDoorConnectionsTable.tableName,

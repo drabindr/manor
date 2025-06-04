@@ -23,6 +23,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
       environment: {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     const disconnectLambda = new NodejsFunction(this, 'DisconnectLambda', {
@@ -30,6 +33,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
       environment: {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     const apiLambda = new NodejsFunction(this, 'ApiLambda', {
@@ -37,6 +43,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
       environment: {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Grant necessary permissions to the Lambda functions

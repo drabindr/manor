@@ -48,6 +48,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
       environment: {
         HOMES_TABLE: homesTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Create a Lambda function to handle home state queries
@@ -59,6 +62,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
         HOMES_TABLE: homesTable.tableName,
         WEBSOCKET_URL: "wss://w42qpgs203.execute-api.us-east-1.amazonaws.com/prod"
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Create a Lambda function to handle user home state updates.
@@ -69,6 +75,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
       environment: {
         USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Create a Lambda function to handle saving display names.
@@ -79,6 +88,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
       environment: {
         USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Grant the Lambda permission to read/write the tables.

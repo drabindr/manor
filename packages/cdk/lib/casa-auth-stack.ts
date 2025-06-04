@@ -38,6 +38,9 @@ export class CasaAuthStack extends cdk.Stack {
       environment: {
         NODE_ENV: 'production',
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     const preSignupLambda = new nodejs.NodejsFunction(this, 'PreSignupFunction', {
@@ -50,6 +53,9 @@ export class CasaAuthStack extends cdk.Stack {
         NODE_ENV: 'production',
         ALLOWED_APPLE_EMAILS: 'drabindr@gmail.com,jcsubram@gmail.com',
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Create Cognito User Pool
