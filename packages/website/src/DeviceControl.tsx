@@ -151,6 +151,18 @@ const DeviceControl: React.FC = () => {
   const [lights, setLights] = useState<LightDevice[]>([]);
   const [lightsError, setLightsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  
+  // Check for mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Check if garage door should be positioned first (daytime) or last (nighttime)
   const garageDoorFirst = shouldGarageDoorBeFirst();
@@ -174,7 +186,7 @@ const DeviceControl: React.FC = () => {
   const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean; isSuggested: boolean; inactiveCount: number }) => {
     return (
       <div
-        className={`relative p-3 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-200 hover:border-gray-600/50 ${
+        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-200 hover:border-gray-600/50 ${
           room.hasEssentialDevices ? 'border-yellow-600/50' : room.isSuggested ? 'border-blue-600/50' : 'border-gray-700/50'
         }`}
       >
@@ -189,32 +201,33 @@ const DeviceControl: React.FC = () => {
         )}
         
         {/* Glass effect overlay */}
-        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
         
-        {/* Room Title with emoji icons */}
-        <div className="flex justify-between items-center mb-3 sm:mb-4">
+        {/* Room Title with emoji icons - Compact for better space utilization */}
+        <div className="flex justify-between items-center mb-2.5 sm:mb-4">
           <div className="text-gray-200 font-medium flex items-center space-x-2">
-            <span className="text-lg">{getRoomIcon(room.name)}</span>
-            <span className="text-sm sm:text-base">{room.name}</span>
+            <span className="text-base sm:text-lg">{getRoomIcon(room.name)}</span>
+            <span className="text-xs sm:text-base truncate">{room.name}</span>
             {room.isSuggested && (
-              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30">
+              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30 hidden sm:inline">
                 Suggested
               </span>
             )}
           </div>
-          <div className="flex space-x-1 sm:space-x-2">
-            <div className="text-xs text-gray-400 bg-gray-800/60 px-2 py-1 rounded-full border border-gray-700/30">
+          <div className="flex space-x-1 sm:space-x-2 text-xs">
+            <div className="text-gray-400 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-700/30">
               {room.deviceCount}
             </div>
             {room.activeCount > 0 && (
-              <div className="text-xs text-yellow-300 bg-yellow-900/30 px-2 py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
+              <div className="text-yellow-300 bg-yellow-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
                 <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
                 <span>{room.activeCount}</span>
               </div>
             )}
             {room.inactiveCount > 0 && (
-              <div className="text-xs text-gray-500 bg-gray-800/40 px-2 py-1 rounded-full border border-gray-600/30">
-                {room.inactiveCount} off
+              <div className="text-gray-500 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/30">
+                <span className="hidden sm:inline">{room.inactiveCount} off</span>
+                <span className="sm:hidden">{room.inactiveCount}</span>
               </div>
             )}
           </div>
@@ -222,9 +235,9 @@ const DeviceControl: React.FC = () => {
         
         {/* Light Controls - Optimized mobile grid with inactive devices first */}
         <div
-          className="grid gap-2 sm:gap-3"
+          className="grid gap-1.5 sm:gap-3"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(85px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
           }}
         >
           {/* Render inactive devices first for better visibility */}
@@ -430,13 +443,13 @@ const DeviceControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Time-based contextual prompt */}
-      <div className="mx-2 sm:mx-4 mb-3 p-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-800/40 shadow-lg">
-        <p className="text-blue-200 text-sm text-center">{timePrompt}</p>
+      {/* Time-based contextual prompt - Enhanced mobile layout */}
+      <div className="mx-2 sm:mx-4 mb-3 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-800/40 shadow-lg">
+        <p className="text-blue-200 text-xs sm:text-sm text-center leading-relaxed">{timePrompt}</p>
       </div>
       
-      {/* DEVICE CONTROLS - Flexible layout with condensed rows for small rooms */}
-      <div className="grid gap-3 sm:gap-4 px-2 sm:px-4 pb-3" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'}}>
+      {/* DEVICE CONTROLS - Enhanced responsive layout with optimized condensed rows */}
+      <div className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))'}}>
         {/* Garage Door - Show at top during daytime (6 AM to 10 PM) */}
         {garageDoorFirst && (
           <div className="col-span-full">
@@ -481,10 +494,11 @@ const DeviceControl: React.FC = () => {
                     </div>
                   );
                 } else {
-                  // Multiple small rooms get condensed in a row
+                  // Multiple small rooms get condensed in a row - responsive columns
+                  const numCols = Math.min(pendingSmallRooms.length, isMobile ? 2 : 3);
                   elements.push(
                     <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
-                      <div className="grid gap-3 sm:gap-4" style={{gridTemplateColumns: `repeat(${Math.min(pendingSmallRooms.length, 3)}, 1fr)`}}>
+                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${numCols}, 1fr)`}}>
                         {pendingSmallRooms.map(smallRoom => (
                           <div key={smallRoom.name}>
                             {renderRoomCard(smallRoom)}
@@ -507,8 +521,11 @@ const DeviceControl: React.FC = () => {
               // Accumulate small rooms for condensed rows
               pendingSmallRooms.push(room);
               
-              // If we have 3 small rooms or this is the last room, create a condensed row
-              if (pendingSmallRooms.length === 3 || index === roomsWithData.length - 1) {
+              // Create condensed rows with appropriate sizing for mobile
+              const maxRoomsPerRow = isMobile ? 2 : 3;
+              
+              // If we have reached max rooms per row or this is the last room, create a condensed row
+              if (pendingSmallRooms.length === maxRoomsPerRow || index === roomsWithData.length - 1) {
                 if (pendingSmallRooms.length === 1) {
                   elements.push(
                     <div key={pendingSmallRooms[0].name}>
@@ -518,7 +535,7 @@ const DeviceControl: React.FC = () => {
                 } else {
                   elements.push(
                     <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
-                      <div className="grid gap-3 sm:gap-4" style={{gridTemplateColumns: `repeat(${Math.min(pendingSmallRooms.length, 3)}, 1fr)`}}>
+                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${pendingSmallRooms.length}, 1fr)`}}>
                         {pendingSmallRooms.map(smallRoom => (
                           <div key={smallRoom.name}>
                             {renderRoomCard(smallRoom)}
