@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo } from "react";
 import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell } from "@iconscout/react-unicons";
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
+import OptimizedImage from "./components/OptimizedImage";
 
 // Helper to check if a state is a running state
 const isRunningState = (state: string): boolean => {
@@ -167,7 +168,7 @@ const LGDeviceCard = memo(({
       {/* Compact Header */}
       <div className="p-3 flex items-center space-x-2.5">
         <div className="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-lg border border-gray-600/50 shadow-inner flex-shrink-0">
-          <img
+          <OptimizedImage
             src={`/device_icons/${iconMap[device.deviceType]}`}
             alt={device.deviceType}
             className="w-7 h-7 object-contain opacity-90 transition-opacity duration-300"
