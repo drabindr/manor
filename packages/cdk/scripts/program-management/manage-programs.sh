@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Program Management Script for Veedu CDK
+# Program Management Script for Manor CDK
 # Manages compilation and upload of ESP8266/Arduino programs
 
 # Get the script directory
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CDK_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROGRAMS_DIR="$CDK_ROOT/programs"
 
-echo "🏗️  Veedu CDK Program Management"
+echo "🏗️  Manor CDK Program Management"
 echo "==============================="
 echo "📁 CDK Root: $CDK_ROOT"
 echo "📁 Programs Directory: $PROGRAMS_DIR"

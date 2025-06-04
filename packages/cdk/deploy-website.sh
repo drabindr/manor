@@ -3,8 +3,8 @@
 # Simple deployment script that builds website and deploys via CDK
 set -e
 
-echo "🚀 Deploying Veedu Website via CDK"
-echo "=================================="
+echo "🚀 Deploying Manor Website via CDK"
+echo "==================================="
 
 # Change to website directory and build
 echo "📦 Building website..."
