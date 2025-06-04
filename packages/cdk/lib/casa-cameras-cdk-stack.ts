@@ -24,7 +24,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
@@ -34,7 +36,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
@@ -44,7 +48,9 @@ export class CasaCamerasCdkStack extends cdk.Stack {
         CONN_TABLE_NAME: connectionsTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 

@@ -49,7 +49,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
         HOMES_TABLE: homesTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
@@ -63,7 +65,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
         WEBSOCKET_URL: "wss://w42qpgs203.execute-api.us-east-1.amazonaws.com/prod"
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
@@ -76,7 +80,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
         USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
@@ -89,7 +95,9 @@ export class CasaAdminCdkStack extends cdk.Stack {
         USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
       },
       bundling: {
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
       }
     });
 
