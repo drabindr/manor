@@ -197,6 +197,7 @@ export class CasaGuardCdkStack extends cdk.Stack {
     // This is the Lambda function you should check logs for:
     const apiLambda = new NodejsFunction(this, "ApiHandler", {
       entry: "lambda/api.ts",
+      depsLockFilePath: "lambda/package.json",
       environment: {
         CONN_TABLE_NAME: connectionsTable.tableName,
         LOG_TABLE_NAME: logTable.tableName,

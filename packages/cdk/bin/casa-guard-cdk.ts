@@ -35,7 +35,7 @@ const skipWebsiteDeployment = process.env.SKIP_WEBSITE_DEPLOYMENT === 'true';
 const websiteStack = new ManorWebsiteStack(app, 'ManorWebsiteStack', {
   domainName: '720frontrd.mymanor.click',
   hostedZone: domainStack.hostedZone,
-  websiteBuildPath: process.env.WEBSITE_BUILD_PATH || '../veedu-website/build',
+  websiteBuildPath: process.env.WEBSITE_BUILD_PATH || '../website/build',
   skipWebsiteDeployment: skipWebsiteDeployment,
   env: {
     account: '680511694845',

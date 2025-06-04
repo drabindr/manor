@@ -135,7 +135,7 @@ export class ManorWebsiteStack extends cdk.Stack {
     // Use configurable path to support both local and CI environments
     // Skip deployment if explicitly requested (for CI/CD pipelines)
     if (!props.skipWebsiteDeployment) {
-      const websiteBuildPath = props.websiteBuildPath || '../veedu-website/build';
+      const websiteBuildPath = props.websiteBuildPath || '../website/build';
       const websiteDeployment = new s3deploy.BucketDeployment(this, 'VeeduWebsiteDeployment', {
         sources: [s3deploy.Source.asset(websiteBuildPath)],
         destinationBucket: this.websiteBucket,

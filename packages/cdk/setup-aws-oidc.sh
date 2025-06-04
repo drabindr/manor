@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "🚀 Casa Guard AWS OIDC Setup Script"
-echo "===================================="
+echo "🚀 Manor AWS OIDC Setup Script"
+echo "================================"
 echo ""
 
 # Get AWS account ID
@@ -61,7 +61,7 @@ cat > github-actions-trust-policy.json << EOF
                     "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                 },
                 "StringLike": {
-                    "token.actions.githubusercontent.com:sub": "repo:drabindr/veedu-cdk:*"
+                    "token.actions.githubusercontent.com:sub": "repo:drabindr/manor:*"
                 }
             }
         }
@@ -97,7 +97,7 @@ else
     aws iam create-role \
         --role-name GitHubActionsRole \
         --assume-role-policy-document file://github-actions-trust-policy.json \
-        --description "Role for GitHub Actions to deploy Casa Guard infrastructure"
+        --description "Role for GitHub Actions to deploy Manor infrastructure"
     
     if [ $? -eq 0 ]; then
         echo "✅ GitHubActionsRole created successfully"
@@ -185,7 +185,7 @@ echo "2. Production deployment:"
 echo "   git checkout main && git push origin main"
 echo ""
 echo "3. Monitor deployment:"
-echo "   https://github.com/drabindr/veedu-cdk/actions"
+echo "   https://github.com/drabindr/manor/actions"
 echo ""
 
 # Cleanup

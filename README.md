@@ -35,6 +35,14 @@ manor/
 - Node.js (≥18.0.0)
 - npm (≥9.0.0)
 - AWS CLI configured (for CDK deployments)
+- CDK CLI (`npm install -g aws-cdk`)
+- OpenAI API key (for AI features)
+
+### 🚀 One-Command Setup
+```bash
+# Set up complete CI/CD deployment pipeline
+./setup-deployment.sh
+```
 
 ### Installation
 ```bash
@@ -61,11 +69,25 @@ npm run dev
 npm run test
 ```
 
-### Deployment
+### 🚀 Deployment
+
+**Automated (Recommended):**
+- Push to `main` branch triggers automatic deployment via GitHub Actions
+- Monitor: https://github.com/drabindr/manor/actions
+
+**Manual:**
 ```bash
 # Deploy infrastructure
 npm run deploy
 ```
+
+**Setup CI/CD Pipeline:**
+```bash
+# Run the automated setup script
+./setup-deployment.sh
+```
+
+For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ## Workspace Scripts
 
@@ -133,10 +155,35 @@ OPENAI_API_KEY=your_openai_key  # For AI features
 
 ## CI/CD
 
-GitHub Actions workflows are configured for:
-- Automated testing on pull requests
-- Building and deployment on merge to main
-- Security scanning and dependency updates
+Automated CI/CD pipeline with GitHub Actions:
+- ✅ Automated testing on pull requests  
+- ✅ Building and deployment on merge to main
+- ✅ Security scanning and dependency updates
+- ✅ AWS OIDC authentication (no access keys)
+
+**Setup**: Run `./setup-deployment.sh` for automated configuration.
+
+## 📚 Documentation
+
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment setup guide
+- **[CI/CD Pipeline](.github/workflows/ci.yml)** - GitHub Actions workflow
+- **[Setup Script](setup-deployment.sh)** - Automated deployment configuration
+
+## 🔧 Troubleshooting
+
+**Quick fixes:**
+```bash
+# Update CDK CLI
+npm install -g aws-cdk@latest
+
+# Bootstrap CDK
+cdk bootstrap aws://ACCOUNT_ID/us-east-1
+
+# Check GitHub Actions
+gh run list
+```
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed troubleshooting.
 
 ## License
 

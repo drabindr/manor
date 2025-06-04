@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '18'
@@ -46,6 +47,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install lambda dependencies
+        run: |
+          cd packages/cdk/lambda
+          npm ci
+
       - name: Build packages
         run: npm run build
 
@@ -56,6 +62,7 @@ jobs:
           path: |
             packages/website/build/
             packages/cdk/dist/
+            packages/cdk/lambda/node_modules/
           retention-days: 7
 
   deploy:
@@ -64,6 +71,11 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
+    
+    permissions:
+      contents: read
+      id-token: write  # Required for AWS OIDC authentication
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,8 +89,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Deploy-Manor
           aws-region: us-east-1
 
       - name: Install dependencies
@@ -90,13 +102,97 @@ jobs:
           name: build-artifacts
 
       - name: Deploy infrastructure
-        run: npm run deploy
+        run: |
+          echo "🚀 Deploying Manor infrastructure stacks..."
+          npm run deploy:infrastructure
+          echo "✅ Infrastructure deployment complete"
         working-directory: packages/cdk
         env:
-          SKIP_PREBUILD: true
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: us-east-1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Extract CDK outputs and deploy website
+        run: |
+          echo "📤 Extracting CDK outputs for website configuration..."
+          
+          # Get authentication configuration from CDK outputs
+          USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name CasaAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+          USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks --stack-name CasaAuthStack --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text)
+          IDENTITY_POOL_ID=$(aws cloudformation describe-stacks --stack-name CasaAuthStack --query "Stacks[0].Outputs[?OutputKey=='IdentityPoolId'].OutputValue" --output text)
+          AUTH_DOMAIN=$(aws cloudformation describe-stacks --stack-name CasaAuthStack --query "Stacks[0].Outputs[?OutputKey=='AuthDomain'].OutputValue" --output text)
+          
+          # Get API URLs from CDK outputs
+          WEBSOCKET_URL=$(aws cloudformation describe-stacks --stack-name CasaGuardCdkStack --query "Stacks[0].Outputs[?OutputKey=='WebSocketURL'].OutputValue" --output text)
+          API_GATEWAY_URL=$(aws cloudformation describe-stacks --stack-name CasaIntegrationsStack --query "Stacks[0].Outputs[?OutputKey=='IntegrationsApiUrl'].OutputValue" --output text)
+          
+          echo "🔧 Extracted configuration values:"
+          echo "USER_POOL_ID: $USER_POOL_ID"
+          echo "USER_POOL_CLIENT_ID: $USER_POOL_CLIENT_ID"
+          echo "IDENTITY_POOL_ID: $IDENTITY_POOL_ID"
+          echo "AUTH_DOMAIN: $AUTH_DOMAIN"
+          echo "WEBSOCKET_URL: $WEBSOCKET_URL"
+          echo "API_GATEWAY_URL: $API_GATEWAY_URL"
+          
+          echo "🏗️ Building website with production configuration..."
+          cd packages/website
+          
+          # Create production environment file with CDK outputs
+          cat > .env.production << 'EOF'
+          # Manor Authentication Configuration
+          # Generated from CDK deployment
+          REACT_APP_USER_POOL_ID=${USER_POOL_ID}
+          REACT_APP_USER_POOL_CLIENT_ID=${USER_POOL_CLIENT_ID}
+          REACT_APP_IDENTITY_POOL_ID=${IDENTITY_POOL_ID}
+          REACT_APP_AUTH_DOMAIN=${AUTH_DOMAIN}
+          REACT_APP_AWS_REGION=us-east-1
+          
+          # API Configuration
+          REACT_APP_API_GATEWAY_URL=${API_GATEWAY_URL}
+          REACT_APP_WEBSOCKET_URL=${WEBSOCKET_URL}
+          
+          # Other Configuration
+          GENERATE_SOURCEMAP=false
+          EOF
+          
+          # Replace variables in the env file
+          sed -i "s/\${USER_POOL_ID}/$USER_POOL_ID/g" .env.production
+          sed -i "s/\${USER_POOL_CLIENT_ID}/$USER_POOL_CLIENT_ID/g" .env.production
+          sed -i "s/\${IDENTITY_POOL_ID}/$IDENTITY_POOL_ID/g" .env.production
+          sed -i "s/\${AUTH_DOMAIN}/$AUTH_DOMAIN/g" .env.production
+          sed -i "s/\${API_GATEWAY_URL}/$API_GATEWAY_URL/g" .env.production
+          sed -i "s/\${WEBSOCKET_URL}/$WEBSOCKET_URL/g" .env.production
+          
+          echo "📋 Generated .env.production:"
+          cat .env.production
+          
+          # Build the website with production environment
+          npm run build:production
+          
+          # Verify build directory was created
+          if [ -d "build" ]; then
+            echo "✅ Website build successful! Build directory contents:"
+            ls -la build/
+          else
+            echo "❌ Error: Build directory not created"
+            exit 1
+          fi
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Deploy website stack
+        run: |
+          echo "🌐 Deploying Manor website to S3 and CloudFront..."
+          
+          # Deploy the website stack with the built content
+          npm run deploy:website:ci
+          
+          echo "✅ Website deployment complete!"
+        working-directory: packages/cdk
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: us-east-1
+          AWS_DEFAULT_REGION: us-east-1
 
   security:
     name: Security Scan

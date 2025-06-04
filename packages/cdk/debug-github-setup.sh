@@ -40,8 +40,8 @@ echo "🚀 Recommended GitHub Actions Setup:"
 echo "======================================"
 
 # Determine the best setup
-if [ -f "package.json" ] && [ -d "../veedu-website" ]; then
-    echo "SETUP TYPE: Separate Repositories (veedu-cdk + veedu-website)"
+if [ -f "package.json" ] && [ -d "../website" ]; then
+    echo "SETUP TYPE: Monorepo (manor with website + cdk packages)"
     echo ""
     echo "✅ Use the updated deploy.yml workflow which:"
     echo "   1. Checks out veedu-cdk repository (main)"
@@ -106,7 +106,7 @@ echo ""
 echo "⚡ Quick Test Commands:"
 echo "======================="
 echo "Test CDK synthesis: npx cdk synth"
-echo "Test website build: cd ../veedu-website && npm run build"
+echo "Test website build: cd ../website && npm run build"
 echo "Check GitHub secrets: gh secret list (requires gh cli)"
 
 echo ""

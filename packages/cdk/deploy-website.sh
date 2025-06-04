@@ -8,12 +8,12 @@ echo "=================================="
 
 # Change to website directory and build
 echo "📦 Building website..."
-cd ../veedu-website
+cd ../website
 npm run build:production
 
 # Change back to CDK and deploy
 echo "☁️ Deploying infrastructure and content..."
-cd ../veedu-cdk
+cd ../cdk
 npm run deploy:website
 
 echo "✅ Deployment complete!"
