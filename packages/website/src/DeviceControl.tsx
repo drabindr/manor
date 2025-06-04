@@ -68,10 +68,10 @@ const getTimeBasedPriorityDevices = () => {
       suggested: ["Bathroom", "Kitchen"]
     };
   } else if (hour >= 11 && hour < 17) {
-    // Afternoon: Office lights, kitchen
+    // Afternoon: Kitchen, LG appliances (lights less relevant when not dark)
     return {
-      essential: ["Office", "Office 2", "Office 3", "Coffee machine"],
-      suggested: ["Office", "Kitchen"]
+      essential: ["Coffee machine"],
+      suggested: ["Kitchen"]
     };
   } else if (hour >= 17 && hour < 22) {
     // Evening: Outdoor lights, kitchen, bedroom
@@ -112,9 +112,9 @@ const getTimeBasedRoomOrder = () => {
   if (hour >= 6 && hour < 11) {
     return ["Kitchen", "Bathroom", "Bedroom", "Office", "Outdoor", "Garage", "Closet", "LukaRoom"];
   }
-  // Afternoon/Work hours (11 AM - 5 PM): Prioritize Office, Kitchen
+  // Afternoon/Work hours (11 AM - 5 PM): Prioritize Kitchen, Bathroom (lights less relevant when not dark)
   else if (hour >= 11 && hour < 17) {
-    return ["Office", "Kitchen", "Outdoor", "Bathroom", "Bedroom", "Garage", "Closet", "LukaRoom"];
+    return ["Kitchen", "Bathroom", "Bedroom", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
   }
   // Evening (5 PM - 10 PM): Prioritize Kitchen, Outdoor, Bedroom
   else if (hour >= 17 && hour < 22) {
@@ -133,7 +133,7 @@ const getTimeBasedPrompt = () => {
   if (hour >= 6 && hour < 11) {
     return "☀️ Good morning! Start your day with coffee and lights.";
   } else if (hour >= 11 && hour < 17) {
-    return "🏢 Afternoon productivity. Optimize your workspace lighting.";
+    return "🏠 Afternoon focus. Manage appliances and essential devices.";
   } else if (hour >= 17 && hour < 22) {
     return "🌅 Evening time. Set the mood with outdoor and ambient lights.";
   } else {
@@ -145,6 +145,14 @@ const getTimeBasedPrompt = () => {
 const shouldGarageDoorBeFirst = () => {
   const hour = new Date().getHours();
   return hour >= 6 && hour <= 22; // Show at top 6 AM to 10 PM, bottom otherwise
+};
+
+// Check if LG appliances should be prioritized (when lights are less relevant)
+const shouldLGAppliancesBePrioritized = () => {
+  const hour = new Date().getHours();
+  // During afternoon (11 AM - 5 PM) when it's likely not dark outside,
+  // LG appliances like washing machines are more contextually relevant than lights
+  return hour >= 11 && hour < 17;
 };
 
 const DeviceControl: React.FC = () => {
@@ -166,6 +174,9 @@ const DeviceControl: React.FC = () => {
   
   // Check if garage door should be positioned first (daytime) or last (nighttime)
   const garageDoorFirst = shouldGarageDoorBeFirst();
+  
+  // Check if LG appliances should be prioritized
+  const lgAppliancesPrioritized = shouldLGAppliancesBePrioritized();
   
   // Get time-based priorities and room order
   const timeBasedPriorities = getTimeBasedPriorityDevices();
@@ -457,6 +468,13 @@ const DeviceControl: React.FC = () => {
           </div>
         )}
         
+        {/* LG ThinQ Appliances Component - Prioritized during afternoon (11 AM - 5 PM) when lights are less relevant */}
+        {lgAppliancesPrioritized && (
+          <div className="col-span-full px-2 sm:px-4">
+            <LGAppliances />
+          </div>
+        )}
+        
         {(() => {
           const roomsWithData = roomOrder.map((groupName) => {
             const groupLights = getLightsByGroup(groupName);
@@ -561,10 +579,12 @@ const DeviceControl: React.FC = () => {
         )}
       </div>
     
-      {/* LG ThinQ Appliances Component - Mobile optimized */}
-      <div className="px-2 sm:px-4 pb-4">
-        <LGAppliances />
-      </div>
+      {/* LG ThinQ Appliances Component - Mobile optimized - Show at bottom when not prioritized */}
+      {!lgAppliancesPrioritized && (
+        <div className="px-2 sm:px-4 pb-4">
+          <LGAppliances />
+        </div>
+      )}
     </div>
   );
 };
