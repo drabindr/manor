@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AlarmControls from '../AlarmControls';
 import UserProfile from './UserProfile';
+import HouseDropdown from './HouseDropdown';
 import { useNotifications } from './NotificationsProvider';
 
 interface AppHeaderProps {
@@ -60,7 +61,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       }}
     >
       <div 
-        className="h-16 flex items-center justify-between px-4"
+        className="h-16 flex items-center justify-between px-2 sm:px-4"
         style={{
           // Move content down slightly on iOS
           marginTop: isIOS ? "8px" : "0px"
@@ -69,14 +70,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${onlineIndicatorColor} shadow-lg shadow-teal-500/20 ring-2 ring-black/20`} />
-            <span className="veedu-text text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm">
-              720 Front
-            </span>
+            <HouseDropdown />
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <div
-            className={`text-sm font-bold ${getArmModeColor()} mr-1 px-2 py-0.5 rounded-full bg-gray-900/50 border border-gray-800`}
+            className={`text-xs sm:text-sm font-bold ${getArmModeColor()} mr-1 px-2 py-0.5 rounded-full bg-gray-900/50 border border-gray-800`}
           >
             {getArmModeDisplay()}
           </div>
