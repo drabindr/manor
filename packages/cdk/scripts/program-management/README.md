@@ -1,6 +1,6 @@
 # Program Management Scripts
 
-This directory contains scripts for managing and deploying programs in the Veedu CDK project.
+This directory contains scripts for managing and deploying programs in the Manor CDK project.
 
 ## Scripts
 
@@ -150,7 +150,7 @@ To add support for new programs:
 
 ## Integration with CDK
 
-These scripts are designed to work seamlessly with the Veedu CDK project structure:
+These scripts are designed to work seamlessly with the Manor CDK project structure:
 - All paths are relative to the CDK root
 - Scripts can be called from any directory
 - Compatible with CDK deployment workflows
