@@ -12,7 +12,21 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          // Split large video library
           vidstack: ['@vidstack/react'],
+          // Split AWS SDK into separate chunks
+          'aws-sdk-core': ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
+          'aws-sdk-cognito': ['@aws-sdk/client-cognito-identity', '@aws-sdk/client-cognito-identity-provider'],
+          'aws-sdk-s3': ['@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner'],
+          'aws-sdk-credentials': ['@aws-sdk/credential-provider-cognito-identity', '@aws-sdk/credential-providers'],
+          // Split icon libraries
+          'icons': ['@iconscout/react-unicons', '@iconscout/react-unicons-solid'],
+          // Split React ecosystem
+          'react-vendor': ['react', 'react-dom'],
+          'react-router': ['react-router-dom'],
+          // Split other heavy dependencies
+          'axios': ['axios'],
+          'video-libs': ['hls.js'],
         },
       },
     },

@@ -172,6 +172,8 @@ const LGDeviceCard = memo(({
             alt={device.deviceType}
             className="w-7 h-7 object-contain opacity-90 transition-opacity duration-300"
             onError={handleImgError}
+            loading="lazy"
+            decoding="async"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -587,15 +589,42 @@ const LGAppliances: React.FC = () => {
     fetchLGDevices(true);
   }, []);
 
-  // Separate effect for adaptive polling
+  // Separate effect for adaptive polling with visibility optimization
   useEffect(() => {
     if (lgLoading) return; // Don't start polling until initial load is complete
     
-    const timeoutId = setTimeout(() => {
-      fetchLGDevices(false);
-    }, currentPollingInterval);
+    // Check if page is visible - pause polling when page is hidden
+    const isVisible = () => !document.hidden;
+    
+    const scheduleNext = () => {
+      if (isVisible()) {
+        const timeoutId = setTimeout(() => {
+          fetchLGDevices(false);
+        }, currentPollingInterval);
+        return timeoutId;
+      } else {
+        // If page is hidden, check visibility more frequently but don't poll data
+        const timeoutId = setTimeout(scheduleNext, 5000);
+        return timeoutId;
+      }
+    };
+    
+    const timeoutId = scheduleNext();
+    
+    // Listen for visibility changes
+    const handleVisibilityChange = () => {
+      if (isVisible()) {
+        // Resume polling immediately when page becomes visible
+        fetchLGDevices(false);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [currentPollingInterval, lgLoading]); // Removed lgStatus to prevent infinite loops
 
   return (

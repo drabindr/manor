@@ -488,7 +488,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         {/* Nest Logo (Top Right) */}
         <div className="absolute top-3 right-3 z-10">
           <div className="bg-black/30 rounded-full p-1.5 backdrop-blur-sm">
-            <img src="/nest.svg" alt="Nest" className="h-6 w-6 opacity-80 hover:opacity-100 transition-opacity duration-200" />
+            <img src="/nest.svg" alt="Nest" className="h-6 w-6 opacity-80 hover:opacity-100 transition-opacity duration-200" loading="lazy" decoding="async" />
           </div>
         </div>
         
@@ -803,6 +803,8 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               src="/airthings.svg" 
               alt="Airthings"
               className="h-5 w-auto opacity-70"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           

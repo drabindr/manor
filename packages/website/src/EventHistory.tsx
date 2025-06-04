@@ -175,7 +175,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
       [refreshData]
     );
 
-    const collapseEvents = (allEvents: Event[]): Event[] => {
+    const collapseEvents = useCallback((allEvents: Event[]): Event[] => {
       const collapsed: Event[] = [];
       const reversed = [...allEvents].reverse();
 
@@ -232,9 +232,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
       }
 
       return collapsed.reverse();
-    };
+    }, []); // Empty dependency array since it doesn't depend on any values
 
-    const collapsedEvents = useMemo(() => collapseEvents(events), [events]);
+    const collapsedEvents = useMemo(() => collapseEvents(events), [events, collapseEvents]);
 
     // Group events by day
     const eventsByDay = useMemo(() => {
