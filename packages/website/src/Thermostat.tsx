@@ -161,10 +161,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const [isTemperatureChanging, setIsTemperatureChanging] = useState(false);
   const [ecoModeActive, setEcoModeActive] = useState(false);
   
-  // New state for enhanced interactions
-  const [selectedSetpoint, setSelectedSetpoint] = useState<'heat' | 'cool' | 'single' | null>(null);
+  // Enhanced UI state for dial interaction
   const [isDragging, setIsDragging] = useState(false);
-  const [isDialActive, setIsDialActive] = useState(false);
+  const [selectedSetpoint, setSelectedSetpoint] = useState<'heat' | 'cool' | 'single' | null>(null);
+  const [hoverTemp, setHoverTemp] = useState<number | null>(null);
   const [pendingChanges, setPendingChanges] = useState(false);
 
   /**
@@ -306,7 +306,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   }, [onLoaded]);
 
   /**
-   * Keep local setpoints in sync with fetched data and update eco mode
+   * Keep local setpoints in sync with fetched data
    */
   useEffect(() => {
     if (thermostatData?.setpoint !== undefined && thermostatData.setpoint !== null) {
@@ -318,20 +318,52 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
     if (thermostatData?.coolCelsius !== undefined && thermostatData.coolCelsius !== null) {
       setLocalCoolSetpoint(thermostatData.coolCelsius);
     }
-    // Update eco mode based on backend data
-    if (thermostatData?.ecoMode) {
-      setEcoModeActive(thermostatData.ecoMode !== "OFF");
-    }
-  }, [thermostatData?.setpoint, thermostatData?.heatCelsius, thermostatData?.coolCelsius, thermostatData?.ecoMode]);
+  }, [thermostatData?.setpoint, thermostatData?.heatCelsius, thermostatData?.coolCelsius]);
 
   /**
-   * Handler to set the thermostat temperature with backend integration
+   * Global mouse event handling for dial interaction
+   */
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleDialMouseUp();
+      }
+    };
+
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      if (isDragging) {
+        // Convert to React.MouseEvent-like object for consistency
+        const syntheticEvent = {
+          currentTarget: document.querySelector('svg'),
+          clientX: event.clientX,
+          clientY: event.clientY,
+          preventDefault: () => event.preventDefault(),
+        } as any;
+        
+        if (syntheticEvent.currentTarget) {
+          handleDialMouseMove(syntheticEvent);
+        }
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+    }
+
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [isDragging, selectedSetpoint, localHeatSetpoint, localCoolSetpoint, localSetpoint]);
+
+  /**
+   * Enhanced temperature setting functions with backend integration
    */
   const setThermostatTemperature = async (newSetpoint: number) => {
     console.log("Setting new setpoint to:", newSetpoint);
     setLocalSetpoint(newSetpoint);
     setPendingChanges(true);
-    setIsTemperatureChanging(true);
     
     try {
       const response = await fetch(
@@ -342,144 +374,121 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           body: JSON.stringify({
             data: {
               deviceId,
-              command: {
-                "sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat": {
-                  heatCelsius: newSetpoint
-                }
-              }
-            }
-          })
+              mode: thermostatData?.mode,
+              setpoint: newSetpoint,
+            },
+          }),
         }
       );
       
       if (response.ok) {
+        console.log("Temperature setpoint updated successfully");
         // Refresh data after successful update
-        setTimeout(() => {
-          fetchThermostatData();
-          setPendingChanges(false);
-        }, 1000);
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update temperature setpoint");
       }
     } catch (error) {
-      console.error("Error setting temperature:", error);
-      setPendingChanges(false);
+      console.error("Error updating temperature setpoint:", error);
     } finally {
-      setTimeout(() => setIsTemperatureChanging(false), 500);
+      setPendingChanges(false);
     }
   };
 
   /**
-   * Handler to adjust heat setpoint in HEATCOOL mode with backend integration
+   * Enhanced heat setpoint adjustment with backend integration
    */
   const adjustHeatSetpoint = async (delta: number) => {
-    if (localHeatSetpoint !== null && localCoolSetpoint !== null) {
-      const newHeatSetpoint = localHeatSetpoint + delta;
-      // Ensure heat setpoint doesn't exceed cool setpoint minus 1 degree
-      const maxHeatSetpoint = localCoolSetpoint - 1;
-      const validHeatSetpoint = Math.min(newHeatSetpoint, maxHeatSetpoint);
-      console.log("Setting new heat setpoint to:", validHeatSetpoint);
-      setLocalHeatSetpoint(validHeatSetpoint);
-      setPendingChanges(true);
-      setIsTemperatureChanging(true);
-      
-      try {
-        const response = await fetch(
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
-          {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              data: {
-                deviceId,
-                command: {
-                  "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange": {
-                    heatCelsius: validHeatSetpoint,
-                    coolCelsius: localCoolSetpoint
-                  }
-                }
-              }
-            })
-          }
-        );
-        
-        if (response.ok) {
-          setTimeout(() => {
-            fetchThermostatData();
-            setPendingChanges(false);
-          }, 1000);
+    if (localHeatSetpoint === null) return;
+    
+    const newHeatSetpoint = localHeatSetpoint + delta;
+    
+    // Ensure heat setpoint doesn't exceed cool setpoint minus 1 degree
+    const maxHeatSetpoint = localCoolSetpoint !== null ? localCoolSetpoint - 1 : newHeatSetpoint;
+    const validHeatSetpoint = Math.min(Math.max(newHeatSetpoint, 10), Math.min(maxHeatSetpoint, 30));
+    
+    console.log("Setting new heat setpoint to:", validHeatSetpoint);
+    setLocalHeatSetpoint(validHeatSetpoint);
+    setPendingChanges(true);
+    
+    try {
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              mode: "HEATCOOL",
+              heatSetpoint: validHeatSetpoint,
+              coolSetpoint: localCoolSetpoint,
+            },
+          }),
         }
-      } catch (error) {
-        console.error("Error setting heat setpoint:", error);
-        setPendingChanges(false);
-      } finally {
-        setTimeout(() => setIsTemperatureChanging(false), 500);
+      );
+      
+      if (response.ok) {
+        console.log("Heat setpoint updated successfully");
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update heat setpoint");
       }
-    } else if (localHeatSetpoint !== null) {
-      // If only heat setpoint is available, adjust it directly
-      const newHeatSetpoint = localHeatSetpoint + delta;
-      console.log("Setting new heat setpoint to:", newHeatSetpoint);
-      setLocalHeatSetpoint(newHeatSetpoint);
-      // Call API for single heat setpoint
-      setPendingChanges(true);
+    } catch (error) {
+      console.error("Error updating heat setpoint:", error);
+    } finally {
+      setPendingChanges(false);
     }
   };
 
   /**
-   * Handler to adjust cool setpoint in HEATCOOL mode with backend integration
+   * Enhanced cool setpoint adjustment with backend integration
    */
   const adjustCoolSetpoint = async (delta: number) => {
-    if (localCoolSetpoint !== null && localHeatSetpoint !== null) {
-      const newCoolSetpoint = localCoolSetpoint + delta;
-      // Ensure cool setpoint doesn't go below heat setpoint plus 1 degree
-      const minCoolSetpoint = localHeatSetpoint + 1;
-      const validCoolSetpoint = Math.max(newCoolSetpoint, minCoolSetpoint);
-      console.log("Setting new cool setpoint to:", validCoolSetpoint);
-      setLocalCoolSetpoint(validCoolSetpoint);
-      setPendingChanges(true);
-      setIsTemperatureChanging(true);
-      
-      try {
-        const response = await fetch(
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              data: {
-                deviceId,
-                command: {
-                  "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange": {
-                    heatCelsius: localHeatSetpoint,
-                    coolCelsius: validCoolSetpoint
-                  }
-                }
-              }
-            })
-          }
-        );
-        
-        if (response.ok) {
-          setTimeout(() => {
-            fetchThermostatData();
-            setPendingChanges(false);
-          }, 1000);
+    if (localCoolSetpoint === null) return;
+    
+    const newCoolSetpoint = localCoolSetpoint + delta;
+    
+    // Ensure cool setpoint doesn't go below heat setpoint plus 1 degree
+    const minCoolSetpoint = localHeatSetpoint !== null ? localHeatSetpoint + 1 : newCoolSetpoint;
+    const validCoolSetpoint = Math.max(Math.min(newCoolSetpoint, 30), Math.max(minCoolSetpoint, 10));
+    
+    console.log("Setting new cool setpoint to:", validCoolSetpoint);
+    setLocalCoolSetpoint(validCoolSetpoint);
+    setPendingChanges(true);
+    
+    try {
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              mode: "HEATCOOL",
+              heatSetpoint: localHeatSetpoint,
+              coolSetpoint: validCoolSetpoint,
+            },
+          }),
         }
-      } catch (error) {
-        console.error("Error setting cool setpoint:", error);
-        setPendingChanges(false);
-      } finally {
-        setTimeout(() => setIsTemperatureChanging(false), 500);
+      );
+      
+      if (response.ok) {
+        console.log("Cool setpoint updated successfully");
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update cool setpoint");
       }
-    } else if (localCoolSetpoint !== null) {
-      // If only cool setpoint is available, adjust it directly
-      const newCoolSetpoint = localCoolSetpoint + delta;
-      console.log("Setting new cool setpoint to:", newCoolSetpoint);
-      setLocalCoolSetpoint(newCoolSetpoint);
-      setPendingChanges(true);
+    } catch (error) {
+      console.error("Error updating cool setpoint:", error);
+    } finally {
+      setPendingChanges(false);
     }
   };
 
   /**
-   * Handler to change the thermostat mode with backend integration
+   * Enhanced mode change with backend integration
    */
   const changeThermostatMode = async (newMode: string) => {
     console.log("Changing thermostat mode to", newMode);
@@ -495,109 +504,158 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           body: JSON.stringify({
             data: {
               deviceId,
-              command: {
-                "sdm.devices.commands.ThermostatMode.SetMode": {
-                  mode: newMode
-                }
-              }
-            }
-          })
+              mode: newMode,
+            },
+          }),
         }
       );
       
       if (response.ok) {
-        setTimeout(() => {
-          fetchThermostatData();
-          setPendingChanges(false);
-        }, 1000);
+        console.log("Thermostat mode updated successfully");
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update thermostat mode");
       }
     } catch (error) {
-      console.error("Error changing mode:", error);
+      console.error("Error updating thermostat mode:", error);
+    } finally {
       setPendingChanges(false);
     }
   };
 
   /**
-   * Interactive dial control - converts mouse position to temperature
+   * Interactive dial functions for temperature selection
    */
-  const handleDialInteraction = (event: React.MouseEvent<SVGElement>) => {
-    if (!isDragging && !isDialActive) return;
-    
-    const svg = event.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const x = event.clientX - rect.left - centerX;
-    const y = event.clientY - rect.top - centerY;
-    
-    // Calculate angle from center
-    let angle = Math.atan2(y, x) * 180 / Math.PI;
-    
-    // Normalize angle to 0-360 range
-    if (angle < 0) angle += 360;
-    
-    // Convert to temperature range (270 degrees of rotation, starting at -135)
-    // Adjust for our dial's orientation
-    let dialAngle = angle + 135;
-    if (dialAngle > 360) dialAngle -= 360;
-    
-    // Ensure angle is within our 270-degree range
-    if (dialAngle > 270) return;
-    
-    // Convert angle to temperature
-    const tempPercent = dialAngle / 270;
-    const newTemp = minTemp + tempPercent * (maxTemp - minTemp);
-    const roundedTemp = Math.round(newTemp * 2) / 2; // Round to nearest 0.5
-    
-    // Update appropriate setpoint based on selection
-    if (thermostatData?.mode === "HEATCOOL") {
-      if (selectedSetpoint === 'heat' && localCoolSetpoint !== null) {
-        const maxHeat = localCoolSetpoint - 1;
-        const validTemp = Math.min(roundedTemp, maxHeat);
-        setLocalHeatSetpoint(validTemp);
-      } else if (selectedSetpoint === 'cool' && localHeatSetpoint !== null) {
-        const minCool = localHeatSetpoint + 1;
-        const validTemp = Math.max(roundedTemp, minCool);
-        setLocalCoolSetpoint(validTemp);
-      }
-    } else {
-      setLocalSetpoint(roundedTemp);
-    }
+  const getTemperatureFromAngle = (angle: number): number => {
+    // Convert angle to temperature (angle range: -135° to 135°, temp range: 10°C to 30°C)
+    const normalizedAngle = Math.max(-135, Math.min(135, angle));
+    const temp = ((normalizedAngle + 135) / 270) * (maxTemp - minTemp) + minTemp;
+    return Math.round(temp * 2) / 2; // Round to nearest 0.5
   };
 
-  /**
-   * Start dial interaction
-   */
-  const startDialInteraction = () => {
-    setIsDialActive(true);
+  const getAngleFromEvent = (event: React.MouseEvent, svgRect: DOMRect): number => {
+    const clientX = event.clientX;
+    const clientY = event.clientY;
+    
+    const svgCenterX = svgRect.left + svgRect.width / 2;
+    const svgCenterY = svgRect.top + svgRect.height / 2;
+    
+    const deltaX = clientX - svgCenterX;
+    const deltaY = clientY - svgCenterY;
+    
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+    return angle;
+  };
+
+  const handleDialMouseDown = (event: React.MouseEvent) => {
+    const svgElement = (event.currentTarget as SVGElement);
+    const svgRect = svgElement.getBoundingClientRect();
+    const angle = getAngleFromEvent(event, svgRect);
+    const temp = getTemperatureFromAngle(angle);
+    
     setIsDragging(true);
     setIsTemperatureChanging(true);
-  };
-
-  /**
-   * End dial interaction and save changes
-   */
-  const endDialInteraction = async () => {
-    setIsDragging(false);
-    setIsDialActive(false);
     
+    // Determine which setpoint to adjust based on mode and proximity
     if (thermostatData?.mode === "HEATCOOL") {
-      if (selectedSetpoint === 'heat') {
-        await adjustHeatSetpoint(0); // This triggers the API call with current value
-      } else if (selectedSetpoint === 'cool') {
-        await adjustCoolSetpoint(0); // This triggers the API call with current value
+      const heatTemp = localHeatSetpoint || 20;
+      const coolTemp = localCoolSetpoint || 25;
+      const distToHeat = Math.abs(temp - heatTemp);
+      const distToCool = Math.abs(temp - coolTemp);
+      
+      if (distToHeat < distToCool) {
+        setSelectedSetpoint('heat');
+      } else {
+        setSelectedSetpoint('cool');
       }
     } else {
-      if (localSetpoint !== null) {
-        await setThermostatTemperature(localSetpoint);
-      }
+      setSelectedSetpoint('single');
     }
     
-    setTimeout(() => setIsTemperatureChanging(false), 300);
+    event.preventDefault();
+  };
+
+  const handleDialMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging) {
+      // Show hover temperature
+      const svgElement = (event.currentTarget as SVGElement);
+      const svgRect = svgElement.getBoundingClientRect();
+      const angle = getAngleFromEvent(event, svgRect);
+      const temp = getTemperatureFromAngle(angle);
+      setHoverTemp(temp);
+      return;
+    }
+
+    const svgElement = (event.currentTarget as SVGElement);
+    const svgRect = svgElement.getBoundingClientRect();
+    const angle = getAngleFromEvent(event, svgRect);
+    const temp = getTemperatureFromAngle(angle);
+
+    // Update appropriate setpoint based on selection
+    if (selectedSetpoint === 'heat') {
+      const maxHeat = localCoolSetpoint ? localCoolSetpoint - 1 : 30;
+      const validTemp = Math.min(Math.max(temp, 10), maxHeat);
+      setLocalHeatSetpoint(validTemp);
+    } else if (selectedSetpoint === 'cool') {
+      const minCool = localHeatSetpoint ? localHeatSetpoint + 1 : 10;
+      const validTemp = Math.max(Math.min(temp, 30), minCool);
+      setLocalCoolSetpoint(validTemp);
+    } else if (selectedSetpoint === 'single') {
+      const validTemp = Math.min(Math.max(temp, 10), 30);
+      setLocalSetpoint(validTemp);
+    }
+  };
+
+  const handleDialMouseUp = async () => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    setIsTemperatureChanging(false);
+    setSelectedSetpoint(null);
+    
+    // Send backend update based on what was changed
+    if (selectedSetpoint === 'heat' || selectedSetpoint === 'cool') {
+      setPendingChanges(true);
+      try {
+        const response = await fetch(
+          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              data: {
+                deviceId,
+                mode: "HEATCOOL",
+                heatSetpoint: localHeatSetpoint,
+                coolSetpoint: localCoolSetpoint,
+              },
+            }),
+          }
+        );
+        
+        if (response.ok) {
+          console.log("HEATCOOL setpoints updated successfully");
+          setTimeout(fetchThermostatData, 1000);
+        }
+      } catch (error) {
+        console.error("Error updating HEATCOOL setpoints:", error);
+      } finally {
+        setPendingChanges(false);
+      }
+    } else if (selectedSetpoint === 'single') {
+      await setThermostatTemperature(localSetpoint!);
+    }
+  };
+
+  const handleDialMouseLeave = () => {
+    setHoverTemp(null);
+    if (isDragging) {
+      handleDialMouseUp();
+    }
   };
 
   /**
-   * Toggle eco mode with backend integration
+   * Enhanced eco mode toggle with backend integration
    */
   const toggleEcoMode = async () => {
     console.log("Toggling eco mode");
@@ -613,30 +671,29 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           body: JSON.stringify({
             data: {
               deviceId,
-              command: {
-                "sdm.devices.commands.ThermostatEco.SetMode": {
-                  mode: ecoModeActive ? "OFF" : "MANUAL_ECO"
-                }
-              }
-            }
-          })
+              ecoMode: !ecoModeActive ? "MANUAL_ECO" : "OFF",
+            },
+          }),
         }
       );
       
       if (response.ok) {
-        setTimeout(() => {
-          fetchThermostatData();
-          setPendingChanges(false);
-        }, 1000);
+        console.log("Eco mode updated successfully");
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update eco mode");
+        setEcoModeActive(ecoModeActive); // Revert on failure
       }
     } catch (error) {
-      console.error("Error toggling eco mode:", error);
+      console.error("Error updating eco mode:", error);
+      setEcoModeActive(ecoModeActive); // Revert on failure
+    } finally {
       setPendingChanges(false);
     }
   };
 
   /**
-   * Toggle fan for a specified duration with backend integration
+   * Enhanced fan toggle with backend integration
    */
   const toggleFan = async (duration: number) => {
     console.log("Toggling fan with duration", duration, "seconds");
@@ -652,25 +709,21 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           body: JSON.stringify({
             data: {
               deviceId,
-              command: {
-                "sdm.devices.commands.Fan.SetTimer": {
-                  timerMode: duration > 0 ? "ON" : "OFF",
-                  duration: duration > 0 ? `${duration}s` : undefined
-                }
-              }
-            }
-          })
+              fanTimer: duration > 0 ? duration : null,
+            },
+          }),
         }
       );
       
       if (response.ok) {
-        setTimeout(() => {
-          fetchThermostatData();
-          setPendingChanges(false);
-        }, 1000);
+        console.log("Fan timer updated successfully");
+        setTimeout(fetchThermostatData, 1000);
+      } else {
+        console.error("Failed to update fan timer");
       }
     } catch (error) {
-      console.error("Error toggling fan:", error);
+      console.error("Error updating fan timer:", error);
+    } finally {
       setPendingChanges(false);
     }
   };
@@ -714,7 +767,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const xBaseRight = centerX + halfNeedle * Math.cos(setpointRad - Math.PI / 2);
   const yBaseRight = centerY + halfNeedle * Math.sin(setpointRad - Math.PI / 2);
 
-  // Generate tick marks with enhanced styling and selection states
+  // Generate tick marks with enhanced styling
   const ticks = useMemo(() => {
     const tickMarks = [];
     for (let t = minTemp; t <= maxTemp; t++) {
@@ -722,9 +775,8 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       const rad = (angle * Math.PI) / 180;
       const isLongTick = t % 5 === 0;
       
-      // Check if this tick represents a setpoint and determine selection state
+      // Check if this tick represents a setpoint
       let isSetpoint = false;
-      let isSelected = false;
       let tickColor = "#888";
       
       if (thermostatData?.mode === "HEATCOOL") {
@@ -733,37 +785,33 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         isSetpoint = isHeatSetpoint || isCoolSetpoint;
         
         if (isHeatSetpoint) {
-          tickColor = selectedSetpoint === 'heat' ? "#FF8844" : "#FF5500";
-          isSelected = selectedSetpoint === 'heat';
+          tickColor = "#FF5500";
         } else if (isCoolSetpoint) {
-          tickColor = selectedSetpoint === 'cool' ? "#44AAFF" : "#00A0FF";
-          isSelected = selectedSetpoint === 'cool';
+          tickColor = "#00A0FF";
         } else if (isLongTick) {
           tickColor = "#AAA";
         }
       } else {
         isSetpoint = t === Math.round(setpointTemp);
-        isSelected = selectedSetpoint === 'single';
         if (isSetpoint) {
           if (thermostatData?.mode === "HEAT") {
-            tickColor = isSelected ? "#FF8844" : "#FF5500";
+            tickColor = "#FF5500";
           } else if (thermostatData?.mode === "COOL") {
-            tickColor = isSelected ? "#44AAFF" : "#00A0FF";
+            tickColor = "#00A0FF";
           }
         } else if (isLongTick) {
           tickColor = "#AAA";
         }
       }
       
-      const tickLength = isSetpoint ? (isSelected ? 18 : 14) : isLongTick ? 12 : 6;
-      const strokeWidth = isSetpoint ? (isSelected ? 4 : 3) : isLongTick ? 2 : 1;
+      const tickLength = isLongTick ? 12 : isSetpoint ? 14 : 6;
       
       const x1 = centerX + radiusTicks * Math.cos(rad);
       const y1 = centerY + radiusTicks * Math.sin(rad);
       const x2 = centerX + (radiusTicks - tickLength) * Math.cos(rad);
       const y2 = centerY + (radiusTicks - tickLength) * Math.sin(rad);
       
-      // Add tick mark with enhanced selection state
+      // Add tick mark
       tickMarks.push(
         <line
           key={t}
@@ -772,10 +820,8 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           x2={x2}
           y2={y2}
           stroke={tickColor}
-          strokeWidth={strokeWidth}
+          strokeWidth={isSetpoint ? 3 : isLongTick ? 2 : 1}
           strokeLinecap="round"
-          className={`transition-all duration-200 ${isSetpoint ? 'drop-shadow-lg' : ''}`}
-          style={{ filter: isSelected ? `drop-shadow(0 0 6px ${tickColor})` : 'none' }}
         />
       );
       
@@ -793,7 +839,6 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             fill="#AAA"
             textAnchor="middle"
             alignmentBaseline="middle"
-            className="transition-colors duration-200"
           >
             {t}
           </text>
@@ -801,7 +846,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       }
     }
     return tickMarks;
-  }, [minTemp, maxTemp, setpointTemp, thermostatData?.mode, localHeatSetpoint, localCoolSetpoint, selectedSetpoint]);
+  }, [minTemp, maxTemp, setpointTemp, thermostatData?.mode, localHeatSetpoint, localCoolSetpoint]);
 
   // Calculate arc paths for the leaf indicator and active area
   const arcPath = (radius: number, startAngle: number, endAngle: number) => {
@@ -894,12 +939,12 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             height={height} 
             viewBox={`0 0 ${width} ${height}`} 
             className={`transform transition-all duration-300 cursor-pointer ${
-              isDialActive ? 'scale-105' : 'scale-95'
-            } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            onMouseDown={startDialInteraction}
-            onMouseMove={handleDialInteraction}
-            onMouseUp={endDialInteraction}
-            onMouseLeave={endDialInteraction}
+              isDragging ? 'scale-105' : 'scale-95 hover:scale-100'
+            } ${pendingChanges ? 'animate-pulse' : ''}`}
+            onMouseDown={handleDialMouseDown}
+            onMouseMove={handleDialMouseMove}
+            onMouseUp={handleDialMouseUp}
+            onMouseLeave={handleDialMouseLeave}
           >
             <defs>
               {/* Enhanced gradients for a more premium look */}
@@ -932,12 +977,24 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 <stop offset="50%" stopColor="#4DDF4D" />
                 <stop offset="100%" stopColor="#00A0FF" />
               </linearGradient>
+              <radialGradient id="selectedGradient" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#4DDF4D" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#4DDF4D" stopOpacity="0.2" />
+              </radialGradient>
               <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="5" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
+              <filter id="strongGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="8" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
               <filter id="softShadow">
                 <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.3" />
+              </filter>
+              <filter id="hoverGlow">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
             </defs>
             
@@ -953,15 +1010,67 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             {/* Inner bezel ring */}
             <circle cx={centerX} cy={centerY} r={radiusBezelInner + 2} fill="url(#bezelGradient)" />
             
-            {/* Black glass display */}
+            {/* Black glass display with selection feedback */}
             <circle 
               cx={centerX} 
               cy={centerY} 
               r={radiusBlackCircle} 
               fill="url(#innerGlassGradient)" 
               className="transition-all duration-300"
-              style={{ filter: isHvacActive ? 'brightness(1.2)' : 'none' }}
+              style={{ 
+                filter: isHvacActive ? 'brightness(1.2)' : isDragging ? 'brightness(1.1)' : 'none',
+                stroke: selectedSetpoint ? '#4DDF4D' : 'none',
+                strokeWidth: selectedSetpoint ? 2 : 0,
+                strokeOpacity: selectedSetpoint ? 0.6 : 0
+              }}
             />
+            
+            {/* Selection indicator overlay */}
+            {selectedSetpoint && (
+              <circle 
+                cx={centerX} 
+                cy={centerY} 
+                r={radiusBlackCircle - 5} 
+                fill="url(#selectedGradient)" 
+                className="animate-pulse"
+              />
+            )}
+            
+            {/* Hover temperature indicator */}
+            {hoverTemp !== null && !isDragging && (
+              <>
+                {(() => {
+                  const hoverAngle = ((hoverTemp - minTemp) / (maxTemp - minTemp)) * 270 - 135;
+                  const hoverRad = (hoverAngle * Math.PI) / 180;
+                  const hoverX = centerX + (radiusTicks - 15) * Math.cos(hoverRad);
+                  const hoverY = centerY + (radiusTicks - 15) * Math.sin(hoverRad);
+                  
+                  return (
+                    <g className="animate-pulse">
+                      <circle
+                        cx={hoverX}
+                        cy={hoverY}
+                        r="8"
+                        fill="#4DDF4D"
+                        fillOpacity="0.8"
+                        filter="url(#hoverGlow)"
+                      />
+                      <text
+                        x={hoverX}
+                        y={hoverY + 1}
+                        fontSize="8"
+                        fill="#000"
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        fontWeight="bold"
+                      >
+                        {hoverTemp}
+                      </text>
+                    </g>
+                  );
+                })()}
+              </>
+            )}
             
             {/* Subtle reflection on glass */}
             <ellipse 
@@ -1015,20 +1124,21 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             {/* Tick marks */}
             {ticks}
             
-            {/* Temperature needle(s) */}
+            {/* Temperature needle(s) with enhanced selection feedback */}
             {thermostatData?.mode === "HEATCOOL" && localHeatSetpoint !== null && localCoolSetpoint !== null ? (
               /* Dual needles for HEATCOOL mode */
-              <g className={`transition-transform duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''}`}>
+              <g className={`transition-all duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''}`}>
                 {/* Heat setpoint needle */}
-                <g>
+                <g className={selectedSetpoint === 'heat' ? 'scale-110' : ''}>
                   {(() => {
                     const heatRad = (heatAngle * Math.PI) / 180;
                     const xHeat = centerX + radiusTicks * Math.cos(heatRad);
                     const yHeat = centerY + radiusTicks * Math.sin(heatRad);
-                    const xHeatBaseLeft = centerX + (halfNeedle - 1) * Math.cos(heatRad + Math.PI / 2);
-                    const yHeatBaseLeft = centerY + (halfNeedle - 1) * Math.sin(heatRad + Math.PI / 2);
-                    const xHeatBaseRight = centerX + (halfNeedle - 1) * Math.cos(heatRad - Math.PI / 2);
-                    const yHeatBaseRight = centerY + (halfNeedle - 1) * Math.sin(heatRad - Math.PI / 2);
+                    const needleSize = selectedSetpoint === 'heat' ? halfNeedle + 1 : halfNeedle - 1;
+                    const xHeatBaseLeft = centerX + needleSize * Math.cos(heatRad + Math.PI / 2);
+                    const yHeatBaseLeft = centerY + needleSize * Math.sin(heatRad + Math.PI / 2);
+                    const xHeatBaseRight = centerX + needleSize * Math.cos(heatRad - Math.PI / 2);
+                    const yHeatBaseRight = centerY + needleSize * Math.sin(heatRad - Math.PI / 2);
                     
                     return (
                       <polygon
@@ -1036,21 +1146,24 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                         fill="#FF5500"
                         stroke="#222"
                         strokeWidth="0.5"
+                        filter={selectedSetpoint === 'heat' ? "url(#strongGlow)" : "none"}
+                        className="transition-all duration-200"
                       />
                     );
                   })()}
                 </g>
                 
                 {/* Cool setpoint needle */}
-                <g>
+                <g className={selectedSetpoint === 'cool' ? 'scale-110' : ''}>
                   {(() => {
                     const coolRad = (coolAngle * Math.PI) / 180;
                     const xCool = centerX + radiusTicks * Math.cos(coolRad);
                     const yCool = centerY + radiusTicks * Math.sin(coolRad);
-                    const xCoolBaseLeft = centerX + (halfNeedle - 1) * Math.cos(coolRad + Math.PI / 2);
-                    const yCoolBaseLeft = centerY + (halfNeedle - 1) * Math.sin(coolRad + Math.PI / 2);
-                    const xCoolBaseRight = centerX + (halfNeedle - 1) * Math.cos(coolRad - Math.PI / 2);
-                    const yCoolBaseRight = centerY + (halfNeedle - 1) * Math.sin(coolRad - Math.PI / 2);
+                    const needleSize = selectedSetpoint === 'cool' ? halfNeedle + 1 : halfNeedle - 1;
+                    const xCoolBaseLeft = centerX + needleSize * Math.cos(coolRad + Math.PI / 2);
+                    const yCoolBaseLeft = centerY + needleSize * Math.sin(coolRad + Math.PI / 2);
+                    const xCoolBaseRight = centerX + needleSize * Math.cos(coolRad - Math.PI / 2);
+                    const yCoolBaseRight = centerY + needleSize * Math.sin(coolRad - Math.PI / 2);
                     
                     return (
                       <polygon
@@ -1058,40 +1171,46 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                         fill="#00A0FF"
                         stroke="#222"
                         strokeWidth="0.5"
+                        filter={selectedSetpoint === 'cool' ? "url(#strongGlow)" : "none"}
+                        className="transition-all duration-200"
                       />
                     );
                   })()}
                 </g>
                 
-                {/* Central hub with dual color indicator */}
+                {/* Central hub with dual color indicator and selection feedback */}
                 <circle
                   cx={centerX}
                   cy={centerY}
-                  r={8}
+                  r={selectedSetpoint ? 10 : 8}
                   fill="url(#dualModeGradient)"
                   stroke="#222"
                   strokeWidth="0.5"
+                  filter={selectedSetpoint ? "url(#strongGlow)" : "none"}
+                  className="transition-all duration-200"
                 />
               </g>
             ) : (
-              /* Single needle for other modes */
+              /* Single needle for other modes with selection feedback */
               <g 
-                className={`transition-transform duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''}`}
-                style={{ filter: isTemperatureChanging ? "url(#glow)" : "none" }}
+                className={`transition-all duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''} ${selectedSetpoint === 'single' ? 'scale-110' : ''}`}
+                style={{ filter: isTemperatureChanging || selectedSetpoint === 'single' ? "url(#strongGlow)" : "none" }}
               >
                 <polygon
                   points={`${xSet},${ySet} ${xBaseLeft},${yBaseLeft} ${xBaseRight},${yBaseRight}`}
                   fill={getModeColor()}
                   stroke="#222"
                   strokeWidth="0.5"
+                  className="transition-all duration-200"
                 />
                 <circle
                   cx={centerX}
                   cy={centerY}
-                  r={8}
+                  r={selectedSetpoint === 'single' ? 10 : 8}
                   fill={getModeColor()}
                   stroke="#222"
                   strokeWidth="0.5"
+                  className="transition-all duration-200"
                 />
               </g>
             )}
@@ -1109,84 +1228,76 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             )}
           </svg>
           
-          {/* Inner Text (Current Temp, Humidity, Selection Controls) */}
+          {/* Enhanced Inner Text with Selection Feedback */}
           <div
-            className="absolute flex flex-col items-center justify-center text-white"
+            className="absolute flex flex-col items-center justify-center text-white pointer-events-none"
             style={{
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
             }}
           >
+            {/* Hover temperature display */}
+            {hoverTemp !== null && !isDragging && (
+              <div className="absolute -top-12 text-sm text-green-400 font-medium animate-pulse">
+                Set to {hoverTemp}°C
+              </div>
+            )}
+            
+            {/* Selection feedback */}
+            {selectedSetpoint && (
+              <div className="absolute -top-8 text-xs text-green-400 font-medium animate-pulse">
+                {selectedSetpoint === 'heat' ? 'Adjusting Heat' : 
+                 selectedSetpoint === 'cool' ? 'Adjusting Cool' : 
+                 'Adjusting Temperature'}
+              </div>
+            )}
+            
             {thermostatData?.mode === "HEATCOOL" ? (
-              /* Dual setpoint display with selection for HEATCOOL mode */
+              /* Enhanced dual setpoint display for HEATCOOL mode */
               <div className="flex flex-col items-center">
-                <div className="flex items-center space-x-3 text-2xl font-light tracking-tight mb-2">
-                  <button
-                    onClick={() => setSelectedSetpoint(selectedSetpoint === 'heat' ? null : 'heat')}
-                    className={`flex items-center transition-all duration-300 px-2 py-1 rounded-lg ${
-                      selectedSetpoint === 'heat' 
-                        ? 'bg-red-500/30 text-red-300 scale-110 shadow-lg shadow-red-500/25' 
-                        : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                    }`}
-                  >
-                    <UilFire size={18} className="mr-1" />
-                    <span>{thermostatData.heatCelsius !== null ? Math.round(thermostatData.heatCelsius) : "--"}°</span>
-                  </button>
+                <div className="flex items-center space-x-3 text-3xl font-light tracking-tight">
+                  <div className={`flex items-center transition-all duration-200 ${
+                    selectedSetpoint === 'heat' ? 'text-red-300 scale-110' : 'text-red-400'
+                  }`}>
+                    <UilFire size={20} className="mr-1" />
+                    <span>{localHeatSetpoint !== null ? Math.round(localHeatSetpoint) : "--"}°</span>
+                  </div>
                   <div className="text-gray-500">|</div>
-                  <button
-                    onClick={() => setSelectedSetpoint(selectedSetpoint === 'cool' ? null : 'cool')}
-                    className={`flex items-center transition-all duration-300 px-2 py-1 rounded-lg ${
-                      selectedSetpoint === 'cool' 
-                        ? 'bg-blue-500/30 text-blue-300 scale-110 shadow-lg shadow-blue-500/25' 
-                        : 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10'
-                    }`}
-                  >
-                    <UilSnowflake size={18} className="mr-1" />
-                    <span>{thermostatData.coolCelsius !== null ? Math.round(thermostatData.coolCelsius) : "--"}°</span>
-                  </button>
+                  <div className={`flex items-center transition-all duration-200 ${
+                    selectedSetpoint === 'cool' ? 'text-blue-300 scale-110' : 'text-blue-400'
+                  }`}>
+                    <UilSnowflake size={20} className="mr-1" />
+                    <span>{localCoolSetpoint !== null ? Math.round(localCoolSetpoint) : "--"}°</span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400 opacity-80 mb-1">
-                  {selectedSetpoint === 'heat' && "Heat setpoint selected"}
-                  {selectedSetpoint === 'cool' && "Cool setpoint selected"}
-                  {!selectedSetpoint && "Tap to select heat or cool"}
+                <div className="text-xs mt-1 text-gray-400 opacity-80">
+                  Heat | Cool
                 </div>
-                {selectedSetpoint && (
-                  <div className="text-xs text-gray-500 opacity-70">
-                    Click dial to adjust • Use +/- buttons
+                {pendingChanges && (
+                  <div className="text-xs text-yellow-400 animate-pulse mt-1">
+                    Updating...
                   </div>
                 )}
               </div>
             ) : (
-              /* Single setpoint display for other modes */
+              /* Enhanced single setpoint display for other modes */
               <div className="flex flex-col items-center">
-                <button
-                  onClick={() => setSelectedSetpoint(selectedSetpoint === 'single' ? null : 'single')}
-                  className={`transition-all duration-300 rounded-lg px-3 py-2 ${
-                    selectedSetpoint === 'single'
-                      ? 'scale-110 shadow-lg'
-                      : 'hover:scale-105'
-                  }`}
-                  style={{
-                    backgroundColor: selectedSetpoint === 'single' ? `${getModeColor()}20` : 'transparent',
-                    color: selectedSetpoint === 'single' ? getModeColor() : 'white',
-                    boxShadow: selectedSetpoint === 'single' ? `0 0 20px ${getModeColor()}40` : 'none'
-                  }}
-                >
-                  <div className="text-4xl font-light tracking-tight">
-                    {localSetpoint !== null ? Math.round(localSetpoint) : "--"}°
-                  </div>
-                </button>
-                {selectedSetpoint === 'single' && (
-                  <div className="text-xs text-gray-500 opacity-70 mt-1">
-                    Click dial to adjust • Use +/- buttons
+                <div className={`text-5xl font-light tracking-tight transition-all duration-200 ${
+                  selectedSetpoint === 'single' ? 'scale-110' : ''
+                }`}>
+                  {localSetpoint !== null ? Math.round(localSetpoint) : "--"}°
+                </div>
+                {pendingChanges && (
+                  <div className="text-xs text-yellow-400 animate-pulse">
+                    Updating...
                   </div>
                 )}
               </div>
             )}
             
             {thermostatData && (
-              <div className="text-sm mt-2 text-gray-300 opacity-80">
+              <div className="text-sm mt-1 text-gray-300 opacity-80">
                 Current: {thermostatData.currentTemperature.toFixed(1)}°C
               </div>
             )}
@@ -1196,25 +1307,25 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               <span className="opacity-90">{thermostatData?.humidity || '--'}%</span>
             </div>
             
-            {/* Pending changes indicator */}
-            {pendingChanges && (
-              <div className="flex items-center mt-2 text-xs text-yellow-400">
-                <div className="animate-spin w-3 h-3 border border-yellow-400 border-t-transparent rounded-full mr-1"></div>
-                Updating...
+            {/* Interactive hint */}
+            {!selectedSetpoint && !isDragging && (
+              <div className="text-xs text-gray-500 mt-2 opacity-60 animate-pulse">
+                Click and drag to adjust
               </div>
             )}
           </div>
         </div>
         
-        {/* Controls Container */}
-        <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm gap-3 sm:gap-0">
+        {/* Simplified Controls Container */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm">
           {/* Mode Control */}
-          <div className="relative order-1 sm:order-1">
+          <div className="relative">
             <button 
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)} 
               className="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+              disabled={pendingChanges}
             >
-              <span className={`transition-colors duration-200`} style={{ color: getModeColor() }}>
+              <span className={`transition-colors duration-200 ${pendingChanges ? 'opacity-50' : ''}`} style={{ color: getModeColor() }}>
                 {thermostatData?.mode === "HEAT" && <UilFire size={22} />}
                 {thermostatData?.mode === "COOL" && <UilSnowflake size={22} />}
                 {thermostatData?.mode === "HEATCOOL" && (
@@ -1227,7 +1338,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               </span>
               <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200">Mode</span>
             </button>
-            {modeDropdownOpen && (
+            {modeDropdownOpen && !pendingChanges && (
               <div className="absolute bottom-full mb-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 border border-gray-700 w-32 overflow-hidden">
                 {["HEAT", "COOL", "HEATCOOL", "OFF"].map((modeOption) => (
                   <button
@@ -1258,142 +1369,33 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             )}
           </div>
           
-          {/* Temperature Controls */}
-          <div className="order-3 sm:order-2">
-            {thermostatData?.mode === "HEATCOOL" ? (
-              /* Enhanced dual controls for HEATCOOL mode */
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                {selectedSetpoint === 'heat' || !selectedSetpoint ? (
-                  /* Heat controls */
-                  <div className={`flex items-center space-x-1 sm:space-x-2 transition-all duration-300 ${
-                    selectedSetpoint === 'heat' ? 'scale-110' : selectedSetpoint === 'cool' ? 'opacity-50' : ''
-                  }`}>
-                    <button
-                      onMouseDown={() => setIsTemperatureChanging(true)}
-                      onMouseUp={() => setIsTemperatureChanging(false)}
-                      onMouseLeave={() => setIsTemperatureChanging(false)}
-                      onClick={() => {
-                        setSelectedSetpoint('heat');
-                        adjustHeatSetpoint(-0.5);
-                      }}
-                      className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-all duration-150 border border-red-700/30 hover:scale-105 active:scale-95"
-                      title="Decrease heat setpoint"
-                    >
-                      <UilMinusCircle size={18} className="sm:w-5 sm:h-5" />
-                    </button>
-                    <div className="flex flex-col items-center px-1">
-                      <UilFire size={14} className="text-red-400 sm:w-4 sm:h-4" />
-                      <span className="text-xs text-red-400">Heat</span>
-                    </div>
-                    <button
-                      onMouseDown={() => setIsTemperatureChanging(true)}
-                      onMouseUp={() => setIsTemperatureChanging(false)}
-                      onMouseLeave={() => setIsTemperatureChanging(false)}
-                      onClick={() => {
-                        setSelectedSetpoint('heat');
-                        adjustHeatSetpoint(0.5);
-                      }}
-                      className="bg-red-800/60 hover:bg-red-700/80 active:bg-red-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-all duration-150 border border-red-700/30 hover:scale-105 active:scale-95"
-                      title="Increase heat setpoint"
-                    >
-                      <UilPlusCircle size={18} className="sm:w-5 sm:h-5" />
-                    </button>
-                  </div>
-                ) : null}
-                
-                {selectedSetpoint === 'cool' || !selectedSetpoint ? (
-                  /* Cool controls */
-                  <div className={`flex items-center space-x-1 sm:space-x-2 transition-all duration-300 ${
-                    selectedSetpoint === 'cool' ? 'scale-110' : selectedSetpoint === 'heat' ? 'opacity-50' : ''
-                  }`}>
-                    <button
-                      onMouseDown={() => setIsTemperatureChanging(true)}
-                      onMouseUp={() => setIsTemperatureChanging(false)}
-                      onMouseLeave={() => setIsTemperatureChanging(false)}
-                      onClick={() => {
-                        setSelectedSetpoint('cool');
-                        adjustCoolSetpoint(-0.5);
-                      }}
-                      className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-all duration-150 border border-blue-700/30 hover:scale-105 active:scale-95"
-                      title="Decrease cool setpoint"
-                    >
-                      <UilMinusCircle size={18} className="sm:w-5 sm:h-5" />
-                    </button>
-                    <div className="flex flex-col items-center px-1">
-                      <UilSnowflake size={14} className="text-blue-400 sm:w-4 sm:h-4" />
-                      <span className="text-xs text-blue-400">Cool</span>
-                    </div>
-                    <button
-                      onMouseDown={() => setIsTemperatureChanging(true)}
-                      onMouseUp={() => setIsTemperatureChanging(false)}
-                      onMouseLeave={() => setIsTemperatureChanging(false)}
-                      onClick={() => {
-                        setSelectedSetpoint('cool');
-                        adjustCoolSetpoint(0.5);
-                      }}
-                      className="bg-blue-800/60 hover:bg-blue-700/80 active:bg-blue-600 text-white rounded-full p-1 sm:p-1.5 focus:outline-none transition-all duration-150 border border-blue-700/30 hover:scale-105 active:scale-95"
-                      title="Increase cool setpoint"
-                    >
-                      <UilPlusCircle size={18} className="sm:w-5 sm:h-5" />
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              /* Enhanced single controls for other modes */
-              <div className={`flex space-x-4 transition-all duration-300 ${
-                selectedSetpoint === 'single' ? 'scale-110' : ''
-              }`}>
-                <button
-                  onMouseDown={() => setIsTemperatureChanging(true)}
-                  onMouseUp={() => setIsTemperatureChanging(false)}
-                  onMouseLeave={() => setIsTemperatureChanging(false)}
-                  onClick={() => {
-                    setSelectedSetpoint('single');
-                    if (localSetpoint !== null) setThermostatTemperature(localSetpoint - 0.5);
-                  }}
-                  className="bg-gray-800/60 hover:bg-gray-700/80 active:bg-gray-600 text-white rounded-full p-2 focus:outline-none transition-all duration-150 border border-gray-700/30 hover:scale-105 active:scale-95"
-                  style={{
-                    backgroundColor: selectedSetpoint === 'single' ? `${getModeColor()}30` : undefined,
-                    borderColor: selectedSetpoint === 'single' ? `${getModeColor()}50` : undefined
-                  }}
-                >
-                  <UilMinusCircle size={24} />
-                </button>
-                <button
-                  onMouseDown={() => setIsTemperatureChanging(true)}
-                  onMouseUp={() => setIsTemperatureChanging(false)}
-                  onMouseLeave={() => setIsTemperatureChanging(false)}
-                  onClick={() => {
-                    setSelectedSetpoint('single');
-                    if (localSetpoint !== null) setThermostatTemperature(localSetpoint + 0.5);
-                  }}
-                  className="bg-gray-800/60 hover:bg-gray-700/80 active:bg-gray-600 text-white rounded-full p-2 focus:outline-none transition-all duration-150 border border-gray-700/30 hover:scale-105 active:scale-95"
-                  style={{
-                    backgroundColor: selectedSetpoint === 'single' ? `${getModeColor()}30` : undefined,
-                    borderColor: selectedSetpoint === 'single' ? `${getModeColor()}50` : undefined
-                  }}
-                >
-                  <UilPlusCircle size={24} />
-                </button>
-              </div>
-            )}
+          {/* Interactive instruction */}
+          <div className="text-center flex-1 mx-4">
+            <div className="text-xs text-gray-400">
+              {isDragging ? "Adjusting..." : 
+               selectedSetpoint ? "Release to set" : 
+               "Click dial to adjust temperature"}
+            </div>
           </div>
           
           {/* Fan & Eco Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3 order-2 sm:order-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Fan Control */}
             <div className="relative">
               <button 
                 onClick={() => setFanDropdownOpen(!fanDropdownOpen)} 
                 className="group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+                disabled={pendingChanges}
               >
                 <UilWind
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"}`}
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                    pendingChanges ? 'opacity-50' : 
+                    thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"
+                  }`}
                 />
                 <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Fan</span>
               </button>
-              {fanDropdownOpen && (
+              {fanDropdownOpen && !pendingChanges && (
                 <div className="absolute bottom-full mb-2 right-0 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 border border-gray-700 w-32 overflow-hidden">
                   {[15, 30, 60].map((minutes) => (
                     <button
@@ -1424,9 +1426,13 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             <button 
               onClick={toggleEcoMode} 
               className={`group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200`}
+              disabled={pendingChanges}
             >
               <UilTrees
-                className={`w-5 h-5 sm:w-6 sm:h-6 ${ecoModeActive ? "text-green-400" : "text-gray-500 group-hover:text-gray-300"}`}
+                className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                  pendingChanges ? 'opacity-50' : 
+                  ecoModeActive ? "text-green-400" : "text-gray-500 group-hover:text-gray-300"
+                }`}
               />
               <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Eco</span>
             </button>
