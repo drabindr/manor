@@ -100,7 +100,9 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       bundling: {
         minify: true,
-        externalModules: ['@aws-sdk/*']
+        externalModules: ['@aws-sdk/*', 'aws-sdk'], // Include both AWS SDK v2 and v3
+        nodeModules: ['node-apn'], // Include node-apn for APNs functionality
+        platform: 'linux',
       },
       environment: {
         DEVICE_TOKENS_TABLE: deviceTokensTable.tableName,
