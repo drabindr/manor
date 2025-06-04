@@ -28,6 +28,45 @@ const formatRunningState = (state: string): string => {
   return state.charAt(0) + state.slice(1).toLowerCase();
 };
 
+// Helper to calculate optimal polling interval based on device states
+const calculatePollingInterval = (lgStatus: Record<string, LGDeviceStatus>): number => {
+  let minInterval = 300000; // Default: 5 minutes for idle devices
+  
+  for (const status of Object.values(lgStatus)) {
+    if (!status) continue;
+    
+    const isActive = isRunningState(status.currentState);
+    if (!isActive) continue; // Skip idle devices
+    
+    const remainingTime = status.remainingTime ? parseInt(status.remainingTime) : null;
+    
+    if (remainingTime !== null) {
+      if (remainingTime <= 1) {
+        // Last minute: check every 15 seconds
+        minInterval = Math.min(minInterval, 15000);
+      } else if (remainingTime <= 5) {
+        // Last 5 minutes: check every 30 seconds
+        minInterval = Math.min(minInterval, 30000);
+      } else if (remainingTime <= 10) {
+        // 5-10 minutes: check every 1 minute
+        minInterval = Math.min(minInterval, 60000);
+      } else if (remainingTime <= 20) {
+        // 10-20 minutes: check every 2 minutes
+        minInterval = Math.min(minInterval, 120000);
+      } else {
+        // >20 minutes: check every 5 minutes
+        minInterval = Math.min(minInterval, 300000);
+      }
+    } else {
+      // Running but no time info: check every 2 minutes
+      minInterval = Math.min(minInterval, 120000);
+    }
+  }
+  
+  // Ensure minimum reasonable interval (15 seconds)
+  return Math.max(minInterval, 15000);
+};
+
 type LGDevice = {
   deviceId: string;
   deviceName: string;
@@ -282,6 +321,7 @@ const LGAppliances: React.FC = () => {
   const [lgError, setLgError] = useState<string|null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPollingInterval, setCurrentPollingInterval] = useState<number>(15000);
 
   // Fetch devices list + status
   const fetchLGDevices = async (initialLoad = false) => {
@@ -435,6 +475,13 @@ const LGAppliances: React.FC = () => {
 
       setLgStatus(newStatus);
       setLgError(null);
+      
+      // Calculate optimal polling interval based on current device states
+      const newInterval = calculatePollingInterval(newStatus);
+      if (Math.abs(newInterval - currentPollingInterval) > 1000) { // Only update if difference is >1s to avoid noise
+        console.log(`LG Polling interval changed: ${currentPollingInterval/1000}s -> ${newInterval/1000}s`);
+        setCurrentPollingInterval(newInterval);
+      }
     } catch(err:any) {
       console.error("fetchLGDevices error", err);
       setLgError("Failed to load LG appliances");
@@ -535,12 +582,21 @@ const LGAppliances: React.FC = () => {
     }
   };
 
-  // Initial + 60s polling
+  // Adaptive polling based on device states
   useEffect(() => {
     fetchLGDevices(true);
-    const iv = setInterval(() => fetchLGDevices(false), 15000); // Reduced from 60s to 15s for more responsive updates
-    return () => clearInterval(iv);
   }, []);
+
+  // Separate effect for adaptive polling
+  useEffect(() => {
+    if (lgLoading) return; // Don't start polling until initial load is complete
+    
+    const timeoutId = setTimeout(() => {
+      fetchLGDevices(false);
+    }, currentPollingInterval);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPollingInterval, lgLoading]); // Removed lgStatus to prevent infinite loops
 
   return (
     <div className="my-0">
@@ -579,6 +635,8 @@ const LGAppliances: React.FC = () => {
               <div className="text-xs text-blue-300 bg-blue-900/40 px-3 py-1.5 rounded-full border border-blue-800/40 flex items-center space-x-2 shadow-inner">
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
                 <span>{lgDevices.length} {lgDevices.length === 1 ? 'device' : 'devices'}</span>
+                <span className="text-gray-400">•</span>
+                <span>{Math.round(currentPollingInterval / 1000)}s</span>
               </div>
             )}
           </div>
