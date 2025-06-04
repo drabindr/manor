@@ -55,6 +55,16 @@ jobs:
           
           echo "✅ Website dependencies fixed"
 
+      - name: Build website with fixed dependencies
+        run: |
+          echo "🏗️ Building website with fixed rollup dependencies..."
+          cd packages/website
+          
+          # Build the website for production
+          npm run build:production
+          
+          echo "✅ Website build completed"
+
       - name: Deploy to AWS
         run: |
           echo "🚀 Deploying Manor to AWS..."
