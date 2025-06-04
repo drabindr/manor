@@ -63,10 +63,25 @@ class WebSocketService {
     this.url = url;
     if (homeId) this.homeId = homeId;
 
+    // Add visibility change listener for performance optimization
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          logger.debugFast(() => 'Page hidden, pausing WebSocket activity');
+          this.pauseConnection();
+        } else {
+          logger.debugFast(() => 'Page visible, resuming WebSocket activity');
+          this.resumeConnection();
+        }
+      });
+    }
+
     // Start with a short delay to prevent immediate connection on page load
     setTimeout(() => {
-      this.connect();
-      this.startConnectionHealthCheck();
+      if (!document.hidden) {
+        this.connect();
+        this.startConnectionHealthCheck();
+      }
     }, 1000);
   }
 
@@ -610,6 +625,31 @@ class WebSocketService {
       return this.stateData.state;
     }
     return null;
+  }
+
+  // Pause connection when page is hidden
+  private pauseConnection(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.connectionHealthCheckInterval) {
+      clearInterval(this.connectionHealthCheckInterval);
+      this.connectionHealthCheckInterval = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+  }
+
+  // Resume connection when page becomes visible
+  private resumeConnection(): void {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      this.connect();
+    }
+    this.startConnectionHealthCheck();
+    this.startPing();
   }
 
   // Event listeners
