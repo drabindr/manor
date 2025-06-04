@@ -166,11 +166,17 @@ export class CasaGuardCdkStack extends cdk.Stack {
     const connectLambda = new NodejsFunction(this, "ConnectHandler", {
       entry: "lambda/connect.ts",
       environment: { CONN_TABLE_NAME: connectionsTable.tableName },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     const disconnectLambda = new NodejsFunction(this, "DisconnectHandler", {
       entry: "lambda/disconnect.ts",
       environment: { CONN_TABLE_NAME: connectionsTable.tableName },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     const webSocketApi = new WebSocketApi(this, "WebSocketApi", {
@@ -204,6 +210,9 @@ export class CasaGuardCdkStack extends cdk.Stack {
         ALARM_STATE_TABLE_NAME: alarmStateTable.tableName,
         HOMES_TABLE_NAME: "Homes",
       },
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     // Create ping Lambda for monitoring connection status
@@ -215,6 +224,9 @@ export class CasaGuardCdkStack extends cdk.Stack {
         PING_INTERVAL_MINUTES: "5", // Added environment variable for ping interval
       },
       timeout: cdk.Duration.seconds(60), // Increase timeout to handle larger batches of connections
+      bundling: {
+        externalModules: ['@aws-sdk/*']
+      }
     });
 
     new cdk.aws_events.Rule(this, "PingScheduleRule", {
