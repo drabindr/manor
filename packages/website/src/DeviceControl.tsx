@@ -375,13 +375,15 @@ const DeviceControl: React.FC = () => {
       if (!device) return;
 
       const response = await fetch(
-        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lights/${device.provider}`,
+        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/${device.provider}/lights/trigger`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            deviceId: deviceId,
-            action: newState ? "turn_on" : "turn_off",
+            data: {
+              deviceId: deviceId,
+              state: newState,
+            },
           }),
         }
       );
