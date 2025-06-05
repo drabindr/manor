@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
 
 const LiveStream: React.FC = () => {
@@ -8,10 +8,11 @@ const LiveStream: React.FC = () => {
   const retryTimeout = useRef<number | null>(null);
   const retryCount = useRef<number>(0);
   const maxRetryCount = 10; // Retry up to 10 times
-  const retryInterval = 500; // Retry interval in milliseconds
-  const wsReconnectDelay = 1000; // Delay between WebSocket reconnections in ms
+  const retryInterval = 200; // Reduced from 500ms for faster retries
+  const wsReconnectDelay = 500; // Reduced from 1000ms for faster reconnection
 
   const runId = useRef(Date.now()); // Unique ID for each live stream run
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadHlsStream = () => {
     const videoElement = videoRef.current;
@@ -36,7 +37,9 @@ const LiveStream: React.FC = () => {
       hls.attachMedia(videoElement);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoElement.play().catch((error) => {
+        videoElement.play().then(() => {
+          setIsLoading(false); // Video started playing
+        }).catch((error) => {
           console.error('Error playing video:', error);
         });
       });
@@ -63,7 +66,9 @@ const LiveStream: React.FC = () => {
     } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
       videoElement.src = streamUrl;
       videoElement.addEventListener('loadedmetadata', () => {
-        videoElement.play().catch((error) => {
+        videoElement.play().then(() => {
+          setIsLoading(false); // Video started playing
+        }).catch((error) => {
           console.error('Error playing video:', error);
         });
       });
@@ -123,6 +128,7 @@ const LiveStream: React.FC = () => {
   };
 
   useEffect(() => {
+    // Start WebSocket and HLS loading in parallel for faster startup
     connectWebSocket();
     loadHlsStream();
 
@@ -140,7 +146,15 @@ const LiveStream: React.FC = () => {
   }, []);
 
   return (
-    <div>
+    <div className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10 rounded">
+          <div className="text-white text-sm flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Loading stream...
+          </div>
+        </div>
+      )}
       <video ref={videoRef} controls autoPlay muted playsInline></video>
     </div>
   );
