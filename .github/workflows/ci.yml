@@ -36,8 +36,13 @@ jobs:
           role-session-name: GitHubActions-Deploy-Manor
           aws-region: us-east-1
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies (excluding iOS)
+        run: |
+          echo "📦 Installing dependencies excluding iOS package..."
+          # Install dependencies for all workspaces except iOS
+          # iOS package is not needed for AWS deployment and may have platform-specific dependencies
+          npm ci --workspaces --workspace=@manor/cdk --workspace=@manor/website
+          echo "✅ Dependencies installed successfully"
 
       - name: Fix website rollup dependencies
         run: |
