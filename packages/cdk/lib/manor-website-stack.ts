@@ -44,7 +44,7 @@ export class ManorWebsiteStack extends cdk.Stack {
       }],
     });
 
-    // Create CloudFront distribution with explicit S3 origin configuration for React SPA
+    // Create CloudFront distribution with OPTIMIZED caching, compression, and performance settings
     this.distribution = new cloudfront.Distribution(this, 'VeeduWebsiteDistribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(this.websiteBucket, {
@@ -53,10 +53,107 @@ export class ManorWebsiteStack extends cdk.Stack {
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
-        compress: true,
-        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        compress: true, // Enable compression for all content
+        // OPTIMIZATION: Custom optimized cache policy for SPA
+        cachePolicy: new cloudfront.CachePolicy(this, 'OptimizedSPACachePolicy', {
+          cachePolicyName: 'VeeduSPAOptimized',
+          comment: 'Optimized caching for React SPA with static assets',
+          defaultTtl: cdk.Duration.days(1), // 1 day default
+          maxTtl: cdk.Duration.days(365), // 1 year max for static assets
+          minTtl: cdk.Duration.seconds(0), // Allow instant invalidation
+          headerBehavior: cloudfront.CacheHeaderBehavior.allowList(
+            'CloudFront-Viewer-Country',
+            'CloudFront-Is-Mobile-Viewer'
+          ),
+          queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+          cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+        }),
         originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
-        responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.SECURITY_HEADERS,
+        // OPTIMIZATION: Enhanced security headers with performance optimizations
+        responseHeadersPolicy: new cloudfront.ResponseHeadersPolicy(this, 'OptimizedSecurityHeaders', {
+          responseHeadersPolicyName: 'VeeduSecurityOptimized',
+          comment: 'Optimized security headers for performance',
+          securityHeadersBehavior: {
+            contentTypeOptions: { override: true },
+            frameOptions: { frameOption: cloudfront.HeadersFrameOption.DENY, override: true },
+            referrerPolicy: { 
+              referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+              override: true 
+            },
+            strictTransportSecurity: {
+              accessControlMaxAge: cdk.Duration.seconds(31536000), // 1 year
+              includeSubdomains: true,
+              preload: true,
+              override: true,
+            },
+            contentSecurityPolicy: {
+              contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: blob: https:; connect-src 'self' https://*.amazonaws.com https://*.execute-api.us-east-1.amazonaws.com wss://*.execute-api.us-east-1.amazonaws.com wss:; worker-src 'self' blob:; child-src 'self' blob:",
+              override: true,
+            },
+          },
+          customHeadersBehavior: {
+            customHeaders: [
+              {
+                header: 'X-Powered-By',
+                value: 'Manor-CloudFront',
+                override: true,
+              },
+              {
+                header: 'X-Cache-Optimized',
+                value: 'true',
+                override: true,
+              },
+            ],
+          },
+        }),
+      },
+      // OPTIMIZATION: Additional behaviors for static assets with aggressive caching
+      additionalBehaviors: {
+        // Static JS/CSS with long-term caching
+        '/static/js/*': {
+          origin: new origins.S3Origin(this.websiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+          cachePolicy: new cloudfront.CachePolicy(this, 'StaticAssetsCachePolicy', {
+            cachePolicyName: 'VeeduStaticAssetsOptimized',
+            comment: 'Aggressive caching for static JS/CSS assets',
+            defaultTtl: cdk.Duration.days(30),
+            maxTtl: cdk.Duration.days(365),
+            minTtl: cdk.Duration.days(1),
+            headerBehavior: cloudfront.CacheHeaderBehavior.allowList('Accept-Encoding'),
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          }),
+        },
+        '/static/css/*': {
+          origin: new origins.S3Origin(this.websiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+        },
+        // Images with medium-term caching
+        '/static/media/*': {
+          origin: new origins.S3Origin(this.websiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+          cachePolicy: new cloudfront.CachePolicy(this, 'ImageCachePolicy', {
+            cachePolicyName: 'VeeduImagesOptimized',
+            comment: 'Optimized caching for images and media',
+            defaultTtl: cdk.Duration.days(7),
+            maxTtl: cdk.Duration.days(90),
+            minTtl: cdk.Duration.hours(1),
+            headerBehavior: cloudfront.CacheHeaderBehavior.allowList('Accept', 'Accept-Encoding'),
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          }),
+        },
+        // Device icons with very long caching
+        '/device_icons/*': {
+          origin: new origins.S3Origin(this.websiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        },
       },
       domainNames: [props.domainName], // 720frontrd.mymanor.click
       certificate: this.certificate, // Use the subdomain certificate
@@ -78,6 +175,8 @@ export class ManorWebsiteStack extends cdk.Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100, // Use only North America and Europe
       geoRestriction: cloudfront.GeoRestriction.allowlist('US', 'CA', 'GB', 'DE', 'FR', 'AU'), // Allow only selected countries
       enableLogging: false, // Disable logging for now
+      // OPTIMIZATION: Enable HTTP/2 and modern web features
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
     });
 
     // Add bucket policy to allow CloudFront access

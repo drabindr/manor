@@ -1,6 +1,6 @@
 import { APIGatewayProxyWebsocketEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand, PutCommand, DeleteCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, PutCommand, DeleteCommand, GetCommand, UpdateCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 
 const dynamoDBClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -36,17 +36,60 @@ async function rebuildInMemoryState(apiGwClient?: ApiGatewayManagementApiClient)
   try {
     console.log("🔄 Rebuilding in-memory state from DynamoDB...");
     
-    // COST OPTIMIZATION: Use more targeted query instead of full table scan when possible
-    const scanResult = await dynamoDBClient.send(
-      new ScanCommand({
-        TableName: CONNECTIONS_TABLE,
-        // Only get active connections from last 30 minutes to reduce scan size
-        FilterExpression: 'lastSeen > :minTime',
-        ExpressionAttributeValues: {
-          ':minTime': Date.now() - 1800000, // 30 minutes ago (more generous for device connections)
-        },
-      })
-    );
+    // OPTIMIZATION: Use GSI query instead of table scan for better performance
+    // First, try to get active connections using GSI if available
+    let scanResult;
+    try {
+      // Query active connections using GSI on lastSeen attribute
+      const queryResult = await dynamoDBClient.send(
+        new QueryCommand({
+          TableName: CONNECTIONS_TABLE,
+          IndexName: 'lastSeen-index', // GSI on lastSeen attribute
+          KeyConditionExpression: 'connectionType = :type AND lastSeen > :minTime',
+          ExpressionAttributeValues: {
+            ':type': 'device',
+            ':minTime': Date.now() - 1800000,
+          },
+          ProjectionExpression: 'connectionId, connectionType, deviceId, lastSeen',
+        })
+      );
+      
+      // Also query frontend connections
+      const frontendResult = await dynamoDBClient.send(
+        new QueryCommand({
+          TableName: CONNECTIONS_TABLE,
+          IndexName: 'lastSeen-index',
+          KeyConditionExpression: 'connectionType = :type AND lastSeen > :minTime',
+          ExpressionAttributeValues: {
+            ':type': 'frontend',
+            ':minTime': Date.now() - 1800000,
+          },
+          ProjectionExpression: 'connectionId, connectionType, deviceId, lastSeen',
+        })
+      );
+      
+      // Combine results
+      scanResult = {
+        Items: [...(queryResult.Items || []), ...(frontendResult.Items || [])]
+      };
+      
+      console.log(`✅ Used GSI queries instead of table scan, found ${scanResult.Items?.length || 0} connections`);
+    } catch (gsiError) {
+      console.log("⚠️ GSI not available, falling back to filtered scan...");
+      
+      // Fallback to optimized scan with reduced data transfer
+      scanResult = await dynamoDBClient.send(
+        new ScanCommand({
+          TableName: CONNECTIONS_TABLE,
+          FilterExpression: 'lastSeen > :minTime',
+          ExpressionAttributeValues: {
+            ':minTime': Date.now() - 1800000, // 30 minutes ago
+          },
+          ProjectionExpression: 'connectionId, connectionType, deviceId, lastSeen', // Only fetch needed attributes
+          Limit: 100, // Limit scan size
+        })
+      );
+    }
 
     const validConnections: string[] = [];
     const staleConnections: string[] = [];

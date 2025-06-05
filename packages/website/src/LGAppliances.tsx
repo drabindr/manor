@@ -1,5 +1,5 @@
-import React, { useState, useEffect, memo } from "react";
-import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell, UilPlay, UilPause } from "@iconscout/react-unicons";
+import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
+import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell } from "@iconscout/react-unicons";
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
 import OptimizedImage from "./components/OptimizedImage";
@@ -146,9 +146,6 @@ const LGDeviceCard = memo(({
 
   return (
     <div className="relative bg-gradient-to-br from-gray-700/50 via-gray-800/70 to-gray-900/90 rounded-xl border border-gray-600/40 overflow-hidden shadow-xl transition-all duration-300 hover:shadow-blue-900/30 active:scale-[0.998] hover:border-gray-500/60 backdrop-blur-sm">
-      {/* Ambient glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
-      
       {/* Status Indicator with enhanced design */}
       <div className={`absolute top-0 left-0 right-0 h-1 transition-all duration-500 ${
         isActive
@@ -302,7 +299,7 @@ const LGDeviceCard = memo(({
                               : "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500/90 hover:to-blue-400/90 text-white border border-blue-400/60 shadow-lg hover:shadow-xl"
                             } active:shadow-inner tap-highlight-transparent active:scale-95`}
                 >
-                  {isActive ? <UilPause size={16} className="mr-2" /> : <UilPlay size={16} className="mr-2" />}
+                  {isActive ? <UilPower size={16} className="mr-2" /> : <UilPower size={16} className="mr-2" />}
                   <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
                 </button>
               )}
@@ -511,7 +508,7 @@ const LGPairedDeviceCard = memo(({
                                 : "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500/90 hover:to-blue-400/90 text-white border border-blue-400/60 shadow-lg hover:shadow-xl"
                               } active:shadow-inner tap-highlight-transparent active:scale-95`}
                   >
-                    {isActive ? <UilPause size={14} className="mr-2" /> : <UilPlay size={14} className="mr-2" />}
+                    {isActive ? <UilPower size={14} className="mr-2" /> : <UilPower size={14} className="mr-2" />}
                     <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
                   </button>
                 )}
@@ -563,7 +560,45 @@ const LGAppliances: React.FC = () => {
   const [lgError, setLgError] = useState<string|null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [currentPollingInterval, setCurrentPollingInterval] = useState<number>(15000);
+
+  // OPTIMIZATION: Separate state for actual polling interval used by useEffect
+  const [activePollingInterval, setActivePollingInterval] = useState(300000); // 5 minutes default
+  
+  // OPTIMIZATION: Memoized polling interval calculation
+  const currentPollingInterval = useMemo(() => 
+    calculatePollingInterval(lgStatus),
+    [lgStatus]
+  );
+
+  // OPTIMIZATION: Update active polling interval when calculated interval changes significantly
+  useEffect(() => {
+    if (Math.abs(currentPollingInterval - activePollingInterval) > 1000) { // Only update if difference is >1s
+      console.log(`LG Polling interval changed: ${activePollingInterval/1000}s -> ${currentPollingInterval/1000}s`);
+      setActivePollingInterval(currentPollingInterval);
+    }
+  }, [currentPollingInterval, activePollingInterval]);
+
+  // OPTIMIZATION: Memoized device lists for better performance
+  const { washerDevices, dryerDevices } = useMemo(() => {
+    const washers = lgDevices.filter(d => d.deviceType === "washer");
+    const dryers = lgDevices.filter(d => d.deviceType === "dryer");
+    return { washerDevices: washers, dryerDevices: dryers };
+  }, [lgDevices]);
+
+  // OPTIMIZATION: Memoized device pairs for display
+  const devicePairs = useMemo(() => {
+    const pairs: Array<{ washer?: LGDevice; dryer?: LGDevice }> = [];
+    const maxPairs = Math.max(washerDevices.length, dryerDevices.length);
+    
+    for (let i = 0; i < maxPairs; i++) {
+      pairs.push({
+        washer: washerDevices[i],
+        dryer: dryerDevices[i],
+      });
+    }
+    
+    return pairs;
+  }, [washerDevices, dryerDevices]);
 
   // Fetch devices list + status
   const fetchLGDevices = async (initialLoad = false) => {
@@ -594,126 +629,77 @@ const LGAppliances: React.FC = () => {
       const devices: LGDevice[] = await listRes.json();
       setLgDevices(devices);
 
-      // 2) Fetch status for each
+      // 2) Fetch status for all devices in batch - OPTIMIZATION: Batch API call
       const newStatus: Record<string,LGDeviceStatus> = {};
-      await Promise.all(devices.map(async dev => {
-        try {
-          const sr = await fetch(
-            "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/status",
-            {
-              method:"POST",
-              headers:{ "Content-Type":"application/json","Accept":"application/json" },
-              body: JSON.stringify({ data:{ deviceId: dev.deviceId } })
-            }
-          );
-          if (!sr.ok) throw new Error(await sr.text());
-          const data = await sr.json();
-
-          // Determine currentState + active
-          let cs = data.currentState || "UNKNOWN";
-          let active = isRunningState(cs);
-
-          if (data.rawState) {
-            if (data.rawState.runState?.currentState && isRunningState(data.rawState.runState.currentState)) {
-              cs = data.rawState.runState.currentState; active = true;
-            } else if (Array.isArray(data.rawState)) {
-              for (const st of data.rawState) {
-                if (st.runState?.currentState && isRunningState(st.runState.currentState)) {
-                  cs = st.runState.currentState; active = true; break;
-                }
-              }
-            }
+      
+      try {
+        // Batch status fetch instead of individual requests
+        const batchStatusRes = await fetch(
+          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/batch-status",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ 
+              deviceIds: devices.map(dev => dev.deviceId),
+              includeRawState: true 
+            })
           }
-          if (!active && data.rawState?.operation && data.rawState.operation !== "OFF") {
-            cs = data.rawState.operation; active = true;
+        );
+        
+        if (batchStatusRes.ok) {
+          const batchData = await batchStatusRes.json();
+          console.log(`✅ Batch status fetch successful for ${devices.length} devices`);
+          
+          // Process batch response
+          for (const dev of devices) {
+            const data = batchData[dev.deviceId];
+            if (!data) continue;
+            
+            newStatus[dev.deviceId] = processDeviceStatus(dev, data);
           }
-
-          // Extract remainingTime from multiple fallbacks
-          let rt: string|undefined = data.remainingTime?.toString();
-
-          // rawState.runState
-          if (!rt && data.rawState?.runState?.remainingTime) {
-            rt = data.rawState.runState.remainingTime.toString();
-          }
-
-          // rawState array entries
-          if (!rt && Array.isArray(data.rawState)) {
-            for (const st of data.rawState) {
-              if (st.runState?.remainingTime) {
-                rt = st.runState.remainingTime.toString();
-                break;
-              }
-              if (st.remainingTimeMinute || st.remainingTime) {
-                rt = (st.remainingTimeMinute || st.remainingTime).toString();
-                break;
-              }
-            }
-          }
-
-          // rawState.timer remainHour/remainMinute
-          if (!rt && data.rawState?.timer) {
-            const t = data.rawState.timer;
-            // First try remainHour/remainMinute
-            if (typeof t.remainHour === "number" && typeof t.remainMinute === "number") {
-              const total = t.remainHour * 60 + t.remainMinute;
-              if (total > 0) rt = total.toString();
-            }
-            // For dryers, also try totalHour/totalMinute if remainingTime is 0 but device is running
-            if (!rt && dev.deviceType === "dryer" && active && 
-                typeof t.totalHour === "number" && typeof t.totalMinute === "number") {
-              const total = t.totalHour * 60 + t.totalMinute;
-              if (total > 0) rt = total.toString();
-            }
-            // Also try relativeHourToStop/relativeMinuteToStop for dryers
-            if (!rt && dev.deviceType === "dryer" && 
-                typeof t.relativeHourToStop === "number" && typeof t.relativeMinuteToStop === "number") {
-              const total = t.relativeHourToStop * 60 + t.relativeMinuteToStop;
-              if (total > 0) rt = total.toString();
-            }
-          }
-
-          // rawProfile.property[].runState.currentState.value.rt
-          if (!rt && data.rawProfile?.property && Array.isArray(data.rawProfile.property)) {
-            for (const prop of data.rawProfile.property) {
-              const v = prop.runState?.currentState?.value;
-              if (v && typeof v === "object" && v.rt) {
-                rt = v.rt.toString();
-                break;
-              }
-            }
-          }
-
-          // dryer-specific nested props
-          if (!rt && dev.deviceType === "dryer" && data.rawState && typeof data.rawState === "object") {
-            const names = ["rtime","rem_time","timeLeft","remTime","timeRemaining"];
-            const search = (obj: any): string|undefined => {
-              if (typeof obj !== "object" || Array.isArray(obj)) return undefined;
-              for (const key of Object.keys(obj)) {
-                if (names.includes(key) && (typeof obj[key] === "number" || typeof obj[key] === "string")) {
-                  return obj[key].toString();
-                }
-                const res = search(obj[key]);
-                if (res) return res;
-              }
-              return undefined;
-            };
-            const found = search(data.rawState);
-            if (found) rt = found;
-          }
-
-          newStatus[dev.deviceId] = {
-            currentState: active ? cs : data.currentState,
-            isPoweredOn: data.isPoweredOn ?? false, // Fallback to false if undefined
-            remoteControlEnabled: data.remoteControlEnabled,
-            rawState: data.rawState,
-            remainingTime: rt,
-            lastUpdated: Date.now(),
-            _debug: data._debug // Include debug info if available
-          };
-        } catch(err) {
-          console.error("Status fetch error for", dev.deviceId, err);
+        } else {
+          throw new Error("Batch API not available, falling back to individual requests");
         }
-      }));
+      } catch (batchError) {
+        console.log("⚠️ Batch status fetch failed, falling back to individual requests:", batchError);
+        
+        // Fallback to individual requests with connection pooling optimization
+        const statusPromises = devices.map(async (dev, index) => {
+          // Stagger requests slightly to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, index * 50));
+          
+          try {
+            const sr = await fetch(
+              "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/status",
+              {
+                method: "POST",
+                headers: { 
+                  "Content-Type": "application/json", 
+                  "Accept": "application/json",
+                  "Connection": "keep-alive" // Optimize connection reuse
+                },
+                body: JSON.stringify({ data: { deviceId: dev.deviceId } })
+              }
+            );
+            
+            if (!sr.ok) throw new Error(await sr.text());
+            const data = await sr.json();
+            
+            return { deviceId: dev.deviceId, device: dev, data };
+          } catch (err) {
+            console.error("Status fetch error for", dev.deviceId, err);
+            return null;
+          }
+        });
+        
+        const results = await Promise.all(statusPromises);
+        
+        // Process individual results
+        for (const result of results) {
+          if (!result) continue;
+          newStatus[result.deviceId] = processDeviceStatus(result.device, result.data);
+        }
+      }
 
       setLgStatus(newStatus);
       setLgError(null);
@@ -722,7 +708,7 @@ const LGAppliances: React.FC = () => {
       const newInterval = calculatePollingInterval(newStatus);
       if (Math.abs(newInterval - currentPollingInterval) > 1000) { // Only update if difference is >1s to avoid noise
         console.log(`LG Polling interval changed: ${currentPollingInterval/1000}s -> ${newInterval/1000}s`);
-        setCurrentPollingInterval(newInterval);
+        // Interval will be updated automatically by the useEffect above
       }
     } catch(err:any) {
       console.error("fetchLGDevices error", err);
@@ -824,6 +810,111 @@ const LGAppliances: React.FC = () => {
     }
   };
 
+  // Helper function to process device status data - extracted for reuse between batch and individual calls
+  const processDeviceStatus = (dev: LGDevice, data: any): LGDeviceStatus => {
+    // Determine currentState + active
+    let cs = data.currentState || "UNKNOWN";
+    let active = isRunningState(cs);
+
+    if (data.rawState) {
+      if (data.rawState.runState?.currentState && isRunningState(data.rawState.runState.currentState)) {
+        cs = data.rawState.runState.currentState; active = true;
+      } else if (Array.isArray(data.rawState)) {
+        for (const st of data.rawState) {
+          if (st.runState?.currentState && isRunningState(st.runState.currentState)) {
+            cs = st.runState.currentState; active = true; break;
+          }
+        }
+      }
+    }
+    if (!active && data.rawState?.operation && data.rawState.operation !== "OFF") {
+      cs = data.rawState.operation; active = true;
+    }
+
+    // Extract remainingTime from multiple fallbacks
+    let rt: string|undefined = data.remainingTime?.toString();
+
+    // rawState.runState
+    if (!rt && data.rawState?.runState?.remainingTime) {
+      rt = data.rawState.runState.remainingTime.toString();
+    }
+
+    // rawState array entries
+    if (!rt && Array.isArray(data.rawState)) {
+      for (const st of data.rawState) {
+        if (st.runState?.remainingTime) {
+          rt = st.runState.remainingTime.toString();
+          break;
+        }
+        if (st.remainingTimeMinute || st.remainingTime) {
+          rt = (st.remainingTimeMinute || st.remainingTime).toString();
+          break;
+        }
+      }
+    }
+
+    // rawState.timer remainHour/remainMinute
+    if (!rt && data.rawState?.timer) {
+      const t = data.rawState.timer;
+      // First try remainHour/remainMinute
+      if (typeof t.remainHour === "number" && typeof t.remainMinute === "number") {
+        const total = t.remainHour * 60 + t.remainMinute;
+        if (total > 0) rt = total.toString();
+      }
+      // For dryers, also try totalHour/totalMinute if remainingTime is 0 but device is running
+      if (!rt && dev.deviceType === "dryer" && active && 
+          typeof t.totalHour === "number" && typeof t.totalMinute === "number") {
+        const total = t.totalHour * 60 + t.totalMinute;
+        if (total > 0) rt = total.toString();
+      }
+      // Also try relativeHourToStop/relativeMinuteToStop for dryers
+      if (!rt && dev.deviceType === "dryer" && 
+          typeof t.relativeHourToStop === "number" && typeof t.relativeMinuteToStop === "number") {
+        const total = t.relativeHourToStop * 60 + t.relativeMinuteToStop;
+        if (total > 0) rt = total.toString();
+      }
+    }
+
+    // rawProfile.property[].runState.currentState.value.rt
+    if (!rt && data.rawProfile?.property && Array.isArray(data.rawProfile.property)) {
+      for (const prop of data.rawProfile.property) {
+        const v = prop.runState?.currentState?.value;
+        if (v && typeof v === "object" && v.rt) {
+          rt = v.rt.toString();
+          break;
+        }
+      }
+    }
+
+    // dryer-specific nested props
+    if (!rt && dev.deviceType === "dryer" && data.rawState && typeof data.rawState === "object") {
+      const names = ["rtime","rem_time","timeLeft","remTime","timeRemaining"];
+      const search = (obj: any): string|undefined => {
+        if (typeof obj !== "object" || Array.isArray(obj)) return undefined;
+        for (const key of Object.keys(obj)) {
+          if (names.includes(key) && (typeof obj[key] === "number" || typeof obj[key] === "string")) {
+            return obj[key].toString();
+          }
+          const res = search(obj[key]);
+          if (res) return res;
+        }
+        return undefined;
+      };
+      const found = search(data.rawState);
+      if (found) rt = found;
+    }
+
+    return {
+      currentState: active ? cs : data.currentState,
+      isPoweredOn: data.isPoweredOn ?? false, // Fallback to false if undefined
+      remoteControlEnabled: data.remoteControlEnabled,
+      rawState: data.rawState,
+      remainingTime: rt,
+      lastUpdated: Date.now(),
+      _debug: data._debug // Include debug info if available
+    };
+  };
+
   // Adaptive polling based on device states
   useEffect(() => {
     fetchLGDevices(true);
@@ -840,7 +931,7 @@ const LGAppliances: React.FC = () => {
       if (isVisible()) {
         const timeoutId = setTimeout(() => {
           fetchLGDevices(false);
-        }, currentPollingInterval);
+        }, activePollingInterval);
         return timeoutId;
       } else {
         // If page is hidden, check visibility more frequently but don't poll data
@@ -865,7 +956,7 @@ const LGAppliances: React.FC = () => {
       clearTimeout(timeoutId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentPollingInterval, lgLoading]); // Removed lgStatus to prevent infinite loops
+  }, [activePollingInterval, lgLoading]); // Use activePollingInterval for actual timing
 
   return (
     <div className="my-0">
@@ -886,8 +977,7 @@ const LGAppliances: React.FC = () => {
               <button 
                 onClick={() => fetchLGDevices(true)}
                 className="p-2 rounded-full bg-gray-800/80 hover:bg-gray-700/90 text-blue-400 border border-gray-700/50 
-                          transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50
-                          tap-highlight-transparent active:scale-95"
+                          transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 aria-label="Refresh devices"
               >
                 <UilHistory size={18} />
@@ -905,7 +995,7 @@ const LGAppliances: React.FC = () => {
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
                 <span>{lgDevices.length} {lgDevices.length === 1 ? 'device' : 'devices'}</span>
                 <span className="text-gray-400">•</span>
-                <span>{Math.round(currentPollingInterval / 1000)}s</span>
+                <span>{Math.round(activePollingInterval / 1000)}s</span>
               </div>
             )}
           </div>
