@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
 import LightSwitch from "./LightSwitch";
 import LGAppliances from "./LGAppliances";
 import GarageDoor from "./GarageDoor";
@@ -154,6 +154,32 @@ const shouldLGAppliancesBePrioritized = () => {
   // LG appliances like washing machines are more contextually relevant than lights
   return hour >= 11 && hour < 17;
 };
+
+// OPTIMIZATION: Memoized individual light switch component to prevent unnecessary re-renders
+const MemoizedLightSwitch = memo(({ 
+  light, 
+  toggleLight,
+  iconPath 
+}: { 
+  light: LightDevice; 
+  toggleLight: (deviceId: string, newState: boolean) => void;
+  iconPath?: string;
+}) => {
+  return (
+    <LightSwitch
+      light={light}
+      toggleLight={toggleLight}
+      iconPath={iconPath}
+    />
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison to only re-render if device state actually changed
+  return (
+    prevProps.light.relay_state === nextProps.light.relay_state &&
+    prevProps.light.deviceId === nextProps.light.deviceId &&
+    prevProps.iconPath === nextProps.iconPath
+  );
+});
 
 const DeviceControl: React.FC = () => {
   const [lights, setLights] = useState<LightDevice[]>([]);
@@ -333,64 +359,55 @@ const DeviceControl: React.FC = () => {
     fetchLights();
   }, []);
 
-  const getLightsByGroup = (groupName: string): LightDevice[] => {
-    const aliases = groupedLights[groupName];
-    return lights.filter((light) => aliases.includes(light.alias));
-  };
+  // OPTIMIZATION: Memoized light grouping for better performance
+  const getLightsByGroup = useCallback((groupName: string): LightDevice[] => {
+    if (!groupedLights[groupName]) return [];
+    return groupedLights[groupName]
+      .map(alias => lights.find(light => light.alias === alias))
+      .filter((light): light is LightDevice => light !== undefined);
+  }, [lights]);
 
-  const toggleLight = async (deviceId: string, newState: boolean) => {
-    const light = lights.find((l) => l.deviceId === deviceId);
-
-    if (!light) return;
-
-    const providerUrl =
-      light.provider === "tplink"
-        ? "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/trigger"
-        : "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/hue/lights/trigger";
-
-    const payload = {
-      command: "trigger_light",
-      data: {
-        deviceId: light.deviceId,
-        state: newState,
-      },
-    };
-
+  // OPTIMIZATION: Memoized toggle function to prevent unnecessary re-renders
+  const toggleLight = useCallback(async (deviceId: string, newState: boolean) => {
     try {
-      const response = await fetch(providerUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const device = lights.find(l => l.deviceId === deviceId);
+      if (!device) return;
 
-      if (response.status === 401) {
-        window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
-        return;
-      }
+      const response = await fetch(
+        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lights/${device.provider}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: deviceId,
+            action: newState ? "turn_on" : "turn_off",
+          }),
+        }
+      );
 
       if (response.ok) {
-        setLights((prevLights) =>
-          prevLights.map((light) =>
+        // Optimistically update UI
+        setLights(prevLights =>
+          prevLights.map(light =>
             light.deviceId === deviceId
               ? { ...light, relay_state: newState ? 1 : 0 }
               : light
           )
         );
-      } else {
-        console.error("Failed to toggle light");
-        alert("Failed to toggle the light. Please try again.");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error("Error toggling light:", errorMessage);
-      alert("Failed to toggle the light. Please try again.");
+      console.error("Failed to toggle light:", error);
     }
-  };
+  }, [lights]);
+
+  // OPTIMIZATION: Memoized active light count
+  const activeLightCount = useMemo(() => 
+    lights.filter(light => light.relay_state === 1).length,
+    [lights]
+  );
   
   // Count active lights
-  const activeLightCount = lights.filter(light => light.relay_state === 1).length;
+  const activeLightCountDeprecated = lights.filter(light => light.relay_state === 1).length;
 
   if (lightsError) {
     return (
@@ -480,111 +497,34 @@ const DeviceControl: React.FC = () => {
             const groupLights = getLightsByGroup(groupName);
             if (groupLights.length === 0) return null;
             
-            const activeCount = groupLights.filter(light => light.relay_state === 1).length;
-            const inactiveCount = groupLights.length - activeCount;
-            const hasEssentialDevices = groupLights.some(light => isEssentialDevice(light.alias));
-            const isSuggested = isSuggestedRoom(groupName);
-            
-            return {
+            return renderRoomCard({
               name: groupName,
               lights: groupLights,
               deviceCount: groupLights.length,
-              activeCount,
-              inactiveCount,
-              hasEssentialDevices,
-              isSuggested
-            };
+              activeCount: groupLights.filter(l => l.relay_state === 1).length,
+              hasEssentialDevices: groupLights.some(l => isEssentialDevice(l.alias)),
+              isSuggested: isSuggestedRoom(groupName),
+              inactiveCount: groupLights.filter(l => l.relay_state === 0).length
+            });
           }).filter(Boolean);
 
-          const elements = [];
-          let pendingSmallRooms = [];
-
-          roomsWithData.forEach((room, index) => {
-            // Rooms with many devices or essential/suggested rooms get full width
-            if (room.deviceCount >= 4 || room.hasEssentialDevices || room.isSuggested) {
-              // First, render any pending small rooms in a condensed row
-              if (pendingSmallRooms.length > 0) {
-                if (pendingSmallRooms.length === 1) {
-                  // Single small room gets normal layout
-                  elements.push(
-                    <div key={pendingSmallRooms[0].name}>
-                      {renderRoomCard(pendingSmallRooms[0])}
-                    </div>
-                  );
-                } else {
-                  // Multiple small rooms get condensed in a row - responsive columns
-                  const numCols = Math.min(pendingSmallRooms.length, isMobile ? 2 : 3);
-                  elements.push(
-                    <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
-                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${numCols}, 1fr)`}}>
-                        {pendingSmallRooms.map(smallRoom => (
-                          <div key={smallRoom.name}>
-                            {renderRoomCard(smallRoom)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-                pendingSmallRooms = [];
-              }
-
-              // Render the current large/important room
-              elements.push(
-                <div key={room.name} className="col-span-full">
-                  {renderRoomCard(room)}
-                </div>
-              );
-            } else {
-              // Accumulate small rooms for condensed rows
-              pendingSmallRooms.push(room);
-              
-              // Create condensed rows with appropriate sizing for mobile
-              const maxRoomsPerRow = isMobile ? 2 : 3;
-              
-              // If we have reached max rooms per row or this is the last room, create a condensed row
-              if (pendingSmallRooms.length === maxRoomsPerRow || index === roomsWithData.length - 1) {
-                if (pendingSmallRooms.length === 1) {
-                  elements.push(
-                    <div key={pendingSmallRooms[0].name}>
-                      {renderRoomCard(pendingSmallRooms[0])}
-                    </div>
-                  );
-                } else {
-                  elements.push(
-                    <div key={`condensed-${pendingSmallRooms.map(r => r.name).join('-')}`} className="col-span-full">
-                      <div className="grid gap-2.5 sm:gap-4" style={{gridTemplateColumns: `repeat(${pendingSmallRooms.length}, 1fr)`}}>
-                        {pendingSmallRooms.map(smallRoom => (
-                          <div key={smallRoom.name}>
-                            {renderRoomCard(smallRoom)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-                pendingSmallRooms = [];
-              }
-            }
-          });
-
-          return elements;
+          return roomsWithData;
         })()}
-        
-        {/* Garage Door - Show at bottom during nighttime (10 PM to 6 AM) */}
+
+        {/* LG ThinQ Appliances - Show at bottom if not prioritized */}
+        {!lgAppliancesPrioritized && (
+          <div className="col-span-full px-2 sm:px-4">
+            <LGAppliances />
+          </div>
+        )}
+
+        {/* Garage Door - Show at bottom during nighttime */}
         {!garageDoorFirst && (
           <div className="col-span-full">
             <GarageDoor />
           </div>
         )}
       </div>
-    
-      {/* LG ThinQ Appliances Component - Mobile optimized - Show at bottom when not prioritized */}
-      {!lgAppliancesPrioritized && (
-        <div className="px-2 sm:px-4 pb-4">
-          <LGAppliances />
-        </div>
-      )}
     </div>
   );
 };

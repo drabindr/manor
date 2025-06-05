@@ -8,11 +8,31 @@ import os.log
  * so components can update their endpoint references accordingly.
  * 
  * Environment settings are managed through the iOS Settings app rather than in-app UI.
+ * 
+ * OPTIMIZATION: Includes connection pooling and request coalescing for better performance
  */
 class EndpointManager {
     static let shared = EndpointManager()
     
     private let log = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.manor.signin", category: "EndpointManager")
+    
+    // OPTIMIZATION: Connection pooling for better network performance
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpMaximumConnectionsPerHost = 4
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.timeoutIntervalForRequest = 10.0
+        config.timeoutIntervalForResource = 30.0
+        config.waitsForConnectivity = true
+        config.networkServiceType = .responsiveData
+        config.httpShouldUsePipelining = true
+        
+        return URLSession(configuration: config)
+    }()
+    
+    // OPTIMIZATION: Request coalescing to prevent duplicate simultaneous requests
+    private var pendingRequests: [String: URLSessionDataTask] = [:]
+    private let requestQueue = DispatchQueue(label: "com.manor.endpoint.requests", attributes: .concurrent)
     
     enum Environment: String {
         case production = "Production"
@@ -103,5 +123,86 @@ class EndpointManager {
     
     var apnsBaseURL: String {
         return currentEnvironment == .production ? prodAPNSBaseURL : testAPNSBaseURL
+    }
+    
+    // OPTIMIZATION: Optimized network request method with connection pooling and request coalescing
+    func performOptimizedRequest(to url: URL, completion: @escaping (Result<Data, Error>) -> Void) -> URLSessionDataTask? {
+        let requestKey = url.absoluteString
+        
+        return requestQueue.sync(flags: .barrier) {
+            // Check if there's already a pending request for this URL
+            if let existingTask = pendingRequests[requestKey] {
+                os_log("Request coalesced for URL: %{public}@", log: log, type: .debug, url.absoluteString)
+                return existingTask
+            }
+            
+            // Create new optimized request
+            var request = URLRequest(url: url)
+            request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+            request.setValue("gzip, deflate, br", forHTTPHeaderField: "Accept-Encoding")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("Manor-iOS/1.0", forHTTPHeaderField: "User-Agent")
+            
+            let task = urlSession.dataTask(with: request) { [weak self] data, response, error in
+                // Remove from pending requests
+                self?.requestQueue.async(flags: .barrier) {
+                    self?.pendingRequests.removeValue(forKey: requestKey)
+                }
+                
+                if let error = error {
+                    completion(.failure(error))
+                } else if let data = data {
+                    completion(.success(data))
+                } else {
+                    completion(.failure(NSError(domain: "EndpointManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                }
+            }
+            
+            // Store the pending request
+            pendingRequests[requestKey] = task
+            task.resume()
+            
+            os_log("Started optimized request for URL: %{public}@", log: log, type: .debug, url.absoluteString)
+            return task
+        }
+    }
+    
+    // OPTIMIZATION: Batch request method for multiple endpoints
+    func performBatchRequests(urls: [URL], completion: @escaping ([Result<Data, Error>]) -> Void) {
+        let group = DispatchGroup()
+        var results: [Result<Data, Error>] = Array(repeating: .failure(NSError(domain: "NotSet", code: -1)), count: urls.count)
+        
+        for (index, url) in urls.enumerated() {
+            group.enter()
+            _ = performOptimizedRequest(to: url) { result in
+                results[index] = result
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) {
+            completion(results)
+        }
+    }
+    
+    // OPTIMIZATION: Preload critical endpoints to establish connections
+    func preloadCriticalEndpoints() {
+        let criticalURLs = [
+            URL(string: userHomeStatesURL),
+            URL(string: apnsBaseURL)
+        ].compactMap { $0 }
+        
+        for url in criticalURLs {
+            // Create a lightweight HEAD request to establish connection
+            var request = URLRequest(url: url)
+            request.httpMethod = "HEAD"
+            request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+            
+            urlSession.dataTask(with: request) { _, _, _ in
+                // Ignore response, just establishing connection
+            }.resume()
+        }
+        
+        os_log("Preloaded %d critical endpoint connections", log: log, type: .info, criticalURLs.count)
     }
 }
