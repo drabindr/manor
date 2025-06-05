@@ -7,12 +7,32 @@ interface LoadingOverlayProps {
 const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ isLoading }) => {
   // Add state for controlling fade animation
   const [isVisible, setIsVisible] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   
   // Control the visibility with a slight delay for smooth transitions
   useEffect(() => {
     if (isLoading) {
-      setIsVisible(true);
+      // Check if initial loader is still showing
+      const initialLoader = document.querySelector('.initial-loader');
+      const isInitialLoaderVisible = initialLoader && !document.body.classList.contains('app-loaded');
+      
+      if (isInitialLoaderVisible) {
+        // Wait for initial loader to finish before showing this overlay
+        const checkInitialLoader = () => {
+          if (document.body.classList.contains('app-loaded')) {
+            setIsVisible(true);
+            setTimeout(() => setShowContent(true), 100);
+          } else {
+            setTimeout(checkInitialLoader, 100);
+          }
+        };
+        checkInitialLoader();
+      } else {
+        setIsVisible(true);
+        setTimeout(() => setShowContent(true), 100);
+      }
     } else {
+      setShowContent(false);
       // Add a slight delay before hiding to prevent flickering on quick loads
       const timer = setTimeout(() => {
         setIsVisible(false);
@@ -33,8 +53,8 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ isLoading }) => {
         WebkitBackfaceVisibility: 'hidden',
         backfaceVisibility: 'hidden',
         // Smooth transition for better UX
-        opacity: isLoading ? 1 : 0,
-        transition: 'opacity 0.2s ease-out',
+        opacity: isLoading && showContent ? 1 : 0,
+        transition: 'opacity 0.3s ease-out',
         // Prevent unintended touch events while loading
         pointerEvents: isLoading ? 'auto' : 'none'
       }}
