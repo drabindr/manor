@@ -101,11 +101,38 @@ export class CasaAdminCdkStack extends cdk.Stack {
       }
     });
 
+    // Create a Lambda function to handle user profiles.
+    const userProfilesLambda = new NodejsFunction(this, "UserProfilesHandler", {
+      entry: "lambda/casa-admin/userProfilesHandler.ts",
+      handler: "handler",
+      runtime: lambda.Runtime.NODEJS_LATEST,
+      environment: {
+        USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
+        USER_POOL_ID: 'us-east-1_5V0U65Iev', // From production config
+      },
+      bundling: {
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
+      }
+    });
+
     // Grant the Lambda permission to read/write the tables.
     homesTable.grantReadWriteData(mainLambda);
     homesTable.grantReadWriteData(homeStatusLambda);
     userHomeStatesTable.grantReadWriteData(userHomeStateLambda);
     userHomeStatesTable.grantReadWriteData(saveDisplayNameLambda);
+    userHomeStatesTable.grantReadData(userProfilesLambda);
+
+    // Allow the user profiles lambda to read from Cognito User Pool
+    userProfilesLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          "cognito-idp:AdminGetUser",
+        ],
+        resources: ["*"], // Will be scoped to specific user pool in production
+      })
+    );
 
     // Allow the Lambda to create/update/delete SSM parameters and get parameters by path.
     mainLambda.addToRolePolicy(
@@ -223,6 +250,13 @@ export class CasaAdminCdkStack extends cdk.Stack {
     const saveDisplayNameResource = adminApi.root.addResource("saveDisplayName");
     saveDisplayNameResource.addMethod("POST", new LambdaIntegration(saveDisplayNameLambda));
     saveDisplayNameResource.addMethod("OPTIONS", corsIntegration, {
+      methodResponses: [methodResponse],
+    });
+
+    // Define the /user-profiles resource.
+    const userProfilesResource = adminApi.root.addResource("user-profiles");
+    userProfilesResource.addMethod("POST", new LambdaIntegration(userProfilesLambda));
+    userProfilesResource.addMethod("OPTIONS", corsIntegration, {
       methodResponses: [methodResponse],
     });
 
