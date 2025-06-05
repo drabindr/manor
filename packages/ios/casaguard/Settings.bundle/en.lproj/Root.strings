@@ -1,0 +1,8 @@
+/* Environment Settings Section */
+"Environment Settings" = "Environment Settings";
+"Switch between Production and Test environments. Using Test environment can affect app functionality." = "Switch between Production and Test environments. Using Test environment can affect app functionality.";
+
+/* Environment Selection */
+"Environment" = "Environment";
+"Production" = "Production";
+"Test" = "Test";

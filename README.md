@@ -11,13 +11,14 @@ Manor is a comprehensive monorepo that combines a React-based frontend web appli
 
 ## Repository Structure
 
-This is a monorepo containing two main packages:
+This is a monorepo containing three main packages:
 
 ```
 manor/
 ├── packages/
 │   ├── website/          # React frontend application
-│   └── cdk/              # AWS CDK infrastructure and Lambda functions
+│   ├── cdk/              # AWS CDK infrastructure and Lambda functions
+│   └── ios/              # iOS mobile application (Veedu/CasaGuard)
 ├── .github/workflows/    # CI/CD pipelines
 └── package.json          # Workspace configuration
 ```
@@ -36,6 +37,12 @@ manor/
 - **Features**: Authentication, device integrations, data storage, real-time messaging
 - **Package Name**: `@manor/cdk`
 
+### 📱 iOS App (`packages/ios`)
+- **Technology**: Swift, SwiftUI, Xcode
+- **Purpose**: Native iOS application for geofencing and home automation
+- **Features**: Location-based triggers, push notifications, device control, home/away detection
+- **Package Name**: `@manor/ios`
+
 ## Quick Start
 
 ### Prerequisites
@@ -44,6 +51,7 @@ manor/
 - AWS CLI configured (for CDK deployments)
 - CDK CLI (`npm install -g aws-cdk`)
 - OpenAI API key (for AI features)
+- Xcode 15.0+ (for iOS development)
 
 ### 🚀 One-Command Setup
 ```bash
@@ -98,11 +106,19 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE
 
 ## Workspace Scripts
 
+### General Commands
 - `npm run build` - Build all packages
 - `npm run test` - Run tests for all packages  
 - `npm run dev` - Start the website development server
 - `npm run deploy` - Deploy CDK infrastructure
 - `npm run install:all` - Install dependencies for all packages
+
+### iOS-Specific Commands
+- `npm run ios:build` - Build iOS app (release configuration)
+- `npm run ios:build:debug` - Build iOS app (debug configuration)
+- `npm run ios:test` - Run iOS unit and UI tests
+- `npm run ios:clean` - Clean iOS build artifacts
+- `npm run ios:open` - Open iOS project in Xcode
 
 ## Architecture
 
@@ -114,6 +130,7 @@ Manor uses a serverless, cloud-native architecture on AWS with seamless integrat
 Frontend (React) ↔ REST API ↔ Lambda (API Handlers)
 Frontend (React) ↔ WebSocket API ↔ Lambda (WebSocket Handler)
 iOS App ↔ REST API ↔ Lambda (API Handlers)
+iOS App ↔ APNs ↔ Lambda (Push Notifications)
 Lambda ↔ DynamoDB (EventLogs, AlarmState, UserHomeStates, Homes)
 Lambda ↔ External Services (Google Nest, TP-Link, Airthings, APNs)
 Python Scripts ↔ S3 (Video Storage)
@@ -125,6 +142,13 @@ Python Scripts ↔ S3 (Video Storage)
 - **Authentication**: AWS Cognito integration
 - **Real-time**: WebSocket connections to backend
 - **UI**: Modern responsive design with Tailwind CSS
+
+### iOS App
+- **Framework**: SwiftUI with Swift
+- **Development**: Xcode project
+- **Authentication**: AWS Cognito integration
+- **Features**: Geofencing, push notifications, location services
+- **Integration**: REST API communication with backend
 
 ### Backend (CDK)
 - **Infrastructure**: AWS CDK for Infrastructure as Code

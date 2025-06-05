@@ -11,7 +11,12 @@
     "test": "npm run test --workspaces",
     "dev": "npm run dev --workspace=@manor/website",
     "deploy": "npm run deploy --workspace=@manor/cdk",
-    "install:all": "npm install --workspaces"
+    "install:all": "npm install --workspaces",
+    "ios:build": "npm run build --workspace=@manor/ios",
+    "ios:build:debug": "npm run build:debug --workspace=@manor/ios",
+    "ios:test": "npm run test --workspace=@manor/ios",
+    "ios:clean": "npm run clean --workspace=@manor/ios",
+    "ios:open": "npm run open --workspace=@manor/ios"
   },
   "devDependencies": {
     "@types/node": "^20.0.0"

@@ -1,0 +1,627 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7307D2BB2BDB4D7D00D58C7F /* casaguardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7307D2BA2BDB4D7D00D58C7F /* casaguardApp.swift */; };
+		7307D2BD2BDB4D7D00D58C7F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7307D2BC2BDB4D7D00D58C7F /* ContentView.swift */; };
+		7307D2BF2BDB4D7F00D58C7F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7307D2BE2BDB4D7F00D58C7F /* Assets.xcassets */; };
+		7307D2C22BDB4D7F00D58C7F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7307D2C12BDB4D7F00D58C7F /* Preview Assets.xcassets */; };
+		7307D2CC2BDB4D7F00D58C7F /* casaguardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7307D2CB2BDB4D7F00D58C7F /* casaguardTests.swift */; };
+		7307D2D62BDB4D7F00D58C7F /* casaguardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7307D2D52BDB4D7F00D58C7F /* casaguardUITests.swift */; };
+		7307D2D82BDB4D7F00D58C7F /* casaguardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7307D2D72BDB4D7F00D58C7F /* casaguardUITestsLaunchTests.swift */; };
+		73B62FA02D5B025200EBEF30 /* HomeLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B62F9F2D5B025200EBEF30 /* HomeLocationManager.swift */; };
+		73D4F9B12D7CD6C2000F8A8B /* APNSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D4F9B02D7CD6C2000F8A8B /* APNSManager.swift */; };
+		73E7CB432DE163AA0043D2CA /* EndpointManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E7CB422DE163AA0043D2CA /* EndpointManager.swift */; };
+		73E7CB452DE166400043D2CA /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 73E7CB442DE166400043D2CA /* Settings.bundle */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7307D2C82BDB4D7F00D58C7F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7307D2AF2BDB4D7D00D58C7F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7307D2B62BDB4D7D00D58C7F;
+			remoteInfo = casaguard;
+		};
+		7307D2D22BDB4D7F00D58C7F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7307D2AF2BDB4D7D00D58C7F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7307D2B62BDB4D7D00D58C7F;
+			remoteInfo = casaguard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		7307D2B72BDB4D7D00D58C7F /* veedu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = veedu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7307D2BA2BDB4D7D00D58C7F /* casaguardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = casaguardApp.swift; sourceTree = "<group>"; };
+		7307D2BC2BDB4D7D00D58C7F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		7307D2BE2BDB4D7F00D58C7F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7307D2C12BDB4D7F00D58C7F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		7307D2C72BDB4D7F00D58C7F /* casaguardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = casaguardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7307D2CB2BDB4D7F00D58C7F /* casaguardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = casaguardTests.swift; sourceTree = "<group>"; };
+		7307D2D12BDB4D7F00D58C7F /* casaguardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = casaguardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7307D2D52BDB4D7F00D58C7F /* casaguardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = casaguardUITests.swift; sourceTree = "<group>"; };
+		7307D2D72BDB4D7F00D58C7F /* casaguardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = casaguardUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		7307D2E42BDB524800D58C7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		730E09282BE72994001009FB /* casaguard copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "casaguard copy-Info.plist"; path = "/Users/drabindr/workspace/casa-guard-ios/casaguard copy-Info.plist"; sourceTree = "<absolute>"; };
+		73B62F9F2D5B025200EBEF30 /* HomeLocationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeLocationManager.swift; sourceTree = "<group>"; };
+		73D4F9B02D7CD6C2000F8A8B /* APNSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNSManager.swift; sourceTree = "<group>"; };
+		73D4F9B22D7CE195000F8A8B /* veedu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = veedu.entitlements; sourceTree = "<group>"; };
+		73E7CB422DE163AA0043D2CA /* EndpointManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndpointManager.swift; sourceTree = "<group>"; };
+		73E7CB442DE166400043D2CA /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7307D2B42BDB4D7D00D58C7F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2C42BDB4D7F00D58C7F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2CE2BDB4D7F00D58C7F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7307D2AE2BDB4D7D00D58C7F = {
+			isa = PBXGroup;
+			children = (
+				73D4F9B22D7CE195000F8A8B /* veedu.entitlements */,
+				7307D2B92BDB4D7D00D58C7F /* casaguard */,
+				7307D2CA2BDB4D7F00D58C7F /* casaguardTests */,
+				7307D2D42BDB4D7F00D58C7F /* casaguardUITests */,
+				7307D2B82BDB4D7D00D58C7F /* Products */,
+				730E09282BE72994001009FB /* casaguard copy-Info.plist */,
+			);
+			sourceTree = "<group>";
+		};
+		7307D2B82BDB4D7D00D58C7F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7307D2B72BDB4D7D00D58C7F /* veedu.app */,
+				7307D2C72BDB4D7F00D58C7F /* casaguardTests.xctest */,
+				7307D2D12BDB4D7F00D58C7F /* casaguardUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7307D2B92BDB4D7D00D58C7F /* casaguard */ = {
+			isa = PBXGroup;
+			children = (
+				73E7CB442DE166400043D2CA /* Settings.bundle */,
+				73D4F9B02D7CD6C2000F8A8B /* APNSManager.swift */,
+				73E7CB422DE163AA0043D2CA /* EndpointManager.swift */,
+				73B62F9F2D5B025200EBEF30 /* HomeLocationManager.swift */,
+				7307D2E42BDB524800D58C7F /* Info.plist */,
+				7307D2BA2BDB4D7D00D58C7F /* casaguardApp.swift */,
+				7307D2BC2BDB4D7D00D58C7F /* ContentView.swift */,
+				7307D2BE2BDB4D7F00D58C7F /* Assets.xcassets */,
+				7307D2C02BDB4D7F00D58C7F /* Preview Content */,
+			);
+			path = casaguard;
+			sourceTree = "<group>";
+		};
+		7307D2C02BDB4D7F00D58C7F /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				7307D2C12BDB4D7F00D58C7F /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		7307D2CA2BDB4D7F00D58C7F /* casaguardTests */ = {
+			isa = PBXGroup;
+			children = (
+				7307D2CB2BDB4D7F00D58C7F /* casaguardTests.swift */,
+			);
+			path = casaguardTests;
+			sourceTree = "<group>";
+		};
+		7307D2D42BDB4D7F00D58C7F /* casaguardUITests */ = {
+			isa = PBXGroup;
+			children = (
+				7307D2D52BDB4D7F00D58C7F /* casaguardUITests.swift */,
+				7307D2D72BDB4D7F00D58C7F /* casaguardUITestsLaunchTests.swift */,
+			);
+			path = casaguardUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7307D2B62BDB4D7D00D58C7F /* veedu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7307D2DB2BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "veedu" */;
+			buildPhases = (
+				7307D2B32BDB4D7D00D58C7F /* Sources */,
+				7307D2B42BDB4D7D00D58C7F /* Frameworks */,
+				7307D2B52BDB4D7D00D58C7F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = veedu;
+			productName = veedu;
+			productReference = 7307D2B72BDB4D7D00D58C7F /* veedu.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7307D2C62BDB4D7F00D58C7F /* casaguardTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7307D2DE2BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "casaguardTests" */;
+			buildPhases = (
+				7307D2C32BDB4D7F00D58C7F /* Sources */,
+				7307D2C42BDB4D7F00D58C7F /* Frameworks */,
+				7307D2C52BDB4D7F00D58C7F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7307D2C92BDB4D7F00D58C7F /* PBXTargetDependency */,
+			);
+			name = casaguardTests;
+			productName = casaguardTests;
+			productReference = 7307D2C72BDB4D7F00D58C7F /* casaguardTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7307D2D02BDB4D7F00D58C7F /* casaguardUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7307D2E12BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "casaguardUITests" */;
+			buildPhases = (
+				7307D2CD2BDB4D7F00D58C7F /* Sources */,
+				7307D2CE2BDB4D7F00D58C7F /* Frameworks */,
+				7307D2CF2BDB4D7F00D58C7F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7307D2D32BDB4D7F00D58C7F /* PBXTargetDependency */,
+			);
+			name = casaguardUITests;
+			productName = casaguardUITests;
+			productReference = 7307D2D12BDB4D7F00D58C7F /* casaguardUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7307D2AF2BDB4D7D00D58C7F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1420;
+				LastUpgradeCheck = 1420;
+				TargetAttributes = {
+					7307D2B62BDB4D7D00D58C7F = {
+						CreatedOnToolsVersion = 14.2;
+					};
+					7307D2C62BDB4D7F00D58C7F = {
+						CreatedOnToolsVersion = 14.2;
+						TestTargetID = 7307D2B62BDB4D7D00D58C7F;
+					};
+					7307D2D02BDB4D7F00D58C7F = {
+						CreatedOnToolsVersion = 14.2;
+						TestTargetID = 7307D2B62BDB4D7D00D58C7F;
+					};
+				};
+			};
+			buildConfigurationList = 7307D2B22BDB4D7D00D58C7F /* Build configuration list for PBXProject "casaguard" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7307D2AE2BDB4D7D00D58C7F;
+			productRefGroup = 7307D2B82BDB4D7D00D58C7F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7307D2B62BDB4D7D00D58C7F /* veedu */,
+				7307D2C62BDB4D7F00D58C7F /* casaguardTests */,
+				7307D2D02BDB4D7F00D58C7F /* casaguardUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7307D2B52BDB4D7D00D58C7F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7307D2C22BDB4D7F00D58C7F /* Preview Assets.xcassets in Resources */,
+				73E7CB452DE166400043D2CA /* Settings.bundle in Resources */,
+				7307D2BF2BDB4D7F00D58C7F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2C52BDB4D7F00D58C7F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2CF2BDB4D7F00D58C7F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7307D2B32BDB4D7D00D58C7F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7307D2BD2BDB4D7D00D58C7F /* ContentView.swift in Sources */,
+				73D4F9B12D7CD6C2000F8A8B /* APNSManager.swift in Sources */,
+				73B62FA02D5B025200EBEF30 /* HomeLocationManager.swift in Sources */,
+				7307D2BB2BDB4D7D00D58C7F /* casaguardApp.swift in Sources */,
+				73E7CB432DE163AA0043D2CA /* EndpointManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2C32BDB4D7F00D58C7F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7307D2CC2BDB4D7F00D58C7F /* casaguardTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7307D2CD2BDB4D7F00D58C7F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7307D2D82BDB4D7F00D58C7F /* casaguardUITestsLaunchTests.swift in Sources */,
+				7307D2D62BDB4D7F00D58C7F /* casaguardUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7307D2C92BDB4D7F00D58C7F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7307D2B62BDB4D7D00D58C7F /* veedu */;
+			targetProxy = 7307D2C82BDB4D7F00D58C7F /* PBXContainerItemProxy */;
+		};
+		7307D2D32BDB4D7F00D58C7F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7307D2B62BDB4D7D00D58C7F /* veedu */;
+			targetProxy = 7307D2D22BDB4D7F00D58C7F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		7307D2D92BDB4D7F00D58C7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7307D2DA2BDB4D7F00D58C7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7307D2DC2BDB4D7F00D58C7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = veedu.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"casaguard/Preview Content\"";
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = casaguard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = veedu;
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to set up a geofence around your home.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7307D2DD2BDB4D7F00D58C7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = veedu.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"casaguard/Preview Content\"";
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = casaguard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = veedu;
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to set up a geofence around your home.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7307D2DF2BDB4D7F00D58C7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/casaguard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/casaguard";
+			};
+			name = Debug;
+		};
+		7307D2E02BDB4D7F00D58C7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/casaguard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/casaguard";
+			};
+			name = Release;
+		};
+		7307D2E22BDB4D7F00D58C7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = casaguard;
+			};
+			name = Debug;
+		};
+		7307D2E32BDB4D7F00D58C7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P3ABP9SXH7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.manor.signin.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = casaguard;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7307D2B22BDB4D7D00D58C7F /* Build configuration list for PBXProject "casaguard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7307D2D92BDB4D7F00D58C7F /* Debug */,
+				7307D2DA2BDB4D7F00D58C7F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7307D2DB2BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "veedu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7307D2DC2BDB4D7F00D58C7F /* Debug */,
+				7307D2DD2BDB4D7F00D58C7F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7307D2DE2BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "casaguardTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7307D2DF2BDB4D7F00D58C7F /* Debug */,
+				7307D2E02BDB4D7F00D58C7F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7307D2E12BDB4D7F00D58C7F /* Build configuration list for PBXNativeTarget "casaguardUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7307D2E22BDB4D7F00D58C7F /* Debug */,
+				7307D2E32BDB4D7F00D58C7F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7307D2AF2BDB4D7D00D58C7F /* Project object */;
+}
