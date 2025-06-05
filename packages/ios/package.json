@@ -1,0 +1,27 @@
+{
+  "name": "@manor/ios",
+  "version": "1.0.0",
+  "description": "Manor iOS application - Veedu/CasaGuard",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "xcodebuild -project casaguard.xcodeproj -scheme casaguard -configuration Release",
+    "build:debug": "xcodebuild -project casaguard.xcodeproj -scheme casaguard -configuration Debug",
+    "test": "xcodebuild test -project casaguard.xcodeproj -scheme casaguard -destination 'platform=iOS Simulator,name=iPhone 15'",
+    "clean": "xcodebuild clean -project casaguard.xcodeproj -scheme casaguard",
+    "archive": "xcodebuild archive -project casaguard.xcodeproj -scheme casaguard -archivePath build/casaguard.xcarchive",
+    "open": "open casaguard.xcodeproj"
+  },
+  "keywords": [
+    "ios",
+    "swift",
+    "home-automation",
+    "geofencing",
+    "security"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
