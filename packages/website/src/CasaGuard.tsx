@@ -30,21 +30,40 @@ const EventHistory = lazy(() => import('./EventHistory'));
 // These will load in the background after the main component loads
 const prefetchComponents = () => {
   // Use requestIdleCallback if available, otherwise setTimeout
-  const schedulePreload = (fn: () => void) => {
+  const schedulePreload = (fn: () => void, delay = 100) => {
     if ('requestIdleCallback' in window) {
       requestIdleCallback(fn, { timeout: 5000 });
     } else {
-      setTimeout(fn, 100);
+      setTimeout(fn, delay);
     }
   };
 
+  // Immediate prefetch for likely next components
   schedulePreload(() => {
-    // Prefetch components that aren't immediately visible
+    // Prefetch components that are likely to be used soon
+    import('./components/Navigation');
+    import('./components/AppHeader');
+  }, 50);
+
+  // Secondary prefetch for other components
+  schedulePreload(() => {
     import('./Thermostat');
     import('./DeviceControl'); 
     import('./EventHistory');
+  }, 200);
+
+  // Tertiary prefetch for less critical components
+  schedulePreload(() => {
     import('./components/CameraPage');
-  });
+    import('./components/FullscreenCamera');
+    import('./components/HistoryOverlay');
+  }, 500);
+
+  // Final prefetch for utility components
+  schedulePreload(() => {
+    import('./components/LoadingOverlay');
+    import('./components/NotificationsProvider');
+  }, 1000);
 };
 
 // Locally load only the types

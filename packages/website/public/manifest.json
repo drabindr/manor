@@ -1,6 +1,14 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "name": "Manor234 - Home Automation",
+  "short_name": "Manor234",
+  "description": "Unified home automation and management platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
+  "lang": "en-US",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +26,30 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "shortcuts": [
+    {
+      "name": "Camera View",
+      "short_name": "Cameras",
+      "description": "View security cameras",
+      "url": "/?tab=cameras",
+      "icons": [
+        {
+          "src": "favicon.ico",
+          "sizes": "64x64"
+        }
+      ]
+    },
+    {
+      "name": "Climate Control",
+      "short_name": "Thermostat",
+      "description": "Control temperature",
+      "url": "/?tab=thermostat",
+      "icons": [
+        {
+          "src": "favicon.ico",
+          "sizes": "64x64"
+        }
+      ]
+    }
+  ]
 }
