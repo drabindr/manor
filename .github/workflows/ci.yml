@@ -39,9 +39,24 @@ jobs:
       - name: Install dependencies (excluding iOS)
         run: |
           echo "📦 Installing dependencies excluding iOS package..."
-          # Install dependencies for all workspaces except iOS
-          # iOS package is not needed for AWS deployment and may have platform-specific dependencies
-          npm ci --workspaces --workspace=@manor/cdk --workspace=@manor/website
+          # Remove iOS package reference from package-lock.json temporarily
+          if [ -f package-lock.json ]; then
+            cp package-lock.json package-lock.json.backup
+            # Remove iOS package entries from lockfile
+            node -e "
+              const fs = require('fs');
+              const lockfile = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+              if (lockfile.packages && lockfile.packages['packages/ios']) {
+                delete lockfile.packages['packages/ios'];
+              }
+              if (lockfile.dependencies && lockfile.dependencies['@manor/ios']) {
+                delete lockfile.dependencies['@manor/ios'];
+              }
+              fs.writeFileSync('package-lock.json', JSON.stringify(lockfile, null, 2));
+            "
+          fi
+          # Install dependencies for specific workspaces
+          npm install --workspace=@manor/cdk --workspace=@manor/website
           echo "✅ Dependencies installed successfully"
 
       - name: Fix website rollup dependencies
