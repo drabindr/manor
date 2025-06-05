@@ -12,6 +12,7 @@ import {
   UilLightbulb,
   UilHistory,
 } from "@iconscout/react-unicons";
+import PullToRefresh from "react-simple-pull-to-refresh";
 import "./components/CasaGuard.css";
 
 // Lazy loaded components
@@ -498,6 +499,75 @@ const CasaGuard: React.FC = () => {
     }
   }, []);
 
+  // Tab-specific pull-to-refresh that refreshes current tab first, then others in background
+  const handleTabPullToRefresh = useCallback(async (tabId: string) => {
+    if (refreshing) return Promise.resolve();
+    
+    logger.debug(`Pull-to-refresh triggered for tab: ${tabId}`);
+    setRefreshing(true);
+    
+    try {
+      // First: Refresh the current active tab's widgets immediately
+      if (tabId === 'thermostat') {
+        await fetchThermostatMinimal();
+        thermostatRefreshKey.current += 1;
+      } else if (tabId === 'cameras') {
+        await fetchCameras();
+      } else if (tabId === 'devices') {
+        deviceControlRefreshKey.current += 1;
+      } else if (tabId === 'security' && eventHistoryRef.current) {
+        await eventHistoryRef.current.refresh();
+      }
+      
+      // Second: Refresh other tabs in the background (don't await these)
+      const backgroundRefreshPromises: Promise<any>[] = [];
+      
+      if (tabId !== 'thermostat') {
+        backgroundRefreshPromises.push(
+          fetchThermostatMinimal().then(() => {
+            thermostatRefreshKey.current += 1;
+          })
+        );
+      }
+      
+      if (tabId !== 'cameras') {
+        backgroundRefreshPromises.push(fetchCameras());
+      }
+      
+      if (tabId !== 'devices') {
+        backgroundRefreshPromises.push(
+          Promise.resolve().then(() => {
+            deviceControlRefreshKey.current += 1;
+          })
+        );
+      }
+      
+      if (tabId !== 'security' && eventHistoryRef.current) {
+        backgroundRefreshPromises.push(eventHistoryRef.current.refresh());
+      }
+      
+      // Always refresh alarm state
+      fetchAlarmState();
+      
+      // Start background refreshes but don't wait for them
+      Promise.all(backgroundRefreshPromises).catch(error => {
+        logger.error("Error during background refresh:", error);
+      });
+      
+      // Ensure UI updates are complete before resolving
+      return new Promise(resolve => {
+        setTimeout(() => {
+          setRefreshing(false);
+          resolve(true);
+        }, 300);
+      });
+    } catch (error) {
+      logger.error(`Error during tab refresh for ${tabId}:`, error);
+      setRefreshing(false);
+      return Promise.reject(error);
+    }
+  }, [refreshing, fetchCameras, fetchThermostatMinimal, fetchAlarmState]);
+
   // Improved handling of tab changes to prevent unnecessary renders
   const handleSetActiveTab = useCallback((tabId: string) => {
     // Only update if tab is changing
@@ -601,10 +671,26 @@ const CasaGuard: React.FC = () => {
                     }}
                     aria-hidden={activeTab !== tab.id}
                   >
-                    <Suspense fallback={<TabLoadingFallback />}>
-                      {/* Use memoized tab components instead of dynamically loading each time */}
-                      {tabComponents[tab.id as keyof typeof tabComponents]}
-                    </Suspense>
+                    <PullToRefresh
+                      onRefresh={() => handleTabPullToRefresh(tab.id)}
+                      pullDownThreshold={67}
+                      maxPullDownDistance={95}
+                      refreshingContent={
+                        <div className="flex justify-center items-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-yellow-400"></div>
+                        </div>
+                      }
+                      pullingContent={
+                        <div className="flex justify-center items-center py-2">
+                          <div className="text-gray-400 text-sm">Pull to refresh {tab.label.toLowerCase()}...</div>
+                        </div>
+                      }
+                    >
+                      <Suspense fallback={<TabLoadingFallback />}>
+                        {/* Use memoized tab components instead of dynamically loading each time */}
+                        {tabComponents[tab.id as keyof typeof tabComponents]}
+                      </Suspense>
+                    </PullToRefresh>
                   </div>
                 ))}
               </div>
