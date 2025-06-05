@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import Hls from 'hls.js';
 import { logger } from './utils/Logger';
 
@@ -10,9 +10,10 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   const retryTimeout = useRef<number | null>(null);
   const retryCount = useRef<number>(0);
   const maxRetryCount = 1000;
-  const retryInterval = 500;
-  const wsReconnectDelay = 1000;
+  const retryInterval = 200; // Reduced from 500ms for faster retries
+  const wsReconnectDelay = 500; // Reduced from 1000ms for faster reconnection
   const runId = useRef(Date.now());
+  const [isLoading, setIsLoading] = useState(true);
 
   useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
 
@@ -58,13 +59,13 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        liveSyncDuration: 2,
-        liveMaxLatencyDuration: 5,
+        liveSyncDuration: 0.3, // Reduced for lower latency
+        liveMaxLatencyDuration: 1.5, // Reduced for lower latency
         maxLiveSyncPlaybackRate: 1.5,
-        lowLatencyMode: false,
+        lowLatencyMode: true, // Enable for better performance
         autoStartLoad: true,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
+        maxBufferLength: 10, // Reduced for faster start
+        maxMaxBufferLength: 20, // Reduced for faster start
       });
 
       hlsRef.current = hls;
@@ -74,7 +75,10 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoElement
           .play()
-          .then(() => resetRetryCount())
+          .then(() => {
+            resetRetryCount();
+            setIsLoading(false); // Video started playing
+          })
           .catch((error) => logger.error('Error playing video:', error));
       });
 
@@ -115,7 +119,10 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
       videoElement.addEventListener('loadedmetadata', () => {
         videoElement
           .play()
-          .then(() => resetRetryCount())
+          .then(() => {
+            resetRetryCount();
+            setIsLoading(false); // Video started playing
+          })
           .catch((error) => logger.error('Error playing video:', error));
       });
     } else {
@@ -193,6 +200,7 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   }
 
   useEffect(() => {
+    // Start WebSocket and HLS loading in parallel for faster startup
     connectWebSocket();
     loadHlsStream();
 
@@ -220,7 +228,15 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full h-full bg-black">
+    <div ref={containerRef} className="w-full h-full bg-black relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+          <div className="text-white text-sm flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Loading camera...
+          </div>
+        </div>
+      )}
       <video
         ref={videoRef}
         controls

@@ -4,6 +4,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useState,
 } from 'react';
 import { logger } from './utils/Logger';
 import type { CameraDevice } from './components/CameraPage';
@@ -23,6 +24,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   const renewalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraNameRef = useRef(camera.name);
   const maxRetries = 400;
+  const [isLoading, setIsLoading] = useState(true);
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
@@ -49,6 +51,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         if (videoRef.current) {
           logger.debug('[ontrack] Received remote track');
           videoRef.current.srcObject = event.streams[0];
+          setIsLoading(false); // Video is now loading/playing
         }
       };
 
@@ -78,7 +81,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
                 getLiveStream();
               }
               isReinitScheduledRef.current = false;
-            }, 5000); // wait 5s
+            }, 2000); // wait 2s instead of 5s for faster recovery
           }
         }
       };
@@ -137,7 +140,13 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
       logger.debug(`[getLiveStream] Attempt ${retryAttempt + 1}/${maxRetries}`);
       if (retryAttempt >= maxRetries) {
         logger.error('[getLiveStream] Max retries reached.');
+        setIsLoading(false);
         return;
+      }
+
+      // Show loading on first attempt
+      if (retryAttempt === 0) {
+        setIsLoading(true);
       }
 
       initializePeerConnection();
@@ -178,7 +187,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
               logger.warn(`[Extend] Non-500 error. Attempt ${retryAttempt + 1}`);
               setTimeout(() => {
                 getLiveStream(retryAttempt + 1);
-              }, 200 * Math.pow(2, retryAttempt));
+              }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
             }
             return;
           }
@@ -199,7 +208,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.warn(`[Generate] Offer SDP invalid. Attempt ${retryAttempt + 1}`);
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, 200 * Math.pow(2, retryAttempt));
+            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
             return;
           }
 
@@ -222,7 +231,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.error(`[Generate] Error ${response.status}: ${response.statusText}`);
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, 200 * Math.pow(2, retryAttempt));
+            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
             return;
           }
 
@@ -245,14 +254,14 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.error('[Generate] Missing answerSdp or mediaSessionId');
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, 200 * Math.pow(2, retryAttempt));
+            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
           }
         }
       } catch (error) {
         logger.error('[getLiveStream] Error:', error);
         setTimeout(() => {
           getLiveStream(retryAttempt + 1);
-        }, 200 * Math.pow(2, retryAttempt));
+        }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
       }
     },
     [createOffer, initializePeerConnection, scheduleRenewal]
@@ -277,8 +286,16 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   return (
     <div
       ref={containerRef}
-      className='bg-gray-900 border border-gray-700 rounded-lg overflow-hidden'
+      className='bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative'
     >
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+          <div className="text-white text-sm flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Loading camera...
+          </div>
+        </div>
+      )}
       <video
         ref={(el) => (videoRef.current = el)}
         autoPlay
