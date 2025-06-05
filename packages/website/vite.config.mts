@@ -2,15 +2,37 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Enable React optimization features
+      babel: {
+        // Don't add babel console removal plugin since we're using terser instead
+        plugins: []
+      }
+    })
+  ],
   server: {
     port: 3000,
   },
   build: {
     outDir: 'build',
     chunkSizeWarningLimit: 1000,
+    // Enable source maps for better debugging but keep them external
+    sourcemap: 'hidden',
+    // Use default esbuild minifier for better performance
+    minify: 'esbuild',
+    // Additional build optimizations
     rollupOptions: {
+      // Optimize imports
+      external: (id) => {
+        // Don't bundle large optional dependencies that might not be used
+        return false; // Keep all dependencies bundled for now
+      },
       output: {
+        // Optimize chunk naming for better caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           // Split large video library
           vidstack: ['@vidstack/react'],

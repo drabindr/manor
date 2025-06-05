@@ -7,20 +7,106 @@
     
     <!-- DNS prefetch for external resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Critical inline CSS for instant loading -->
+    <style>
+      /* Critical loading styles */
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #0f172a;
+        color: white;
+      }
+      
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* Initial loading spinner */
+      .initial-loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+      }
+      
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #334155;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Hide loader when app loads */
+      .app-loaded .initial-loader {
+        display: none;
+      }
+    </style>
     
     <!-- Preload critical CSS -->
-    <link rel="preload" href="/src/index.css" as="style">
-    <link rel="preload" href="/src/components/CasaGuard.css" as="style">
+    <link rel="preload" href="/src/index.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/src/components/CasaGuard.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Preload critical JavaScript chunks -->
+    <link rel="modulepreload" href="/src/index.jsx">
     
     <!-- Viewport optimizations for mobile -->
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Performance optimizations -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Performance hints -->
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Early loading hints -->
+    <script>
+      // Critical resource hints
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          // Prefetch likely navigation targets
+          const prefetchLinks = [
+            '/src/components/CameraPage.tsx',
+            '/src/Thermostat.tsx',
+            '/src/DeviceControl.tsx'
+          ];
+          prefetchLinks.forEach(href => {
+            const link = document.createElement('link');
+            link.rel = 'modulepreload';
+            link.href = href;
+            document.head.appendChild(link);
+          });
+        });
+      }
+    </script>
   </head>
   <body>
+    <!-- Initial loading screen -->
+    <div class="initial-loader">
+      <div class="spinner"></div>
+    </div>
+    
     <div id="root"></div>
     <div id="fullscreen-root"></div>
     <script type="module" src="/src/index.jsx"></script>
