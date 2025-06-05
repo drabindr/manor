@@ -2,10 +2,10 @@
   "name": "lambda-functions",
   "version": "1.0.0",
   "dependencies": {
-    "aws-sdk": "^2.1691.0",
-    "axios": "^1.7.9",
-    "node-apn": "^3.0.0",
     "uuid": "^11.0.5",
-    "ws": "^8.18.0"
+    "axios": "^1.7.9",
+    "ws": "^8.18.0",
+    "aws-sdk": "^2.1691.0",
+    "node-apn": "^3.0.0"
   }
 }
