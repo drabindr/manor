@@ -161,10 +161,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const [isTemperatureChanging, setIsTemperatureChanging] = useState(false);
   const [ecoModeActive, setEcoModeActive] = useState(false);
   
-  // Enhanced UI state for dial interaction
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedSetpoint, setSelectedSetpoint] = useState<'heat' | 'cool' | 'single' | null>(null);
-  const [hoverTemp, setHoverTemp] = useState<number | null>(null);
+  // Mobile-optimized UI state
   const [pendingChanges, setPendingChanges] = useState(false);
   
   // Active setpoint selection for HEATCOOL mode
@@ -322,43 +319,6 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       setLocalCoolSetpoint(thermostatData.coolCelsius);
     }
   }, [thermostatData?.setpoint, thermostatData?.heatCelsius, thermostatData?.coolCelsius]);
-
-  /**
-   * Global mouse event handling for dial interaction
-   */
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (isDragging) {
-        handleDialMouseUp();
-      }
-    };
-
-    const handleGlobalMouseMove = (event: MouseEvent) => {
-      if (isDragging) {
-        // Convert to React.MouseEvent-like object for consistency
-        const syntheticEvent = {
-          currentTarget: document.querySelector('svg'),
-          clientX: event.clientX,
-          clientY: event.clientY,
-          preventDefault: () => event.preventDefault(),
-        } as any;
-        
-        if (syntheticEvent.currentTarget) {
-          handleDialMouseMove(syntheticEvent);
-        }
-      }
-    };
-
-    if (isDragging) {
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-    }
-
-    return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-    };
-  }, [isDragging, selectedSetpoint, localHeatSetpoint, localCoolSetpoint, localSetpoint]);
 
   /**
    * Handle setpoint selection for HEATCOOL mode
@@ -586,104 +546,6 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
     
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     return angle;
-  };
-
-  const handleDialMouseDown = (event: React.MouseEvent) => {
-    const svgElement = (event.currentTarget as SVGElement);
-    const svgRect = svgElement.getBoundingClientRect();
-    const angle = getAngleFromEvent(event, svgRect);
-    const temp = getTemperatureFromAngle(angle);
-    
-    setIsDragging(true);
-    setIsTemperatureChanging(true);
-    
-    // Use the currently active setpoint for HEATCOOL mode
-    if (thermostatData?.mode === "HEATCOOL") {
-      setSelectedSetpoint(activeSetpoint);
-    } else {
-      setSelectedSetpoint('single');
-    }
-    
-    event.preventDefault();
-  };
-
-  const handleDialMouseMove = (event: React.MouseEvent) => {
-    if (!isDragging) {
-      // Show hover temperature
-      const svgElement = (event.currentTarget as SVGElement);
-      const svgRect = svgElement.getBoundingClientRect();
-      const angle = getAngleFromEvent(event, svgRect);
-      const temp = getTemperatureFromAngle(angle);
-      setHoverTemp(temp);
-      return;
-    }
-
-    const svgElement = (event.currentTarget as SVGElement);
-    const svgRect = svgElement.getBoundingClientRect();
-    const angle = getAngleFromEvent(event, svgRect);
-    const temp = getTemperatureFromAngle(angle);
-
-    // Update appropriate setpoint based on selection
-    if (selectedSetpoint === 'heat') {
-      const maxHeat = localCoolSetpoint ? localCoolSetpoint - 1 : 30;
-      const validTemp = Math.min(Math.max(temp, 10), maxHeat);
-      setLocalHeatSetpoint(validTemp);
-    } else if (selectedSetpoint === 'cool') {
-      const minCool = localHeatSetpoint ? localHeatSetpoint + 1 : 10;
-      const validTemp = Math.max(Math.min(temp, 30), minCool);
-      setLocalCoolSetpoint(validTemp);
-    } else if (selectedSetpoint === 'single') {
-      const validTemp = Math.min(Math.max(temp, 10), 30);
-      setLocalSetpoint(validTemp);
-    }
-  };
-
-  const handleDialMouseUp = async () => {
-    if (!isDragging) return;
-    
-    setIsDragging(false);
-    setIsTemperatureChanging(false);
-    setSelectedSetpoint(null);
-    
-    // Send backend update based on what was changed
-    if (selectedSetpoint === 'heat' || selectedSetpoint === 'cool') {
-      setPendingChanges(true);
-      try {
-        const response = await fetch(
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/set",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              data: {
-                deviceId,
-                mode: "HEATCOOL",
-                heatSetpoint: localHeatSetpoint,
-                coolSetpoint: localCoolSetpoint,
-              },
-            }),
-          }
-        );
-        
-        if (response.ok) {
-          console.log("HEATCOOL setpoints updated successfully");
-          setTimeout(fetchThermostatData, 1000);
-        }
-      } catch (error) {
-        console.error("Error updating HEATCOOL setpoints:", error);
-      } finally {
-        setPendingChanges(false);
-      }
-    } else if (selectedSetpoint === 'single') {
-      await setThermostatTemperature(localSetpoint!);
-    }
-  };
-
-  const handleDialMouseLeave = () => {
-    setHoverTemp(null);
-    if (isDragging) {
-      handleDialMouseUp();
-    }
   };
 
   /**
@@ -932,544 +794,180 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                        thermostatData?.hvacStatus === "COOLING";
 
   /**
-   * Render
+   * Render - Simplified Mobile-Optimized Version
    */
   return (
-    <div className="flex flex-col space-y-6 w-screen -ml-4 px-4">
-      {/* =============== THERMOSTAT CARD =============== */}
-      <div className="bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-2xl shadow-2xl overflow-hidden w-full relative min-h-[380px] flex flex-col">
-        {/* Glass reflective overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent h-1/2 pointer-events-none"></div>
+    <div className="flex flex-col space-y-4 w-full max-w-sm mx-auto px-4">
+      {/* =============== SIMPLIFIED THERMOSTAT CARD =============== */}
+      <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden w-full relative">
         
-        {/* Nest Logo (Top Right) */}
-        <div className="absolute top-3 right-3 z-10">
-          <div className="bg-black/30 rounded-full p-1.5 backdrop-blur-sm">
-            <OptimizedImage src="/nest.svg" alt="Nest" className="h-6 w-6 opacity-80 hover:opacity-100 transition-opacity duration-200" loading="lazy" decoding="async" />
-          </div>
-        </div>
-        
-        {/* Status text at the top */}
-        <div className="flex items-center justify-center pt-4 pb-1">
-          <div 
-            className="text-xs font-medium uppercase tracking-wider px-3 py-1 rounded-full border"
-            style={{ 
-              color: getModeColor(),
-              borderColor: `${getModeColor()}50`
-            }}
-          >
-            {getStatusText()}
-            {isHvacActive && (
-              <span className="inline-block ml-1 w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-            )}
-          </div>
-        </div>
-        
-        {/* Thermostat Dial */}
-        <div className="flex items-center justify-center flex-1 relative">
-          <svg 
-            width={width} 
-            height={height} 
-            viewBox={`0 0 ${width} ${height}`} 
-            className={`transform transition-all duration-300 cursor-pointer ${
-              isDragging ? 'scale-105' : 'scale-95 hover:scale-100'
-            } ${pendingChanges ? 'animate-pulse' : ''}`}
-            onMouseDown={handleDialMouseDown}
-            onMouseMove={handleDialMouseMove}
-            onMouseUp={handleDialMouseUp}
-            onMouseLeave={handleDialMouseLeave}
-          >
-            <defs>
-              {/* Enhanced gradients for a more premium look */}
-              <linearGradient id="bezelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#555555" />
-                <stop offset="40%" stopColor="#333333" />
-                <stop offset="60%" stopColor="#222222" />
-                <stop offset="100%" stopColor="#111111" />
-              </linearGradient>
-              <linearGradient id="silverRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f0f0f0" />
-                <stop offset="30%" stopColor="#c0c0c0" />
-                <stop offset="70%" stopColor="#a0a0a0" />
-                <stop offset="100%" stopColor="#808080" />
-              </linearGradient>
-              <radialGradient id="innerGlassGradient" cx="30%" cy="30%" r="70%">
-                <stop offset="0%" stopColor="#333333" />
-                <stop offset="100%" stopColor="#111111" />
-              </radialGradient>
-              <radialGradient id="heatingGradient" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#FF6600" />
-                <stop offset="100%" stopColor="#DD4400" />
-              </radialGradient>
-              <radialGradient id="coolingGradient" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#00BBFF" />
-                <stop offset="100%" stopColor="#0088DD" />
-              </radialGradient>
-              <linearGradient id="dualModeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#FF5500" />
-                <stop offset="50%" stopColor="#4DDF4D" />
-                <stop offset="100%" stopColor="#00A0FF" />
-              </linearGradient>
-              <radialGradient id="selectedGradient" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#4DDF4D" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#4DDF4D" stopOpacity="0.2" />
-              </radialGradient>
-              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="5" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-              <filter id="strongGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="8" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-              <filter id="softShadow">
-                <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.3" />
-              </filter>
-              <filter id="hoverGlow">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
-            
-            {/* Outer silver ring (premium metal look) */}
-            <circle 
-              cx={centerX} 
-              cy={centerY} 
-              r={radiusOuter} 
-              fill="url(#silverRingGradient)" 
-              filter="url(#softShadow)" 
-            />
-            
-            {/* Inner bezel ring */}
-            <circle cx={centerX} cy={centerY} r={radiusBezelInner + 2} fill="url(#bezelGradient)" />
-            
-            {/* Black glass display with enhanced selection feedback */}
-            <circle 
-              cx={centerX} 
-              cy={centerY} 
-              r={radiusBlackCircle} 
-              fill="url(#innerGlassGradient)" 
-              className="transition-all duration-300"
-              style={{ 
-                filter: isHvacActive ? 'brightness(1.2)' : isDragging ? 'brightness(1.1)' : 'none',
-                stroke: selectedSetpoint ? '#4DDF4D' : 
-                        (thermostatData?.mode === "HEATCOOL" && activeSetpoint === 'heat') ? '#FF5500' :
-                        (thermostatData?.mode === "HEATCOOL" && activeSetpoint === 'cool') ? '#00A0FF' : 
-                        'none',
-                strokeWidth: selectedSetpoint ? 3 : (thermostatData?.mode === "HEATCOOL" ? 2 : 0),
-                strokeOpacity: selectedSetpoint ? 0.8 : 0.4
-              }}
-            />
-            
-            {/* Selection indicator overlay */}
-            {selectedSetpoint && (
-              <circle 
-                cx={centerX} 
-                cy={centerY} 
-                r={radiusBlackCircle - 5} 
-                fill="url(#selectedGradient)" 
-                className="animate-pulse"
-              />
-            )}
-            
-            {/* Hover temperature indicator */}
-            {hoverTemp !== null && !isDragging && (
-              <>
-                {(() => {
-                  const hoverAngle = ((hoverTemp - minTemp) / (maxTemp - minTemp)) * 270 - 135;
-                  const hoverRad = (hoverAngle * Math.PI) / 180;
-                  const hoverX = centerX + (radiusTicks - 15) * Math.cos(hoverRad);
-                  const hoverY = centerY + (radiusTicks - 15) * Math.sin(hoverRad);
-                  
-                  return (
-                    <g className="animate-pulse">
-                      <circle
-                        cx={hoverX}
-                        cy={hoverY}
-                        r="8"
-                        fill="#4DDF4D"
-                        fillOpacity="0.8"
-                        filter="url(#hoverGlow)"
-                      />
-                      <text
-                        x={hoverX}
-                        y={hoverY + 1}
-                        fontSize="8"
-                        fill="#000"
-                        textAnchor="middle"
-                        alignmentBaseline="middle"
-                        fontWeight="bold"
-                      >
-                        {hoverTemp}
-                      </text>
-                    </g>
-                  );
-                })()}
-              </>
-            )}
-            
-            {/* Subtle reflection on glass */}
-            <ellipse 
-              cx={centerX - 20} 
-              cy={centerY - 30} 
-              rx={radiusBlackCircle - 30} 
-              ry={20} 
-              fill="white" 
-              opacity={0.03} 
-            />
-            
-            {/* Active progress arc */}
-            {thermostatData?.mode === "HEATCOOL" && localHeatSetpoint !== null && localCoolSetpoint !== null ? (
-              /* Range arc for HEATCOOL mode */
-              <>
-                {/* Background range indicator */}
-                <path 
-                  d={progressPath}
-                  stroke="#4DDF4D"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity={0.3}
-                  className="transition-all duration-300"
-                />
-                <path 
-                  d={progressPath}
-                  stroke="#4DDF4D"
-                  strokeWidth="4"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity={0.8}
-                  className="transition-all duration-300"
-                  filter={isHvacActive ? "url(#glow)" : "none"}
-                />
-              </>
-            ) : (
-              /* Standard progress arc for other modes */
-              <path 
-                d={progressPath}
-                stroke={getModeColor()}
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-                opacity={0.8}
-                className="transition-all duration-300"
-                filter={isHvacActive ? "url(#glow)" : "none"}
-              />
-            )}
-            
-            {/* Tick marks */}
-            {ticks}
-            
-            {/* Temperature needle(s) with enhanced selection feedback */}
-            {thermostatData?.mode === "HEATCOOL" && localHeatSetpoint !== null && localCoolSetpoint !== null ? (
-              /* Dual needles for HEATCOOL mode with active indicator */
-              <g className={`transition-all duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''}`}>
-                {/* Heat setpoint needle */}
-                <g className={`transition-all duration-200 ${
-                  activeSetpoint === 'heat' ? 'scale-110' : 'scale-100 opacity-70'
-                }`}>
-                  {(() => {
-                    const heatRad = (heatAngle * Math.PI) / 180;
-                    const xHeat = centerX + radiusTicks * Math.cos(heatRad);
-                    const yHeat = centerY + radiusTicks * Math.sin(heatRad);
-                    const needleSize = activeSetpoint === 'heat' ? halfNeedle + 1 : halfNeedle - 1;
-                    const xHeatBaseLeft = centerX + needleSize * Math.cos(heatRad + Math.PI / 2);
-                    const yHeatBaseLeft = centerY + needleSize * Math.sin(heatRad + Math.PI / 2);
-                    const xHeatBaseRight = centerX + needleSize * Math.cos(heatRad - Math.PI / 2);
-                    const yHeatBaseRight = centerY + needleSize * Math.sin(heatRad - Math.PI / 2);
-                    
-                    return (
-                      <polygon
-                        points={`${xHeat},${yHeat} ${xHeatBaseLeft},${yHeatBaseLeft} ${xHeatBaseRight},${yHeatBaseRight}`}
-                        fill={activeSetpoint === 'heat' ? "#FF3300" : "#FF5500"}
-                        stroke="#222"
-                        strokeWidth={activeSetpoint === 'heat' ? "1" : "0.5"}
-                        filter={activeSetpoint === 'heat' ? "url(#strongGlow)" : "none"}
-                        className="transition-all duration-200"
-                      />
-                    );
-                  })()}
-                </g>
-                
-                {/* Cool setpoint needle */}
-                <g className={`transition-all duration-200 ${
-                  activeSetpoint === 'cool' ? 'scale-110' : 'scale-100 opacity-70'
-                }`}>
-                  {(() => {
-                    const coolRad = (coolAngle * Math.PI) / 180;
-                    const xCool = centerX + radiusTicks * Math.cos(coolRad);
-                    const yCool = centerY + radiusTicks * Math.sin(coolRad);
-                    const needleSize = activeSetpoint === 'cool' ? halfNeedle + 1 : halfNeedle - 1;
-                    const xCoolBaseLeft = centerX + needleSize * Math.cos(coolRad + Math.PI / 2);
-                    const yCoolBaseLeft = centerY + needleSize * Math.sin(coolRad + Math.PI / 2);
-                    const xCoolBaseRight = centerX + needleSize * Math.cos(coolRad - Math.PI / 2);
-                    const yCoolBaseRight = centerY + needleSize * Math.sin(coolRad - Math.PI / 2);
-                    
-                    return (
-                      <polygon
-                        points={`${xCool},${yCool} ${xCoolBaseLeft},${yCoolBaseLeft} ${xCoolBaseRight},${yCoolBaseRight}`}
-                        fill={activeSetpoint === 'cool' ? "#0088FF" : "#00A0FF"}
-                        stroke="#222"
-                        strokeWidth={activeSetpoint === 'cool' ? "1" : "0.5"}
-                        filter={activeSetpoint === 'cool' ? "url(#strongGlow)" : "none"}
-                        className="transition-all duration-200"
-                      />
-                    );
-                  })()}
-                </g>
-                
-                {/* Central hub with active setpoint indicator */}
-                <circle
-                  cx={centerX}
-                  cy={centerY}
-                  r={10}
-                  fill={activeSetpoint === 'heat' ? "#FF3300" : "#0088FF"}
-                  stroke="#222"
-                  strokeWidth="1"
-                  filter="url(#strongGlow)"
-                  className="transition-all duration-200"
-                />
-                
-                {/* Active setpoint indicator in center */}
-                <text
-                  x={centerX}
-                  y={centerY + 1}
-                  fontSize="8"
-                  fill="white"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                  fontWeight="bold"
-                  className="pointer-events-none"
-                >
-                  {activeSetpoint === 'heat' ? 'H' : 'C'}
-                </text>
-              </g>
-            ) : (
-              /* Single needle for other modes with selection feedback */
-              <g 
-                className={`transition-all duration-300 ${isTemperatureChanging ? 'animate-pulse' : ''} ${selectedSetpoint === 'single' ? 'scale-110' : ''}`}
-                style={{ filter: isTemperatureChanging || selectedSetpoint === 'single' ? "url(#strongGlow)" : "none" }}
-              >
-                <polygon
-                  points={`${xSet},${ySet} ${xBaseLeft},${yBaseLeft} ${xBaseRight},${yBaseRight}`}
-                  fill={getModeColor()}
-                  stroke="#222"
-                  strokeWidth="0.5"
-                  className="transition-all duration-200"
-                />
-                <circle
-                  cx={centerX}
-                  cy={centerY}
-                  r={selectedSetpoint === 'single' ? 10 : 8}
-                  fill={getModeColor()}
-                  stroke="#222"
-                  strokeWidth="0.5"
-                  className="transition-all duration-200"
-                />
-              </g>
-            )}
-            
-            {/* Eco leaf indicator */}
-            {ecoModeActive && (
-              <g transform={`translate(${centerX - 10}, ${centerY + 30})`}>
-                <path
-                  d="M10,0 C15,5 20,10 10,20 C0,10 5,5 10,0"
-                  fill="#4DDF4D"
-                  filter="url(#glow)"
-                  className="animate-pulse"
-                />
-              </g>
-            )}
-          </svg>
-          
-          {/* Enhanced Inner Text with Selection Feedback */}
-          <div
-            className="absolute flex flex-col items-center justify-center text-white pointer-events-none"
-            style={{
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            {/* Hover temperature display */}
-            {hoverTemp !== null && !isDragging && (
-              <div className="absolute -top-12 text-sm text-green-400 font-medium animate-pulse">
-                Set to {hoverTemp}°C
-              </div>
-            )}
-            
-            {/* Selection feedback */}
-            {selectedSetpoint && (
-              <div className="absolute -top-8 text-xs text-green-400 font-medium animate-pulse">
-                {selectedSetpoint === 'heat' ? 'Adjusting Heat' : 
-                 selectedSetpoint === 'cool' ? 'Adjusting Cool' : 
-                 'Adjusting Temperature'}
-              </div>
-            )}
-            
-            {thermostatData?.mode === "HEATCOOL" ? (
-              /* Enhanced dual setpoint display with clear selection indicators */
-              <div className="flex flex-col items-center">
-                <div className="flex items-center space-x-4 text-3xl font-light tracking-tight">
-                  {/* Heat Setpoint - Clickable with enhanced selection indicator */}
-                  <button
-                    onClick={selectHeatSetpoint}
-                    className={`relative flex items-center transition-all duration-200 hover:scale-105 px-3 py-2 rounded-xl ${
-                      activeSetpoint === 'heat' 
-                        ? 'text-red-200 scale-110 font-bold bg-red-900/30 shadow-lg shadow-red-500/20 ring-2 ring-red-400/30' 
-                        : 'text-red-500 opacity-60 hover:opacity-80 hover:bg-red-900/10'
-                    }`}
-                  >
-                    {activeSetpoint === 'heat' && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-400/20 rounded-xl animate-pulse"></div>
-                    )}
-                    <UilFire size={activeSetpoint === 'heat' ? 28 : 22} className="mr-2 z-10" />
-                    <span className={`z-10 ${activeSetpoint === 'heat' ? 'font-bold' : 'font-light'}`}>
-                      {localHeatSetpoint !== null ? Math.round(localHeatSetpoint) : "--"}°
-                    </span>
-                    {activeSetpoint === 'heat' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-pulse shadow-lg shadow-red-400/50"></div>
-                    )}
-                  </button>
-                  
-                  <div className="text-gray-500 text-2xl">|</div>
-                  
-                  {/* Cool Setpoint - Clickable with enhanced selection indicator */}
-                  <button
-                    onClick={selectCoolSetpoint}
-                    className={`relative flex items-center transition-all duration-200 hover:scale-105 px-3 py-2 rounded-xl ${
-                      activeSetpoint === 'cool' 
-                        ? 'text-blue-200 scale-110 font-bold bg-blue-900/30 shadow-lg shadow-blue-500/20 ring-2 ring-blue-400/30' 
-                        : 'text-blue-500 opacity-60 hover:opacity-80 hover:bg-blue-900/10'
-                    }`}
-                  >
-                    {activeSetpoint === 'cool' && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-400/20 rounded-xl animate-pulse"></div>
-                    )}
-                    <UilSnowflake size={activeSetpoint === 'cool' ? 28 : 22} className="mr-2 z-10" />
-                    <span className={`z-10 ${activeSetpoint === 'cool' ? 'font-bold' : 'font-light'}`}>
-                      {localCoolSetpoint !== null ? Math.round(localCoolSetpoint) : "--"}°
-                    </span>
-                    {activeSetpoint === 'cool' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                    )}
-                  </button>
-                </div>
-                
-                {/* Enhanced active setpoint indicator */}
-                <div className="text-xs mt-3 text-center">
-                  <div className={`px-4 py-2 rounded-full ${
-                    activeSetpoint === 'heat' 
-                      ? 'bg-red-900/40 text-red-300 border border-red-500/30' 
-                      : 'bg-blue-900/40 text-blue-300 border border-blue-500/30'
-                  } transition-all duration-200`}>
-                    <span className="font-semibold">
-                      {activeSetpoint === 'heat' ? '🔥 Heat' : '❄️ Cool'} Control Active
-                    </span>
-                    <div className="text-xs opacity-80 mt-1">
-                      Tap to switch • Drag dial to adjust
-                    </div>
-                  </div>
-                </div>
-                
-                {pendingChanges && (
-                  <div className="text-xs text-yellow-400 animate-pulse mt-2">
-                    Updating thermostat...
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Enhanced single setpoint display for other modes */
-              <div className="flex flex-col items-center">
-                <div className={`text-5xl font-light tracking-tight transition-all duration-200 ${
-                  selectedSetpoint === 'single' ? 'scale-110' : ''
-                }`}>
-                  {localSetpoint !== null ? Math.round(localSetpoint) : "--"}°
-                </div>
-                {pendingChanges && (
-                  <div className="text-xs text-yellow-400 animate-pulse">
-                    Updating...
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {thermostatData && (
-              <div className="text-sm mt-1 text-gray-300 opacity-80">
-                Current: {thermostatData.currentTemperature.toFixed(1)}°C
-              </div>
-            )}
-            
-            <div className="text-sm text-blue-400 flex items-center mt-2 space-x-1">
-              <UilRaindrops size={16} className="opacity-80" />
-              <span className="opacity-90">{thermostatData?.humidity || '--'}%</span>
+        {/* Header with Status */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className="flex items-center space-x-2">
+            <div 
+              className="text-sm font-medium px-2 py-1 rounded"
+              style={{ color: getModeColor() }}
+            >
+              {getStatusText()}
             </div>
-            
-            {/* Interactive hint with setpoint awareness */}
-            {!selectedSetpoint && !isDragging && (
-              <div className="text-xs text-gray-500 mt-2 opacity-60 animate-pulse text-center">
-                {thermostatData?.mode === "HEATCOOL" ? (
-                  <div>
-                    <div>Click and drag to adjust</div>
-                    <div className={`text-xs mt-1 ${
-                      activeSetpoint === 'heat' ? 'text-red-400' : 'text-blue-400'
-                    }`}>
-                      {activeSetpoint === 'heat' ? '🔥 Heat' : '❄️ Cool'} selected
-                    </div>
-                  </div>
-                ) : (
-                  "Click and drag to adjust"
-                )}
+          </div>
+          <OptimizedImage src="/nest.svg" alt="Nest" className="h-5 w-5 opacity-70" loading="lazy" decoding="async" />
+        </div>
+        
+        {/* Main Temperature Display */}
+        <div className="flex flex-col items-center py-6">
+          {thermostatData?.mode === "HEATCOOL" ? (
+            /* Simplified dual setpoint display */
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-6">
+                {/* Heat Setpoint */}
+                <button
+                  onClick={selectHeatSetpoint}
+                  className={`flex flex-col items-center p-3 rounded-lg transition-all ${
+                    activeSetpoint === 'heat' 
+                      ? 'bg-red-800/30 text-red-300 scale-105' 
+                      : 'text-red-500 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <UilFire size={24} />
+                  <span className="text-xl font-light mt-1">
+                    {localHeatSetpoint !== null ? Math.round(localHeatSetpoint) : "--"}°
+                  </span>
+                  <span className="text-xs">Heat</span>
+                </button>
+                
+                {/* Cool Setpoint */}
+                <button
+                  onClick={selectCoolSetpoint}
+                  className={`flex flex-col items-center p-3 rounded-lg transition-all ${
+                    activeSetpoint === 'cool' 
+                      ? 'bg-blue-800/30 text-blue-300 scale-105' 
+                      : 'text-blue-500 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <UilSnowflake size={24} />
+                  <span className="text-xl font-light mt-1">
+                    {localCoolSetpoint !== null ? Math.round(localCoolSetpoint) : "--"}°
+                  </span>
+                  <span className="text-xs">Cool</span>
+                </button>
               </div>
-            )}
+              
+              {/* Active setpoint indicator */}
+              <div className="text-xs text-gray-400">
+                {activeSetpoint === 'heat' ? 'Heat' : 'Cool'} control active
+              </div>
+            </div>
+          ) : (
+            /* Single setpoint display */
+            <div className="flex flex-col items-center">
+              <div className="text-4xl font-light text-white">
+                {localSetpoint !== null ? Math.round(localSetpoint) : "--"}°
+              </div>
+              <div className="text-sm text-gray-400 mt-1">Target</div>
+            </div>
+          )}
+          
+          {/* Current temperature */}
+          {thermostatData && (
+            <div className="text-sm text-gray-300 mt-3">
+              Current: {thermostatData.currentTemperature.toFixed(1)}°C
+            </div>
+          )}
+          
+          {/* Humidity */}
+          <div className="flex items-center text-sm text-blue-400 mt-2">
+            <UilRaindrops size={16} className="mr-1" />
+            <span>{thermostatData?.humidity || '--'}%</span>
           </div>
         </div>
         
-        {/* Simplified Controls Container */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm">
+        {/* Temperature Controls */}
+        <div className="flex items-center justify-center space-x-8 py-4 border-t border-gray-700">
+          <button
+            onClick={decreaseActiveSetpoint}
+            disabled={pendingChanges}
+            className={`p-3 rounded-full transition-all ${
+              pendingChanges 
+                ? 'opacity-50' 
+                : 'hover:scale-110 active:scale-95'
+            } ${
+              thermostatData?.mode === "HEATCOOL" 
+                ? (activeSetpoint === 'heat' ? 'bg-red-800/50 text-red-300' : 'bg-blue-800/50 text-blue-300')
+                : 'bg-gray-700 text-gray-300'
+            }`}
+          >
+            <UilMinusCircle size={28} />
+          </button>
+          
+          <div className="text-center">
+            <div className="text-xs text-gray-400">
+              {pendingChanges ? "Updating..." : "Adjust Temp"}
+            </div>
+          </div>
+          
+          <button
+            onClick={increaseActiveSetpoint}
+            disabled={pendingChanges}
+            className={`p-3 rounded-full transition-all ${
+              pendingChanges 
+                ? 'opacity-50' 
+                : 'hover:scale-110 active:scale-95'
+            } ${
+              thermostatData?.mode === "HEATCOOL" 
+                ? (activeSetpoint === 'heat' ? 'bg-red-800/50 text-red-300' : 'bg-blue-800/50 text-blue-300')
+                : 'bg-gray-700 text-gray-300'
+            }`}
+          >
+            <UilPlusCircle size={28} />
+          </button>
+        </div>
+        
+        {/* Mode and Controls */}
+        <div className="flex items-center justify-between p-4 bg-gray-800/50">
           {/* Mode Control */}
           <div className="relative">
             <button 
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)} 
-              className="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-700/50 transition-colors"
               disabled={pendingChanges}
             >
-              <span className={`transition-colors duration-200 ${pendingChanges ? 'opacity-50' : ''}`} style={{ color: getModeColor() }}>
-                {thermostatData?.mode === "HEAT" && <UilFire size={22} />}
-                {thermostatData?.mode === "COOL" && <UilSnowflake size={22} />}
+              <span style={{ color: getModeColor() }}>
+                {thermostatData?.mode === "HEAT" && <UilFire size={20} />}
+                {thermostatData?.mode === "COOL" && <UilSnowflake size={20} />}
                 {thermostatData?.mode === "HEATCOOL" && (
                   <div className="flex space-x-1">
-                    <UilFire size={18} className="text-red-500" />
-                    <UilSnowflake size={18} className="text-blue-500" />
+                    <UilFire size={16} className="text-red-500" />
+                    <UilSnowflake size={16} className="text-blue-500" />
                   </div>
                 )}
-                {thermostatData?.mode === "OFF" && <UilCircle size={22} />}
+                {thermostatData?.mode === "OFF" && <UilCircle size={20} />}
               </span>
-              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200">Mode</span>
+              <span className="text-xs text-gray-400">Mode</span>
             </button>
             {modeDropdownOpen && !pendingChanges && (
-              <div className="absolute bottom-full mb-2 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 border border-gray-700 w-32 overflow-hidden">
+              <div className="absolute bottom-full mb-2 bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-600 w-32">
                 {["HEAT", "COOL", "HEATCOOL", "OFF"].map((modeOption) => (
                   <button
                     key={modeOption}
                     onClick={() => changeThermostatMode(modeOption)}
-                    className={`block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-700 transition-colors duration-150 ${
+                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
                       thermostatData?.mode === modeOption ? "bg-gray-700/50" : ""
-                    } ${modeOption === "HEAT" ? "text-red-400" : ""} 
-                    ${modeOption === "COOL" ? "text-blue-400" : ""}
-                    ${modeOption === "HEATCOOL" ? "text-green-400" : ""}
-                    ${modeOption === "OFF" ? "text-gray-400" : ""}`}
+                    }`}
                   >
                     <div className="flex items-center space-x-2">
-                      {modeOption === "HEAT" && <UilFire size={16} />}
-                      {modeOption === "COOL" && <UilSnowflake size={16} />}
+                      {modeOption === "HEAT" && <UilFire size={16} className="text-red-400" />}
+                      {modeOption === "COOL" && <UilSnowflake size={16} className="text-blue-400" />}
                       {modeOption === "HEATCOOL" && (
-                        <div className="flex space-x-0.5">
+                        <div className="flex space-x-1">
                           <UilFire size={14} className="text-red-400" />
                           <UilSnowflake size={14} className="text-blue-400" />
                         </div>
                       )}
-                      {modeOption === "OFF" && <UilCircle size={16} />}
-                      <span>{modeOption === "HEATCOOL" ? "Auto" : modeOption.charAt(0) + modeOption.slice(1).toLowerCase()}</span>
+                      {modeOption === "OFF" && <UilCircle size={16} className="text-gray-400" />}
+                      <span className="text-gray-200">
+                        {modeOption === "HEATCOOL" ? "Auto" : modeOption.charAt(0) + modeOption.slice(1).toLowerCase()}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -1477,178 +975,52 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             )}
           </div>
           
-          {/* Enhanced Temperature Arrow Controls */}
-          <div className="text-center flex-1 mx-4">
-            {thermostatData?.mode === "HEATCOOL" ? (
-              /* Enhanced arrow controls for HEATCOOL mode */
-              <div className="flex flex-col items-center space-y-3">
+          {/* Fan Control */}
+          <button 
+            onClick={() => setFanDropdownOpen(!fanDropdownOpen)} 
+            className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-700/50 transition-colors"
+            disabled={pendingChanges}
+          >
+            <UilWind
+              className={`w-5 h-5 ${
+                thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500"
+              }`}
+            />
+            <span className="text-xs text-gray-400">Fan</span>
+          </button>
+          {fanDropdownOpen && !pendingChanges && (
+            <div className="absolute bottom-full right-4 mb-2 bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-600 w-28">
+              {[15, 30, 60].map((minutes) => (
                 <button
-                  onClick={increaseActiveSetpoint}
-                  disabled={pendingChanges}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg relative ${
-                    pendingChanges 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:scale-110 active:scale-95 hover:shadow-xl'
-                  } ${
-                    activeSetpoint === 'heat' 
-                      ? 'bg-gradient-to-br from-red-600/70 to-red-800/70 hover:from-red-500/80 hover:to-red-700/80 text-red-100 shadow-red-500/30' 
-                      : 'bg-gradient-to-br from-blue-600/70 to-blue-800/70 hover:from-blue-500/80 hover:to-blue-700/80 text-blue-100 shadow-blue-500/30'
-                  }`}
-                  title={`Increase ${activeSetpoint} setpoint`}
+                  key={minutes}
+                  onClick={() => toggleFan(minutes * 60)}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors text-gray-200"
                 >
-                  <UilPlusCircle size={24} />
-                  {!pendingChanges && (
-                    <div className={`absolute inset-0 rounded-full ${
-                      activeSetpoint === 'heat' ? 'bg-red-400/20' : 'bg-blue-400/20'
-                    } animate-ping opacity-20`}></div>
-                  )}
+                  {minutes} min
                 </button>
-                
-                <div className={`text-center px-3 py-1 rounded-lg ${
-                  activeSetpoint === 'heat' 
-                    ? 'bg-red-900/20 text-red-300 border border-red-500/20' 
-                    : 'bg-blue-900/20 text-blue-300 border border-blue-500/20'
-                }`}>
-                  <div className="text-xs font-medium">
-                    {isDragging ? "Adjusting..." : 
-                     pendingChanges ? "Updating..." :
-                     `${activeSetpoint === 'heat' ? '🔥 Heat' : '❄️ Cool'}`}
-                  </div>
-                  <div className="text-xs opacity-70">
-                    {isDragging || pendingChanges ? "" : "Controls"}
-                  </div>
-                </div>
-                
-                <button
-                  onClick={decreaseActiveSetpoint}
-                  disabled={pendingChanges}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg relative ${
-                    pendingChanges 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:scale-110 active:scale-95 hover:shadow-xl'
-                  } ${
-                    activeSetpoint === 'heat' 
-                      ? 'bg-gradient-to-br from-red-600/70 to-red-800/70 hover:from-red-500/80 hover:to-red-700/80 text-red-100 shadow-red-500/30' 
-                      : 'bg-gradient-to-br from-blue-600/70 to-blue-800/70 hover:from-blue-500/80 hover:to-blue-700/80 text-blue-100 shadow-blue-500/30'
-                  }`}
-                  title={`Decrease ${activeSetpoint} setpoint`}
-                >
-                  <UilMinusCircle size={24} />
-                  {!pendingChanges && (
-                    <div className={`absolute inset-0 rounded-full ${
-                      activeSetpoint === 'heat' ? 'bg-red-400/20' : 'bg-blue-400/20'
-                    } animate-ping opacity-20`}></div>
-                  )}
-                </button>
-              </div>
-            ) : (
-              /* Enhanced arrow controls for single setpoint modes */
-              <div className="flex flex-col items-center space-y-3">
-                <button
-                  onClick={increaseActiveSetpoint}
-                  disabled={pendingChanges}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg relative ${
-                    pendingChanges 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:scale-110 active:scale-95 hover:shadow-xl'
-                  } bg-gradient-to-br from-gray-600/70 to-gray-800/70 hover:from-gray-500/80 hover:to-gray-700/80 text-gray-100 shadow-gray-500/30`}
-                  title="Increase temperature"
-                >
-                  <UilPlusCircle size={24} />
-                  {!pendingChanges && (
-                    <div className="absolute inset-0 rounded-full bg-gray-400/20 animate-ping opacity-20"></div>
-                  )}
-                </button>
-                
-                <div className="text-center px-3 py-1 rounded-lg bg-gray-900/20 text-gray-300 border border-gray-500/20">
-                  <div className="text-xs font-medium">
-                    {isDragging ? "Adjusting..." : 
-                     pendingChanges ? "Updating..." :
-                     "🌡️ Temperature"}
-                  </div>
-                  <div className="text-xs opacity-70">
-                    {isDragging || pendingChanges ? "" : "Controls"}
-                  </div>
-                </div>
-                
-                <button
-                  onClick={decreaseActiveSetpoint}
-                  disabled={pendingChanges}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg relative ${
-                    pendingChanges 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:scale-110 active:scale-95 hover:shadow-xl'
-                  } bg-gradient-to-br from-gray-600/70 to-gray-800/70 hover:from-gray-500/80 hover:to-gray-700/80 text-gray-100 shadow-gray-500/30`}
-                  title="Decrease temperature"
-                >
-                  <UilMinusCircle size={24} />
-                  {!pendingChanges && (
-                    <div className="absolute inset-0 rounded-full bg-gray-400/20 animate-ping opacity-20"></div>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* Fan & Eco Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Fan Control */}
-            <div className="relative">
-              <button 
-                onClick={() => setFanDropdownOpen(!fanDropdownOpen)} 
-                className="group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
-                disabled={pendingChanges}
+              ))}
+              <button
+                onClick={() => toggleFan(0)}
+                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors text-gray-200"
               >
-                <UilWind
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                    pendingChanges ? 'opacity-50' : 
-                    thermostatData?.fanStatus === "ON" ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"
-                  }`}
-                />
-                <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Fan</span>
+                Off
               </button>
-              {fanDropdownOpen && !pendingChanges && (
-                <div className="absolute bottom-full mb-2 right-0 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 border border-gray-700 w-32 overflow-hidden">
-                  {[15, 30, 60].map((minutes) => (
-                    <button
-                      key={minutes}
-                      onClick={() => toggleFan(minutes * 60)}
-                      className="block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-700 transition-colors duration-150"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <UilWind size={16} className="text-blue-400" />
-                        <span>{minutes} min</span>
-                      </div>
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => toggleFan(0)}
-                    className="block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-700 transition-colors duration-150"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <UilWind size={16} className="text-gray-400" />
-                      <span>Off</span>
-                    </div>
-                  </button>
-                </div>
-              )}
             </div>
-            
-            {/* Eco Mode Toggle */}
-            <button 
-              onClick={toggleEcoMode} 
-              className={`group flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200`}
-              disabled={pendingChanges}
-            >
-              <UilTrees
-                className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                  pendingChanges ? 'opacity-50' : 
-                  ecoModeActive ? "text-green-400" : "text-gray-500 group-hover:text-gray-300"
-                }`}
-              />
-              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 hidden sm:inline">Eco</span>
-            </button>
-          </div>
+          )}
+          
+          {/* Eco Mode */}
+          <button 
+            onClick={toggleEcoMode} 
+            className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-700/50 transition-colors"
+            disabled={pendingChanges}
+          >
+            <UilTrees
+              className={`w-5 h-5 ${
+                ecoModeActive ? "text-green-400" : "text-gray-500"
+              }`}
+            />
+            <span className="text-xs text-gray-400">Eco</span>
+          </button>
         </div>
       </div>
       
