@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { IconComponentType } from '@iconscout/react-unicons/dist/types/icons';
 
 interface Tab {
   id: string;
   label: string;
-  icon: IconComponentType;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 interface NavigationProps {
@@ -16,14 +15,28 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }) => {
   const navRef = useRef<HTMLElement>(null);
 
-  // Create optimized tab button handler with useCallback
+  // Enhanced tab button handler with haptic feedback simulation
   const handleTabChange = useCallback((tabId: string) => {
     if (activeTab !== tabId) {
+      // Simulate haptic feedback on supported devices
+      if ('vibrate' in navigator) {
+        navigator.vibrate(10); // Light haptic feedback
+      }
+      
+      // Enhanced visual feedback for tab change
+      const button = document.querySelector(`[data-tab-id="${tabId}"]`);
+      if (button) {
+        button.classList.add('tab-switching');
+        setTimeout(() => {
+          button.classList.remove('tab-switching');
+        }, 200);
+      }
+      
       setActiveTab(tabId);
     }
   }, [activeTab, setActiveTab]);
   
-  // Ensure navigation stays visible on iOS
+  // Enhanced navigation visibility and performance
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -32,12 +45,14 @@ const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }
       nav.style.transform = 'translateZ(0)';
       nav.style.visibility = 'visible';
       nav.style.display = 'flex';
+      nav.style.opacity = '1';
+      nav.style.pointerEvents = 'auto';
     };
 
-    // Call immediately
+    // Apply immediately
     ensureVisibility();
 
-    // Set up intersection observer to ensure visibility
+    // Enhanced intersection observer for better visibility control
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -46,7 +61,7 @@ const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }
           }
         });
       },
-      { threshold: 1.0 }
+      { threshold: 0.8, rootMargin: '10px' }
     );
 
     observer.observe(nav);
@@ -58,14 +73,16 @@ const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }
   return (
     <nav
       ref={navRef}
-      className="fixed bottom-0 w-full border-t border-gray-800/50 flex justify-around z-40"
+      className="fixed bottom-0 w-full border-t border-gray-700/30 flex justify-around z-50"
       style={{
-        background: "linear-gradient(to bottom, rgba(25,25,25,0.95), rgba(15,15,15,0.95))",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)",
-        paddingTop: "10px",
-        // iOS optimizations
+        background: "linear-gradient(to bottom, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98))",
+        backdropFilter: "saturate(180%) blur(20px)",
+        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
+        paddingTop: "12px",
+        borderTop: "1px solid rgba(251, 191, 36, 0.15)",
+        boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.15), 0 -2px 8px rgba(0, 0, 0, 0.1)",
+        // Enhanced iOS optimizations
         position: 'fixed',
         bottom: '0',
         left: '0',
@@ -78,6 +95,9 @@ const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }
         willChange: "transform",
         visibility: "visible",
         display: "flex",
+        // Enhanced safe area support
+        paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
+        paddingRight: "max(0.5rem, env(safe-area-inset-right))",
       }}
     >
       {tabs.map((tab) => {
@@ -85,59 +105,137 @@ const Navigation: React.FC<NavigationProps> = ({ tabs, activeTab, setActiveTab }
         return (
           <button
             key={tab.id}
+            data-tab-id={tab.id}
             aria-label={`${tab.label} tab`}
             aria-selected={isActive}
-            className={`relative flex flex-col items-center justify-center py-2 px-3 flex-1 transition-all ${
-              isActive ? "text-yellow-400" : "text-gray-500 hover:text-gray-300"
+            className={`relative flex flex-col items-center justify-center py-2 px-3 flex-1 transition-all touch-manipulation haptic-medium button-interactive ${
+              isActive ? "text-yellow-400" : "text-gray-400 hover:text-gray-200 active:text-gray-100"
             }`}
             onClick={() => handleTabChange(tab.id)}
             style={{
-              // Reduce animation duration for better performance
-              transitionDuration: "200ms",
-              // Use hardware acceleration only when needed
+              // Enhanced transition timing with spring easing
+              transitionDuration: "250ms",
+              transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+              // Hardware acceleration optimization
               transform: isActive ? "translateZ(0)" : "none",
-              willChange: isActive ? "transform, opacity" : "auto"
+              willChange: isActive ? "transform, opacity, color" : "auto",
+              minHeight: "44px", // iPhone-optimized touch target
+              minWidth: "44px",
+              borderRadius: "12px",
+              margin: "0 4px",
+              // Enhanced glass effect for active state
+              background: isActive 
+                ? "rgba(251, 191, 36, 0.08)" 
+                : "transparent",
+              backdropFilter: isActive ? "blur(8px)" : "none",
+              WebkitBackdropFilter: isActive ? "blur(8px)" : "none",
+              border: isActive 
+                ? "1px solid rgba(251, 191, 36, 0.2)" 
+                : "1px solid transparent",
+              // Enhanced tap highlight removal
+              WebkitTapHighlightColor: "transparent",
+              WebkitTouchCallout: "none",
+              WebkitUserSelect: "none",
+              userSelect: "none",
             }}
           >
+            {/* Enhanced Active Indicator with modern gradient */}
             {isActive && (
               <div 
-                className="absolute top-0 left-1/2 w-12 h-1 rounded-b-full bg-gradient-to-r from-yellow-500 to-yellow-300 shadow-lg shadow-yellow-500/20"
+                className="absolute top-0 left-1/2 rounded-b-full shadow-lg animate-fade-in"
                 style={{
+                  width: "48px",
+                  height: "4px",
+                  background: "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
                   transform: "translate3d(-50%, 0, 0)",
-                  willChange: "transform"
+                  boxShadow: "0 4px 12px rgba(251, 191, 36, 0.4), 0 2px 6px rgba(251, 191, 36, 0.2)",
+                  willChange: "transform",
+                  borderRadius: "0 0 6px 6px"
                 }}
               />
             )}
+            
+            {/* Enhanced Icon Container with micro-interactions */}
             <div 
-              className={`relative ${isActive ? "scale-110" : ""}`}
+              className={`relative transition-all duration-250 ${isActive ? "scale-110" : "scale-100"}`}
               style={{ 
-                transition: "transform 200ms ease",
-                transform: isActive ? "translateZ(0)" : "none"
+                transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transform: isActive ? "translateZ(0)" : "none",
+                filter: isActive ? "drop-shadow(0 0 8px rgba(251, 191, 36, 0.3))" : "none"
               }}
             >
-              <tab.icon size={24} />
+              <tab.icon 
+                size={26} 
+                className={`transition-colors duration-250 ${
+                  isActive ? "text-yellow-400" : "text-gray-400"
+                }`} 
+              />
+              
+              {/* Enhanced Active Glow Effect with pulsing animation */}
               {isActive && (
                 <div 
-                  className="absolute inset-0 rounded-full animate-ping-slow opacity-30 bg-yellow-400 blur-sm"
+                  className="absolute inset-0 rounded-full animate-ping-slow opacity-25"
                   style={{
-                    willChange: "opacity, transform"
+                    background: "radial-gradient(circle, rgba(251, 191, 36, 0.6), transparent 70%)",
+                    willChange: "opacity, transform",
+                    filter: "blur(6px)"
+                  }}
+                />
+              )}
+              
+              {/* Subtle background glow for active state */}
+              {isActive && (
+                <div 
+                  className="absolute inset-0 rounded-full opacity-20"
+                  style={{
+                    background: "radial-gradient(circle, rgba(251, 191, 36, 0.4), transparent 60%)",
+                    filter: "blur(12px)",
+                    transform: "scale(1.5)"
                   }}
                 />
               )}
             </div>
+            
+            {/* Enhanced Label with better typography */}
             <span
-              className={`text-xs mt-1.5 font-medium ${
-                isActive ? "opacity-100" : "opacity-80"
+              className={`text-xs mt-2 font-semibold transition-all duration-250 ${
+                isActive ? "opacity-100 text-yellow-400" : "opacity-75 text-gray-400"
               }`}
               style={{
-                transition: "opacity 200ms ease"
+                transitionTimingFunction: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                letterSpacing: isActive ? "0.025em" : "0",
+                fontWeight: isActive ? "600" : "500",
+                textShadow: isActive ? "0 0 8px rgba(251, 191, 36, 0.3)" : "none",
+                fontSize: "11px", // Slightly smaller for better proportions
+                lineHeight: "1.2"
               }}
             >
               {tab.label}
             </span>
+            
+            {/* Ripple effect on touch */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                borderRadius: "12px",
+                overflow: "hidden"
+              }}
+            >
+              {/* This will be handled by the button-interactive class in CSS */}
+            </div>
           </button>
         );
       })}
+      
+      {/* Enhanced bottom accent line */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 h-0.5 opacity-30"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.6), transparent)",
+          marginLeft: "16px",
+          marginRight: "16px"
+        }}
+      />
     </nav>
   );
 };

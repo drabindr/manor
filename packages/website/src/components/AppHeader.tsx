@@ -41,9 +41,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   const alarmControlsProps = {
     armMode,
-    setArmMode,
+    setArmMode: setArmMode as React.Dispatch<React.SetStateAction<"stay" | "away" | null>>,
     isOnline,
-    setIsOnline,
+    setIsOnline: setIsOnline as React.Dispatch<React.SetStateAction<boolean>>,
     showNotification,
     refreshing,
     onAlarmStateChange, // Pass the callback to AlarmControls
@@ -51,30 +51,41 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <div 
-      className="top-app-bar w-full flex flex-col" 
+      className="top-app-bar w-full flex flex-col touch-manipulation" 
       style={{ 
         paddingTop: isIOS ? "calc(env(safe-area-inset-top) + 2rem)" : "env(safe-area-inset-top)",
-        // Add hardware acceleration to prevent flickering during scrolling
+        // Enhanced hardware acceleration and performance optimizations
         transform: "translateZ(0)",
-        WebkitTransform: "translateZ(0)"
+        WebkitTransform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
+        willChange: "transform",
+        // Enhanced iOS-specific optimizations
+        WebkitUserSelect: "none",
+        userSelect: "none",
+        WebkitTouchCallout: "none"
       }}
     >
       <div 
-        className="h-16 flex items-center justify-between px-2 sm:px-4"
+        className="h-16 flex items-center justify-between px-3 sm:px-4 transition-all duration-300 ease-out"
         style={{
-          // Move content down slightly on iOS
-          marginTop: isIOS ? "8px" : "0px"
+          // Enhanced iOS positioning with better spacing
+          marginTop: isIOS ? "12px" : "4px",
+          // Add subtle interaction feedback
+          transform: "translateZ(0)"
         }}
       >
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${onlineIndicatorColor} shadow-lg shadow-teal-500/20 ring-2 ring-black/20`} />
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Enhanced online indicator with better visual feedback */}
+            <div className={`w-3.5 h-3.5 rounded-full ${onlineIndicatorColor} shadow-xl transition-all duration-500 ring-2 ring-black/30 hover:scale-110 active:scale-95`} />
             <HouseDropdown />
           </div>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Enhanced arm mode display with better touch targets */}
           <div
-            className={`text-xs sm:text-sm font-bold ${getArmModeColor()} mr-1 px-2 py-0.5 rounded-full bg-gray-900/50 border border-gray-800`}
+            className={`text-xs sm:text-sm font-bold ${getArmModeColor()} px-3 py-1.5 rounded-full bg-gray-900/60 border border-gray-800/60 backdrop-blur-sm shadow-lg transition-all duration-300 hover:bg-gray-800/60 active:scale-95 touch-manipulation min-w-[60px] text-center`}
           >
             {getArmModeDisplay()}
           </div>

@@ -43,6 +43,27 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   const COMMAND_ACK_TIMEOUT = 12000; // 12 seconds
   const DISCONNECT_NOTIFICATION_DELAY = 8000; // 8 seconds
 
+  // Enhanced iPhone haptic feedback system
+  const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    // iPhone haptic feedback (iOS 13+)
+    if ('hapticFeedback' in navigator && (navigator as any).hapticFeedback) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.7,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback.impact(intensityLevels[intensity]);
+    } else if ('vibrate' in navigator) {
+      // Fallback vibration patterns for other devices
+      const patterns = {
+        light: [30],
+        medium: [50],
+        heavy: [100, 50, 100]
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+  };
+
   const updateArmModeFromSystemState = useCallback(
     (state: string | undefined) => {
       if (state === "Arm Stay" || state?.includes("(auto)")) {
@@ -365,107 +386,143 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
           <p className="text-sm text-yellow-400">Verifying command... ({retryAttempts}/{MAX_RETRY_ATTEMPTS})</p>
         </div>
       )}
-      {/* Alarm Control Buttons - Compact horizontal layout for header */}
+      {/* Enhanced Alarm Control Buttons - iPhone Optimized */}
       {armMode === null ? (
         <div className="relative group" ref={dropdownRef}>
-          {/* Unified split button container */}
-          <div className={`flex items-center rounded-xl shadow-md overflow-hidden
+          {/* Enhanced split button container with better touch targets */}
+          <div className={`flex items-center rounded-xl shadow-lg overflow-hidden
                          bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700
                          border border-blue-400/30
-                         transition-all duration-200 ease-in-out
+                         transition-all duration-300 ease-in-out touch-manipulation
                          ${
                            commandPending || refreshing
                              ? "opacity-60 cursor-not-allowed scale-95"
-                             : "hover:shadow-lg hover:shadow-blue-500/25 hover:scale-105 hover:border-blue-300/50"
+                             : "hover:shadow-xl hover:shadow-blue-500/30 active:scale-95 hover:border-blue-300/60 transform will-change-transform"
                          }`}
-               style={{ minHeight: '40px' }}
+               style={{ 
+                 minHeight: '48px', // Increased for better touch targets
+                 minWidth: '120px',
+                 transform: 'translateZ(0)', // Hardware acceleration
+                 WebkitTransform: 'translateZ(0)',
+                 backfaceVisibility: 'hidden'
+               }}
           >
-            {/* Main ARM STAY button */}
+            {/* Enhanced ARM STAY button with better touch targets */}
             <button
-              onClick={armStay}
+              onClick={() => {
+                armStay();
+                triggerHaptic('medium');
+              }}
               disabled={commandPending || refreshing}
-              className="relative flex items-center justify-center gap-2 py-2.5 px-3 pr-2 text-sm font-semibold text-white
-                       transition-all duration-200 ease-in-out
-                       hover:bg-white/10 active:scale-95 active:bg-white/20"
-              style={{ minWidth: '70px' }}
+              className="relative flex items-center justify-center gap-2 py-3 px-4 pr-3 text-sm font-semibold text-white
+                       transition-all duration-300 ease-in-out touch-manipulation
+                       hover:bg-white/15 active:scale-95 active:bg-white/25 
+                       disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ 
+                minWidth: '80px',
+                minHeight: '48px'
+              }}
             >
               {commandPending && pendingCommand === "Arm Stay" ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <span className="text-lg">🔒</span>
               )}
-              <span className="text-white tracking-wide hidden sm:inline">STAY</span>
+              <span className="text-white tracking-wide font-medium hidden sm:inline">STAY</span>
             </button>
             
-            {/* Divider line */}
-            <div className="w-px h-6 bg-blue-400/40"></div>
+            {/* Enhanced divider line */}
+            <div className="w-px h-6 bg-blue-400/50 shadow-sm"></div>
             
-            {/* Dropdown arrow button */}
+            {/* Enhanced dropdown arrow button with better touch target */}
             <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={() => {
+                setDropdownOpen(!dropdownOpen);
+                triggerHaptic('light');
+              }}
               disabled={commandPending || refreshing}
-              className="relative flex items-center justify-center py-2.5 px-2 text-white
-                       transition-all duration-200 ease-in-out
-                       hover:bg-white/10 active:scale-95 active:bg-white/20"
-              style={{ width: '32px' }}
+              className="relative flex items-center justify-center py-3 px-3 text-white
+                       transition-all duration-300 ease-in-out touch-manipulation
+                       hover:bg-white/15 active:scale-95 active:bg-white/25
+                       disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ 
+                minWidth: '44px',
+                minHeight: '48px'
+              }}
             >
               <svg 
-                className={`w-7 h-7 text-white/90 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
+                className={`w-5 h-5 text-white/90 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
+                strokeWidth={2.5}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
           </div>
           
-          {/* Dropdown menu */}
+          {/* Enhanced dropdown menu with better touch targets */}
           {dropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl z-50 min-w-[120px]">
+            <div className="absolute top-full right-0 mt-2 bg-gray-900/95 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl z-50 overflow-hidden">
               <button
                 onClick={() => {
                   armAway();
                   setDropdownOpen(false);
+                  triggerHaptic('medium');
                 }}
                 disabled={commandPending || refreshing}
-                className={`w-full flex items-center gap-2 py-2.5 px-3 text-sm font-semibold text-white
-                         transition-all duration-200 ease-in-out rounded-xl
+                className={`w-full flex items-center gap-3 py-4 px-4 text-sm font-semibold text-white
+                         transition-all duration-300 ease-in-out touch-manipulation
                          ${
                            commandPending || refreshing
                              ? "opacity-60 cursor-not-allowed"
-                             : "hover:bg-green-600/20 hover:border-green-400/30 active:scale-95"
+                             : "hover:bg-green-600/20 hover:border-green-400/30 active:scale-95 active:bg-green-600/30"
                          }`}
+                style={{ 
+                  minHeight: '52px',
+                  minWidth: '140px'
+                }}
               >
                 {commandPending && pendingCommand === "Arm Away" ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <span className="text-lg">🔑</span>
                 )}
-                <span className="text-green-300 tracking-wide">ARM AWAY</span>
+                <span className="text-green-300 tracking-wide font-medium">ARM AWAY</span>
               </button>
             </div>
           )}
         </div>
       ) : (
         <button
-          onClick={disarm}
+          onClick={() => {
+            disarm();
+            triggerHaptic('heavy');
+          }}
           disabled={commandPending || refreshing}
-          className={`relative flex items-center justify-center gap-2 py-2 px-4 text-sm font-bold rounded-lg text-white shadow-md
+          className={`relative flex items-center justify-center gap-3 py-3 px-5 text-sm font-bold rounded-xl text-white shadow-lg
                    bg-gradient-to-r from-red-600 via-red-500 to-red-600
-                   transition-transform duration-150
+                   transition-all duration-300 ease-in-out touch-manipulation
                    ${
                      commandPending || refreshing
-                       ? "opacity-75 cursor-not-allowed"
-                       : "active:scale-95 active:shadow-inner hover:bg-red-700"
+                       ? "opacity-75 cursor-not-allowed scale-95"
+                       : "active:scale-95 active:shadow-inner hover:shadow-xl hover:from-red-500 hover:to-red-500 transform will-change-transform"
                    }`}
+          style={{ 
+            minHeight: '48px',
+            minWidth: '120px',
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
+          }}
         >
           {commandPending && pendingCommand === "Disarm" ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
             <span className="text-lg">🔓</span>
           )}
-          <span>Disarm</span>
+          <span className="font-medium">Disarm</span>
         </button>
       )}
     </div>

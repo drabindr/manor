@@ -1,9 +1,60 @@
+/* Enhanced Mobile-First Responsive Design */
 @media only screen and (max-width: 393px) and (orientation: portrait) {
-  .veedu-text { font-size: 0.5rem !important; }
+  .veedu-text { 
+    font-size: 0.5rem !important; 
+  }
+  
+  /* Enhanced small screen optimizations */
+  .card-compact {
+    padding: 12px !important;
+    margin: 6px !important;
+  }
+  
+  .text-responsive {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Optimize for iPhone mini */
+  .button-group {
+    gap: 8px !important;
+  }
+  
+  .icon-button {
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
 }
 
+/* Enhanced iPhone Pro Max optimizations */
+@media only screen and (max-width: 430px) and (orientation: portrait) {
+  .camera-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 12px !important;
+  }
+  
+  .device-card {
+    padding: 14px !important;
+  }
+}
+
+/* Enhanced Landscape optimizations for all iPhones */
+@media only screen and (orientation: landscape) and (max-height: 450px) {
+  .tab-content {
+    padding-top: 8px !important;
+  }
+  
+  .top-app-bar {
+    height: 50px !important;
+  }
+  
+  .camera-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+  }
+}
+
+/* Enhanced Tab Content with Better Performance */
 .tab-content { 
-  /* Use absolute positioning to fill the entire container */
   position: absolute;
   top: calc(5rem + var(--safe-area-inset-top) + var(--ios-extra-top-padding));
   left: 0;
@@ -13,14 +64,36 @@
   -webkit-overflow-scrolling: touch;
   will-change: transform;
   transform: translate3d(0,0,0);
-  padding-bottom: 30px; /* Extra padding at the bottom for content visibility */
+  padding-bottom: 30px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.6) transparent;
+  /* Enhanced overscroll behavior */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
 }
 
+/* Enhanced Pull-to-Refresh Styling */
 .ptr__pull-down { 
-  background-color: rgba(30, 30, 30, 0.8); 
-  backdrop-filter: blur(10px); 
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(45, 45, 45, 0.9));
+  backdrop-filter: var(--blur-strength);
+  -webkit-backdrop-filter: var(--blur-strength);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+  box-shadow: var(--shadow-medium);
+  border-radius: 0 0 var(--border-radius-xl) var(--border-radius-xl);
 }
 
+.ptr__pull-down .ptr__pull-down-content {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(251, 191, 36, 0.9);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Enhanced Hidden Tab Animation */
 .hidden-tab { 
   position: absolute; 
   opacity: 0; 
@@ -29,57 +102,102 @@
   height: 0; 
   overflow: hidden; 
   display: none !important;
+  transition: opacity var(--duration-normal) var(--animation-smooth);
 }
 
-/* iOS-specific variables */
+/* Enhanced iOS-Specific Variables */
 :root { 
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); 
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
-  --bottom-nav-height: 70px;
+  --bottom-nav-height: 75px; /* Optimized for better touch targets */
   --ios-extra-top-padding: 2rem;
+  --header-blur: var(--blur-strength);
+  --nav-gradient: linear-gradient(to bottom, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  --header-gradient: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  
+  /* Enhanced iPhone-specific optimizations */
+  --iphone-status-bar-padding: max(20px, env(safe-area-inset-top));
+  --iphone-home-indicator-padding: max(34px, env(safe-area-inset-bottom));
+  --touch-feedback-scale: 0.97;
+  --card-hover-lift: -4px;
+  --button-press-scale: 0.95;
 }
 
-/* Top app bar styling with improved iOS compatibility */
+/* Enhanced Top App Bar with Modern Glass Effect */
 .top-app-bar {
   position: fixed; 
   top: 0; 
   left: 0; 
   right: 0; 
   z-index: 999;
-  background: linear-gradient(to right, rgba(10,10,10,0.95), rgba(20,20,20,0.95));
-  backdrop-filter: blur(12px); 
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(75, 75, 75, 0.3); 
+  background: var(--header-gradient);
+  backdrop-filter: var(--header-blur);
+  -webkit-backdrop-filter: var(--header-blur);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.15); 
   isolation: isolate;
   height: auto !important;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  box-shadow: var(--shadow-medium);
+  transition: all var(--duration-normal) var(--animation-smooth);
+  /* Enhanced iPhone optimizations */
+  padding-top: var(--iphone-status-bar-padding);
 }
 
-/* iOS-specific top bar adjustments */
+/* Enhanced iOS-Specific Top Bar Adjustments */
 .ios-webview .top-app-bar {
   padding-top: calc(var(--safe-area-inset-top) + var(--ios-extra-top-padding));
-  min-height: calc(64px + var(--safe-area-inset-top));
+  min-height: calc(74px + var(--safe-area-inset-top));
+  background: var(--header-gradient);
 }
 
 .ios-webview .min-h-screen {
-  padding-top: calc(3.5rem + env(safe-area-inset-top) + 10px);
+  padding-top: calc(4rem + env(safe-area-inset-top) + 10px);
 }
 
+/* Enhanced Camera Page Container */
 .camera-page-container { 
-  min-height: calc(100vh - 160px); 
+  min-height: calc(100vh - 170px);
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.4));
+  border-radius: var(--border-radius-2xl);
+  margin: 8px;
+  backdrop-filter: var(--blur-subtle);
+  -webkit-backdrop-filter: var(--blur-subtle);
 }
 
+/* Enhanced Camera Card with Modern Glass Effect */
 .camera-card { 
-  transition: all 0.3s ease; 
-  transform-origin: center; 
+  transition: all 400ms var(--animation-spring);
+  transform-origin: center;
+  border-radius: var(--border-radius-xl);
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur-strength);
+  -webkit-backdrop-filter: var(--blur-strength);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  will-change: transform, box-shadow, border-color;
+}
+
+.camera-card:hover {
+  transform: translateY(var(--card-hover-lift)) scale(1.02);
+  box-shadow: var(--shadow-floating);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.camera-card:active {
+  transform: translateY(-2px) scale(var(--touch-feedback-scale));
+  transition-duration: var(--duration-fast);
 }
 
 .camera-card.aspect-video { 
   aspect-ratio: 16/9; 
-  height: auto; 
+  height: auto;
 }
 
+/* Enhanced Camera Card Overlays with better gradients */
 .camera-card::before {
   content: ''; 
   position: absolute; 
@@ -87,9 +205,14 @@
   left: 0; 
   right: 0; 
   height: 40%;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-  z-index: 1; 
+  background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+  z-index: 2; 
   pointer-events: none; 
+  opacity: 0.7;
+  transition: opacity var(--duration-normal) var(--animation-smooth);
+}
+
+.camera-card:hover::before {
   opacity: 0.5;
 }
 
@@ -100,57 +223,97 @@
   left: 0; 
   right: 0; 
   height: 40%;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-  z-index: 1; 
+  background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+  z-index: 2; 
   pointer-events: none; 
+  opacity: 0.7;
+  transition: opacity var(--duration-normal) var(--animation-smooth);
+}
+
+.camera-card:hover::after {
   opacity: 0.5;
 }
 
+/* Enhanced Animation Keyframes */
 @keyframes ping-slow { 
-  75%, 100% { transform: scale(1.8); opacity: 0; } 
+  0% { transform: scale(1); opacity: 1; }
+  75% { transform: scale(1.6); opacity: 0.3; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 
 .animate-ping-slow { 
-  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; 
+  animation: ping-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; 
   will-change: transform, opacity;
   transform: translateZ(0);
 }
 
+/* Enhanced pulse animation for better performance */
+@keyframes pulse-glow {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Enhanced Fullscreen Transitions */
 .fullscreen-enter { 
   opacity: 0; 
-  transform: scale(0.95); 
+  transform: scale(0.92) translateY(20px);
 }
 
 .fullscreen-enter-active { 
   opacity: 1; 
-  transform: scale(1); 
-  transition: opacity 300ms, transform 300ms; 
+  transform: scale(1) translateY(0);
+  transition: opacity 400ms var(--animation-spring), transform 400ms var(--animation-spring);
 }
 
 .fullscreen-exit { 
   opacity: 1; 
-  transform: scale(1); 
+  transform: scale(1) translateY(0);
 }
 
 .fullscreen-exit-active { 
   opacity: 0; 
-  transform: scale(0.95); 
-  transition: opacity 300ms, transform 300ms; 
+  transform: scale(0.92) translateY(20px);
+  transition: opacity var(--duration-normal) var(--animation-smooth), transform var(--duration-normal) var(--animation-smooth);
 }
 
+/* Enhanced Border Pulse Animation */
 @keyframes border-pulse {
-  0% { border-color: rgba(220, 38, 38, 0.8); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
-  70% { border-color: rgba(220, 38, 38, 0.3); box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
-  100% { border-color: rgba(220, 38, 38, 0.8); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  0% { 
+    border-color: rgba(251, 191, 36, 0.8); 
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.8);
+    filter: brightness(1);
+  }
+  70% { 
+    border-color: rgba(251, 191, 36, 0.4); 
+    box-shadow: 0 0 0 15px rgba(251, 191, 36, 0);
+    filter: brightness(1.1);
+  }
+  100% { 
+    border-color: rgba(251, 191, 36, 0.8); 
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    filter: brightness(1);
+  }
 }
 
 .security-border { 
-  animation: border-pulse 2s infinite; 
-  border-color: rgba(255, 173, 51, 0.7);
-  will-change: opacity;
-  animation: pulse-border 2s infinite ease-in-out;
+  animation: border-pulse 2.5s infinite ease-in-out;
+  border-color: rgba(251, 191, 36, 0.8);
+  will-change: border-color, box-shadow, filter;
+  position: relative;
 }
 
+/* Enhanced Gradient Animation */
 @keyframes gradient-x { 
   0% { background-position: 0% 50%; } 
   50% { background-position: 100% 50%; } 
@@ -159,25 +322,240 @@
 
 .animate-gradient-x { 
   background-size: 200% 100%; 
-  animation: gradient-x 3s ease infinite; 
+  animation: gradient-x 4s ease infinite; 
   will-change: background-position;
 }
 
+/* Enhanced Fade In Animation */
 .animate-fade-in {
-  animation: fade-in 0.3s ease-in-out;
+  animation: fade-in var(--duration-slower) var(--animation-spring);
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* iOS-specific optimizations for better performance */
+/* Enhanced slide animations */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-/* Optimize scrolling on iOS devices */
+.animate-slide-up {
+  animation: slide-up var(--duration-slow) var(--animation-spring);
+}
+
+/* Enhanced Card Styles */
+.card-enhanced {
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur-strength);
+  -webkit-backdrop-filter: var(--blur-strength);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: all var(--duration-normal) var(--animation-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+.card-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.card-enhanced:active {
+  transform: translateY(0) scale(var(--touch-feedback-scale));
+  transition-duration: var(--duration-fast);
+}
+
+/* Better handling of full-screen elements */
+#fullscreen-root {
+  z-index: 9999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  will-change: contents;
+}
+
+#fullscreen-root:not(:empty) {
+  pointer-events: auto;
+  background-color: rgba(0, 0, 0, 0.95);
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+}
+
+/* Define custom animation for ping effect with better performance */
+@keyframes ping-optimized {
+  75%, 100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-ping-optimized {
+  animation: ping-optimized 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* Optimize gradient animations */
+@keyframes gradient-shift {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 100%;
+  animation: gradient-shift 3s linear infinite;
+  will-change: background-position;
+}
+
+/* Enhanced Button Interactions */
+.button-interactive {
+  transition: all var(--duration-normal) var(--animation-smooth);
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.button-interactive::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width var(--duration-normal) var(--animation-smooth), height var(--duration-normal) var(--animation-smooth);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.button-interactive:active::before {
+  width: 120%;
+  height: 120%;
+  transition-duration: var(--duration-fast);
+}
+
+.button-interactive:active {
+  transform: scale(var(--button-press-scale));
+  transition-duration: var(--duration-fast);
+}
+
+/* Enhanced Pull-to-Refresh */
+.PullToRefresh {
+  will-change: transform;
+  transform: translateZ(0);
+  z-index: 1;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Enhanced iOS WebView compatibility for bottom navigation */
+.fixed.bottom-0 {
+  bottom: 0 !important;
+  padding-bottom: calc(12px + var(--safe-area-inset-bottom)) !important;
+  height: auto !important;
+  z-index: 999 !important;
+  display: flex !important;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Force the navigation to always be visible */
+nav.fixed.bottom-0 {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+}
+
+/* Main container adjustments */
+.min-h-screen {
+  position: relative;
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow: hidden;
+  padding: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 35%, #334155 70%, #0f172a 100%);
+  background-attachment: fixed;
+}
+
+/* iOS-specific optimizations and fixes */
+:root { 
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); 
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --bottom-nav-height: 70px;
+  --ios-extra-top-padding: 2rem;
+}
+
+/* Ensure proper viewport height on iOS */
+html {
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: -webkit-fill-available;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Main scrollable content area */
+.tab-content { 
+  position: absolute;
+  top: calc(5rem + var(--safe-area-inset-top) + var(--ios-extra-top-padding));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  -webkit-transform: translate3d(0,0,0);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.6) transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* Enhanced iOS optimizations for better performance */
 .ios-optimized {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Prevent rubber-banding/overscroll effects that can cause performance issues */
@@ -203,172 +581,14 @@ html, body {
 .animate-spin, 
 .animate-pulse,
 .animate-ping-slow,
-.animate-gradient-x {
+.animate-gradient-x,
+.animate-gradient-shift,
+.animate-pulse-glow {
   will-change: transform, opacity;
   transform: translateZ(0);
-}
-
-/* Optimize pull-to-refresh component */
-.PullToRefresh {
-  will-change: transform;
-  transform: translateZ(0);
-  z-index: 1;
-  position: relative;
-}
-
-/* Better handling of full-screen elements */
-#fullscreen-root {
-  z-index: 9999;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none; /* Allow clicks to pass through when not active */
-}
-
-#fullscreen-root:not(:empty) {
-  pointer-events: auto; /* Capture clicks when content is present */
-  background-color: rgba(0, 0, 0, 0.95);
-}
-
-/* Define custom animation for ping effect with better performance */
-@keyframes ping-optimized {
-  75%, 100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-/* Optimize gradient animations */
-@keyframes gradient-x {
-  0% { background-position: 0% 0; }
-  100% { background-position: 200% 0; }
-}
-
-/* Enhanced iOS WebView compatibility for bottom navigation */
-.fixed.bottom-0 {
-  bottom: 0 !important;
-  padding-bottom: calc(12px + var(--safe-area-inset-bottom)) !important;
-  height: auto !important;
-  z-index: 999 !important;
-  display: flex !important;
-}
-
-/* Force the navigation to always be visible */
-nav.fixed.bottom-0 {
-  visibility: visible !important;
-  opacity: 1 !important;
-  transform: translateZ(0) !important;
-  -webkit-transform: translateZ(0) !important;
-}
-
-/* Adjust padding for the main container in WebView contexts */
-/* Parent container no longer needs bottom padding; content can extend under nav */
-.min-h-screen {
-  position: relative;
-  height: 100vh;
-  height: -webkit-fill-available;
-  overflow: hidden; /* Prevent scroll on main container */
-  /* Remove padding as we're using absolute positioning */
-  padding: 0;
-}
-
-/* iOS-specific optimizations and fixes */
-:root { 
-  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); 
-  --safe-area-inset-top: env(safe-area-inset-top, 0px);
-  --bottom-nav-height: 70px;
-  --ios-extra-top-padding: 2rem;
-}
-
-/* Ensure proper viewport height on iOS */
-html {
-  height: -webkit-fill-available;
-}
-
-body {
-  min-height: -webkit-fill-available;
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-}
-
-/* Main scrollable content area */
-.tab-content { 
-  /* Use absolute positioning to fill the entire container */
-  position: absolute;
-  top: calc(5rem + var(--safe-area-inset-top) + var(--ios-extra-top-padding));
-  left: 0;
-  right: 0;
-  bottom: 0; /* Let content extend behind the navigation */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  will-change: transform;
-  transform: translate3d(0,0,0);
-  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-inset-bottom) + 130px); /* Extra padding to ensure content is visible above navigation */
-}
-
-/* Fixed bottom navigation bar */
-nav.fixed.bottom-0 {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 9999 !important;
-  padding-bottom: calc(12px + var(--safe-area-inset-bottom)) !important;
-  background: linear-gradient(to bottom, rgba(25,25,25,0.95), rgba(15,15,15,0.95)) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  margin: 0 !important;
-  transform: translateZ(0) !important;
-  -webkit-transform: translateZ(0) !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  display: flex !important;
-  height: auto !important;
-  min-height: calc(var(--bottom-nav-height) + var(--safe-area-inset-bottom)) !important;
-  border-top: 1px solid rgba(75, 75, 75, 0.3) !important;
-}
-
-/* Top app bar fixes */
-.top-app-bar {
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  right: 0; 
-  z-index: 999;
-  background: linear-gradient(to right, rgba(10,10,10,0.95), rgba(20,20,20,0.95));
-  backdrop-filter: blur(12px); 
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(75, 75, 75, 0.3); 
-  isolation: isolate;
-  padding-top: max(env(safe-area-inset-top), 20px);
-  height: auto !important;
-  transform: translateZ(0);
   -webkit-transform: translateZ(0);
-}
-
-/* Main container adjustments */
-.min-h-screen {
-  position: relative;
-  height: 100vh;
-  height: -webkit-fill-available;
-  overflow: hidden; /* Prevent scroll on main container */
-  /* Remove padding as we're using absolute positioning */
-  padding: 0;
-}
-
-/* Pull-to-refresh styling */
-.ptr__pull-down { 
-  background-color: rgba(30, 30, 30, 0.8); 
-  backdrop-filter: blur(10px); 
-}
-
-/* Prevent any unwanted scrolling/bouncing effects */
-.ios-optimized {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Ensure camera tab content can overflow horizontally for grid */
