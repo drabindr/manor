@@ -675,19 +675,19 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         </div>
         
         {/* Controls Container */}
-        <div className="flex items-center justify-between px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm">
+        <div className="thermostat-controls flex items-center justify-between px-2 xs:px-3 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm gap-1 xs:gap-2">
           {/* Enhanced Mode Control with iPhone optimizations */}
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <button 
               onClick={() => {
                 setModeDropdownOpen(!modeDropdownOpen);
                 triggerHaptic('light');
               }}
-              className="group flex items-center space-x-2 px-4 py-3 rounded-lg 
+              className="thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
                          hover:bg-gray-800/50 active:bg-gray-700/60 
                          transition-all duration-200 ease-in-out touch-manipulation
                          border border-gray-700/30 backdrop-blur-sm
-                         min-h-[48px] min-w-[80px]"
+                         min-h-[48px] min-w-[70px] xs:min-w-[80px]"
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
                 transform: 'translateZ(0)',
@@ -748,7 +748,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           </div>
           
           {/* Enhanced Temperature Controls with iPhone optimizations */}
-          <div className="flex space-x-3">
+          <div className="flex space-x-2 xs:space-x-3 flex-shrink-0">
             <button
               onMouseDown={() => setIsTemperatureChanging(true)}
               onMouseUp={() => setIsTemperatureChanging(false)}
@@ -764,14 +764,14 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   triggerHaptic('medium');
                 }
               }}
-              className="bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
+              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
                          hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
                          active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
-                         text-white rounded-full p-3 focus:outline-none 
+                         text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
                          transition-all duration-200 ease-in-out
                          border border-gray-600/40 shadow-lg hover:shadow-xl 
                          active:scale-95 touch-manipulation 
-                         min-h-[52px] min-w-[52px] flex items-center justify-center
+                         min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
                          backdrop-blur-sm"
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
@@ -782,7 +782,8 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 willChange: 'transform, box-shadow'
               }}
             >
-              <UilMinusCircle size={26} className="drop-shadow-sm" />
+              <UilMinusCircle size={22} className="drop-shadow-sm xs:hidden" />
+              <UilMinusCircle size={26} className="drop-shadow-sm hidden xs:block" />
             </button>
             <button
               onMouseDown={() => setIsTemperatureChanging(true)}
@@ -799,14 +800,14 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   triggerHaptic('medium');
                 }
               }}
-              className="bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
+              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
                          hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
                          active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
-                         text-white rounded-full p-3 focus:outline-none 
+                         text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
                          transition-all duration-200 ease-in-out
                          border border-gray-600/40 shadow-lg hover:shadow-xl 
                          active:scale-95 touch-manipulation 
-                         min-h-[52px] min-w-[52px] flex items-center justify-center
+                         min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
                          backdrop-blur-sm"
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
@@ -817,12 +818,13 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 willChange: 'transform, box-shadow'
               }}
             >
-              <UilPlusCircle size={26} className="drop-shadow-sm" />
+              <UilPlusCircle size={22} className="drop-shadow-sm xs:hidden" />
+              <UilPlusCircle size={26} className="drop-shadow-sm hidden xs:block" />
             </button>
           </div>
           
           {/* Enhanced Fan & Eco Controls with iPhone optimizations */}
-          <div className="flex items-center space-x-2 xs:space-x-3">
+          <div className="thermostat-fan-eco-container flex items-center space-x-1 xs:space-x-2 flex-shrink min-w-0">
             {/* Enhanced Fan Control - iPhone Optimized */}
             <div className="relative">
               <button 
@@ -830,11 +832,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   setFanDropdownOpen(!fanDropdownOpen);
                   triggerHaptic('light');
                 }}
-                className="group flex items-center space-x-2 px-3 xs:px-4 py-3 rounded-lg 
+                className="thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
                            hover:bg-gray-800/50 active:bg-gray-700/60 
                            transition-all duration-200 ease-in-out touch-manipulation
                            border border-gray-700/30 backdrop-blur-sm
-                           min-h-[48px] min-w-[100px] xs:min-w-[120px] flex-shrink-0"
+                           min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0"
                 style={{ 
                   WebkitTapHighlightColor: 'transparent',
                   transform: 'translateZ(0)',
@@ -843,9 +845,9 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               >
                 <UilWind
                   className={thermostatData?.fanStatus === "ON" ? "text-blue-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
-                  size={20}
+                  size={18}
                 />
-                <span className="text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap">Fan</span>
+                <span className="btn-text-responsive text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap truncate">Fan</span>
               </button>
               {fanDropdownOpen && (
                 <div className="absolute bottom-full mb-2 right-0 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl z-20 border border-gray-700/50 w-36 overflow-hidden">
@@ -898,11 +900,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 toggleEcoMode();
                 triggerHaptic('medium');
               }}
-              className={`group flex items-center space-x-2 px-3 xs:px-4 py-3 rounded-lg 
+              className={`thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
                          hover:bg-gray-800/50 active:bg-gray-700/60 
                          transition-all duration-200 ease-in-out touch-manipulation
                          border border-gray-700/30 backdrop-blur-sm
-                         min-h-[48px] min-w-[100px] xs:min-w-[120px] flex-shrink-0`}
+                         min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0`}
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
                 transform: 'translateZ(0)',
@@ -911,9 +913,9 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             >
               <UilTrees
                 className={ecoModeActive ? "text-green-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
-                size={20}
+                size={18}
               />
-              <span className="text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap">Eco</span>
+              <span className="btn-text-responsive text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap truncate">Eco</span>
             </button>
           </div>
         </div>
