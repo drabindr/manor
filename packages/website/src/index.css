@@ -651,9 +651,9 @@ code {
   
   /* Improve text readability on iPhone 15 Pro */
   .house-dropdown .veedu-text {
-    font-size: 1rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.025em !important;
+    font-size: 0.875rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.015em !important;
     white-space: nowrap !important;
     text-rendering: optimizeLegibility;
   }
@@ -687,8 +687,8 @@ code {
 /* iPhone 15 Pro Max and larger iPhones (430px+) */
 @media only screen and (min-width: 430px) and (orientation: portrait) {
   .house-dropdown .veedu-text {
-    font-size: 1.25rem !important;
-    letter-spacing: 0.03em !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.02em !important;
   }
   
   .app-header-content {
@@ -705,7 +705,7 @@ code {
   }
   
   .house-dropdown .veedu-text {
-    font-size: 0.9rem !important;
+    font-size: 0.8rem !important;
   }
   
   .app-header-content {

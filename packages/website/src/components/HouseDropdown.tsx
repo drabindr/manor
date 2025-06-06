@@ -34,8 +34,8 @@ const HouseDropdown: React.FC = () => {
         className="flex items-center space-x-1 xs:space-x-1.5 sm:space-x-2 p-1.5 xs:p-2 sm:p-3 rounded-xl hover:bg-white/10 transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-white/20"
         style={{ transform: 'translateZ(0)' }}
       >
-        <span className="veedu-text text-base xs:text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm transition-all duration-200 text-optimized">
-          <span className="inline-block">720 Front</span>
+        <span className="veedu-text text-sm xs:text-base sm:text-lg font-bold bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wide drop-shadow-sm transition-all duration-200 text-optimized whitespace-nowrap">
+          720 Front
         </span>
         <svg 
           className={`w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-white transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
