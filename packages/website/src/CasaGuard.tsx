@@ -615,7 +615,7 @@ const CasaGuard: React.FC = () => {
             className="min-h-screen w-full flex flex-col text-white relative ios-optimized bg-gray-950" // Base background for the new theme
             style={{
               paddingTop: "calc(5rem + env(safe-area-inset-top) + 1.25rem)",
-              paddingBottom: "calc(70px + var(--safe-area-inset-bottom))",
+              paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1rem)",
               height: "calc(100vh - env(safe-area-inset-top)); height: -webkit-fill-available",
               position: "fixed",
               width: "100%",
@@ -673,7 +673,7 @@ const CasaGuard: React.FC = () => {
                   WebkitOverflowScrolling: "touch",
                   transform: "translate3d(0,0,0)",
                   willChange: "transform",
-                  marginBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))"
+                  marginBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1rem)"
                 }}
               >
                 {/* Render all tabs but only show the active one */}

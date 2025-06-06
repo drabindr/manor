@@ -44,6 +44,9 @@
   --border-radius-3xl: 40px;
   --spacing-unit: 4px;
   
+  /* Navigation System */
+  --bottom-nav-height: 82px; /* 12px nav top + 8px button top + 38px content + 8px button bottom + 16px nav bottom */
+  
   /* Animation System */
   --animation-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --animation-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -422,6 +425,28 @@ code {
     transform: scale(0.96);
     filter: brightness(0.9);
   }
+}
+
+/* Navigation Spacing Utilities */
+.nav-bottom-spacing {
+  margin-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.nav-bottom-padding {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+/* Enhanced scroll area for content that needs to clear navigation */
+.scroll-area-with-nav {
+  height: calc(100vh - var(--bottom-nav-height) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem; /* Add extra padding at the bottom of scroll areas */
+}
+
+/* Ensure proper spacing for last elements in scrollable content */
+.last-element-spacing {
+  margin-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.5rem);
 }
 
 /* Enhanced Keyframe Animations */
