@@ -6,6 +6,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useRef,
 } from "react";
 import { logger } from "./utils/Logger";
 import {
@@ -71,6 +72,7 @@ interface EventHistoryProps {
 
 export type EventHistoryRef = {
   refresh: () => Promise<void>;
+  refreshImmediate?: () => Promise<void>;
 };
 
 const REGION = "us-east-1";
@@ -123,6 +125,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
     // Pagination state for better performance with large event lists
     const [currentPage, setCurrentPage] = useState(1);
     const [eventsPerPage] = useState(50); // Show 50 events per page
+    
+    // Debouncing ref to prevent excessive refresh calls
+    const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const fetchUserHomeStatuses = useCallback(async () => {
       setIsLoadingStatuses(true);
@@ -156,7 +161,34 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
           displayName: item.displayName || undefined // Explicitly handle displayName
         }));
         
-        setUserHomeStatuses(statusesWithNames as UserHomeStatusType[]);
+        // Compare with current state to prevent unnecessary re-renders
+        setUserHomeStatuses(prevStatuses => {
+          // Check if the new data is actually different from current state
+          if (prevStatuses.length !== statusesWithNames.length) {
+            logger.debug("User home status count changed, updating UI");
+            return statusesWithNames as UserHomeStatusType[];
+          }
+          
+          // Compare each status to see if any have changed
+          const hasChanges = statusesWithNames.some((newStatus, index) => {
+            const prevStatus = prevStatuses.find(p => p.userId === newStatus.userId);
+            if (!prevStatus) return true; // New user
+            
+            return (
+              prevStatus.state !== newStatus.state ||
+              prevStatus.displayName !== newStatus.displayName ||
+              prevStatus.homeId !== newStatus.homeId
+            );
+          });
+          
+          if (hasChanges) {
+            logger.debug("User home status data changed, updating UI");
+            return statusesWithNames as UserHomeStatusType[];
+          } else {
+            logger.debug("User home status data unchanged, skipping UI update");
+            return prevStatuses;
+          }
+        });
 
         if (items.length === 0) {
           logger.warn(`No user home statuses found for homeId: ${homeId}`);
@@ -187,6 +219,31 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
       }
     }, [fetchUserHomeStatuses, fetchEvents]);
 
+    // Debounced refresh function to prevent excessive calls
+    const debouncedRefreshData = useCallback(async () => {
+      // Clear existing timeout if any
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      // Set new timeout
+      return new Promise<void>((resolve) => {
+        refreshTimeoutRef.current = setTimeout(async () => {
+          await refreshData();
+          resolve();
+        }, 500); // 500ms debounce delay
+      });
+    }, [refreshData]);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+      };
+    }, []);
+
     // Call refreshData on mount and when homeId changes
     useEffect(() => {
       refreshData();
@@ -196,9 +253,10 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
     useImperativeHandle(
       ref,
       () => ({
-        refresh: refreshData,
+        refresh: debouncedRefreshData, // Use debounced version to prevent excessive refreshing
+        refreshImmediate: refreshData, // Keep immediate version for when needed
       }),
-      [refreshData]
+      [debouncedRefreshData, refreshData]
     );
 
     const collapseEvents = useCallback((allEvents: Event[]): Event[] => {
