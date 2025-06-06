@@ -85,7 +85,13 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ isLoading }) => {
               willChange: 'transform' 
             }}
           ></div>
-          <div className="text-yellow-400 text-xl font-bold">V</div>
+          <div 
+            className="w-8 h-8 bg-no-repeat bg-center bg-contain"
+            style={{
+              backgroundImage: 'url(/logo2.png)',
+              filter: 'brightness(1.1) saturate(1.2)'
+            }}
+          ></div>
         </div>
       </div>
       <div className="text-white text-xl font-medium">Connecting to your home...</div>
