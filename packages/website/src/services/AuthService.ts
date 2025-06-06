@@ -33,6 +33,9 @@ export class AuthService {
   private tokens: AuthTokens | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
   private isFirstRefresh: boolean = true;
+  private isRefreshing: boolean = false;
+  private refreshRetryCount: number = 0;
+  private maxRefreshRetries: number = 3;
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -229,18 +232,23 @@ export class AuthService {
       return false;
     }
     
-    // If tokens are expired, try to refresh them if possible
-    if (this.isTokenExpired() && this.tokens.refreshToken) {
+    // If tokens are expired but we have a refresh token and aren't already refreshing, try to refresh
+    if (this.isTokenExpired() && this.tokens.refreshToken && !this.isRefreshing) {
       console.log('Tokens expired but refresh token available, attempting refresh...');
       // Start refresh process but don't wait for it
       this.refreshTokens().catch(error => {
         console.error('Failed to refresh tokens during auth check:', error);
       });
-      // Return false for now, but the refresh might succeed
-      return false;
     }
     
-    return !this.isTokenExpired();
+    // If we're refreshing or tokens are still valid, consider user authenticated
+    // This prevents premature sign-outs during token refresh
+    if (this.isRefreshing || !this.isTokenExpired()) {
+      return true;
+    }
+    
+    // Only return false if tokens are expired AND we don't have a refresh token
+    return !!this.tokens.refreshToken;
   }
 
   private isTokenExpired(): boolean {
@@ -289,6 +297,12 @@ export class AuthService {
       throw new Error('No refresh token available');
     }
 
+    if (this.isRefreshing) {
+      console.log('🔄 Token refresh already in progress, skipping...');
+      return;
+    }
+
+    this.isRefreshing = true;
     console.log('🔄 Attempting token refresh...');
     console.log('Refresh token (first 20 chars):', this.tokens.refreshToken.substring(0, 20) + '...');
 
@@ -315,19 +329,44 @@ export class AuthService {
           error: errorText
         });
         
-        // Only sign out if the refresh token is invalid (400/401)
-        // For other errors (network, 5xx), keep the user logged in
+        // Only sign out if the refresh token is definitely invalid (400/401)
+        // For network errors (5xx) or other temporary issues, keep trying
         if (tokenResponse.status === 400 || tokenResponse.status === 401) {
           console.error('Refresh token is invalid, signing out...');
+          this.isRefreshing = false;
+          this.refreshRetryCount = 0;
           this.signOut();
+          throw new Error(`Invalid refresh token: ${tokenResponse.status} ${errorText}`);
         }
         
-        throw new Error(`Failed to refresh tokens: ${tokenResponse.status} ${errorText}`);
+        // For other errors, we'll retry
+        this.refreshRetryCount++;
+        if (this.refreshRetryCount < this.maxRefreshRetries) {
+          console.log(`🔄 Retrying token refresh... (attempt ${this.refreshRetryCount}/${this.maxRefreshRetries})`);
+          this.isRefreshing = false;
+          // Retry after a delay
+          setTimeout(() => {
+            this.refreshTokens().catch(error => {
+              console.error('Token refresh retry failed:', error);
+            });
+          }, Math.pow(2, this.refreshRetryCount) * 1000); // Exponential backoff
+          return;
+        } else {
+          console.error('Max refresh retries reached, keeping user logged in but scheduling next attempt');
+          this.refreshRetryCount = 0;
+          this.isRefreshing = false;
+          // Schedule next refresh attempt in 5 minutes for network issues
+          this.scheduleTokenRefresh();
+          throw new Error(`Failed to refresh tokens after ${this.maxRefreshRetries} attempts: ${tokenResponse.status} ${errorText}`);
+        }
       }
 
       const tokenData = await tokenResponse.json();
       console.log('✅ Token refresh successful');
       console.log('New token expires in:', tokenData.expires_in, 'seconds');
+      
+      // Reset retry counter on success
+      this.refreshRetryCount = 0;
       
       // Preserve refresh token if not included in response (common with Cognito)
       const newRefreshToken = tokenData.refresh_token || this.tokens.refreshToken;
@@ -362,8 +401,8 @@ export class AuthService {
       // Don't automatically sign out for network errors or temporary failures
       // Only sign out if explicitly handled above for auth errors
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('401') || errorMessage.includes('400')) {
-        console.log('Auth error detected, user will be signed out');
+      if (errorMessage.includes('Invalid refresh token')) {
+        console.log('Auth error detected, user signed out');
       } else {
         console.log('Network or temporary error, keeping user logged in');
         // Still schedule next refresh attempt in case this was a temporary issue
@@ -373,6 +412,8 @@ export class AuthService {
       }
       
       throw error;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 
@@ -394,6 +435,10 @@ export class AuthService {
       refreshTime = 5 * 60 * 1000; // 5 minutes after login
       console.log('Scheduling FIRST token refresh in 5 minutes (early test)');
       this.isFirstRefresh = false;
+    } else if (this.refreshRetryCount > 0) {
+      // If we've had refresh failures, schedule more aggressively
+      refreshTime = 5 * 60 * 1000; // 5 minutes for retry attempts
+      console.log(`Scheduling RETRY token refresh in 5 minutes (retry attempt)`);
     } else {
       // Subsequent refreshes: use normal schedule (10 minutes before expiry)
       const timeUntilExpiry = this.tokens.expiresAt - Date.now();
@@ -424,6 +469,10 @@ export class AuthService {
   signOut(): void {
     // Clear refresh timer
     this.clearRefreshTimer();
+    
+    // Reset refresh state
+    this.isRefreshing = false;
+    this.refreshRetryCount = 0;
     
     // Reset first refresh flag for next login
     this.isFirstRefresh = true;
@@ -458,11 +507,21 @@ export class AuthService {
 
         // Check if tokens are expired
         if (this.isTokenExpired()) {
-          this.refreshTokens().catch(() => {
-            // If refresh fails, clear the state
-            this.user = null;
-            this.tokens = null;
-            localStorage.removeItem('casa_guard_auth_state');
+          console.log('Loaded tokens are expired, attempting refresh...');
+          this.refreshTokens().catch((error) => {
+            console.error('Failed to refresh tokens on startup:', error);
+            // Only clear state if refresh token is definitely invalid
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('Invalid refresh token') || errorMessage.includes('No refresh token available')) {
+              console.log('Clearing invalid auth state');
+              this.user = null;
+              this.tokens = null;
+              localStorage.removeItem('casa_guard_auth_state');
+            } else {
+              console.log('Keeping auth state despite refresh failure - will retry later');
+              // Keep the tokens but schedule a retry
+              this.scheduleTokenRefresh();
+            }
           });
         } else {
           // Tokens are still valid, schedule next refresh
@@ -528,6 +587,8 @@ export class AuthService {
     refreshScheduled: boolean;
     expiresAt: string;
     isFakeToken: boolean;
+    isRefreshing: boolean;
+    refreshRetryCount: number;
   } {
     const hasTokens = !!this.tokens;
     const isExpired = this.isTokenExpired();
@@ -542,7 +603,9 @@ export class AuthService {
       expiresIn: `${Math.round(expiresIn / 1000 / 60)} minutes`,
       refreshScheduled,
       expiresAt,
-      isFakeToken: isFakeToken ? '⚠️ FAKE TOKENS DETECTED' : '✅ Real tokens'
+      isFakeToken: isFakeToken ? '⚠️ FAKE TOKENS DETECTED' : '✅ Real tokens',
+      isRefreshing: this.isRefreshing ? '🔄 Refreshing in progress' : '✅ Not refreshing',
+      refreshRetryCount: this.refreshRetryCount
     });
 
     return {
@@ -551,7 +614,9 @@ export class AuthService {
       expiresIn,
       refreshScheduled,
       expiresAt,
-      isFakeToken
+      isFakeToken,
+      isRefreshing: this.isRefreshing,
+      refreshRetryCount: this.refreshRetryCount
     };
   }
 
@@ -566,6 +631,9 @@ export class AuthService {
     if (this.tokens.accessToken === 'placeholder-token') {
       throw new Error('Cannot refresh fake/placeholder tokens');
     }
+    
+    // Reset retry count for forced refresh
+    this.refreshRetryCount = 0;
     
     return this.refreshTokens();
   }
