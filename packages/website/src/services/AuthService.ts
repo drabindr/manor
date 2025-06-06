@@ -33,6 +33,7 @@ export class AuthService {
   private tokens: AuthTokens | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
   private isFirstRefresh: boolean = true;
+  private bypassAuthForDev: boolean = false;
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -40,17 +41,58 @@ export class AuthService {
       region: config.region,
     });
     
-    // Load existing auth state from localStorage
-    this.loadAuthState();
+    // Check if auth bypass is enabled for development
+    this.bypassAuthForDev = process.env.REACT_APP_BYPASS_AUTH_FOR_DEV === 'true';
     
-    // Start proactive token refresh if authenticated
-    if (this.isAuthenticated()) {
-      this.scheduleTokenRefresh();
+    if (this.bypassAuthForDev) {
+      console.warn('🚨 AUTH BYPASS ENABLED FOR DEVELOPMENT - This should NEVER be used in production!');
+      this.setupMockAuthState();
+    } else {
+      // Load existing auth state from localStorage
+      this.loadAuthState();
+      
+      // Start proactive token refresh if authenticated
+      if (this.isAuthenticated()) {
+        this.scheduleTokenRefresh();
+      }
     }
+  }
+
+  // Setup mock authentication state for development/testing
+  private setupMockAuthState(): void {
+    const mockExpiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
+    
+    this.user = {
+      sub: 'dev-mock-user-12345',
+      email: 'dev@manor.test',
+      givenName: 'Dev',
+      familyName: 'User',
+      role: 'admin', // Give admin role for testing all features
+      homeId: 'mock-home-id-123',
+    };
+
+    this.tokens = {
+      accessToken: 'mock-access-token-for-dev',
+      idToken: 'mock-id-token-for-dev',
+      refreshToken: 'mock-refresh-token-for-dev',
+      expiresAt: mockExpiresAt,
+    };
+
+    console.log('✅ Mock authentication state created:', this.user);
+    
+    // Save mock state to localStorage for consistency
+    this.saveAuthState();
   }
 
   // Initialize Sign in with Apple
   async signInWithApple(): Promise<void> {
+    // If bypass is enabled, just refresh the page to use mock auth
+    if (this.bypassAuthForDev) {
+      console.log('🔄 Auth bypass enabled - redirecting to main app');
+      window.location.href = '/';
+      return;
+    }
+    
     const appleAuthUrl = this.buildAppleAuthUrl();
     window.location.href = appleAuthUrl;
   }
@@ -225,6 +267,11 @@ export class AuthService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
+    // In bypass mode, always return true if mock user exists
+    if (this.bypassAuthForDev && this.user) {
+      return true;
+    }
+    
     if (!this.user || !this.tokens) {
       return false;
     }
@@ -256,6 +303,11 @@ export class AuthService {
 
   // Get access token for API calls
   getAccessToken(): string | null {
+    // In bypass mode, return mock token
+    if (this.bypassAuthForDev && this.tokens) {
+      return this.tokens.accessToken;
+    }
+    
     if (!this.tokens) {
       console.warn('No tokens available');
       return null;
@@ -285,6 +337,14 @@ export class AuthService {
 
   // Refresh tokens
   async refreshTokens(): Promise<void> {
+    // In bypass mode, just extend the mock token expiry
+    if (this.bypassAuthForDev && this.tokens) {
+      console.log('🔄 Mock token refresh (extending expiry time)');
+      this.tokens.expiresAt = Date.now() + (24 * 60 * 60 * 1000); // Extend by 24 hours
+      this.saveAuthState();
+      return;
+    }
+    
     if (!this.tokens?.refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -433,6 +493,13 @@ export class AuthService {
     this.tokens = null;
     localStorage.removeItem('casa_guard_auth_state');
     
+    // In bypass mode, recreate mock auth state to simulate staying logged in
+    if (this.bypassAuthForDev) {
+      console.log('🔄 Bypass mode - recreating mock auth state instead of signing out');
+      this.setupMockAuthState();
+      return;
+    }
+    
     // Simply redirect to home page without going through Cognito logout flow
     // This is more reliable and avoids issues with Cognito logout endpoint
     window.location.href = '/';
@@ -449,6 +516,11 @@ export class AuthService {
 
   // Load auth state from localStorage
   private loadAuthState(): void {
+    // Skip loading if bypass mode is enabled (mock state is set up in constructor)
+    if (this.bypassAuthForDev) {
+      return;
+    }
+    
     try {
       const savedState = localStorage.getItem('casa_guard_auth_state');
       if (savedState) {
@@ -528,13 +600,14 @@ export class AuthService {
     refreshScheduled: boolean;
     expiresAt: string;
     isFakeToken: boolean;
+    bypassMode: boolean;
   } {
     const hasTokens = !!this.tokens;
     const isExpired = this.isTokenExpired();
     const expiresIn = this.tokens ? Math.max(0, this.tokens.expiresAt - Date.now()) : 0;
     const refreshScheduled = !!this.refreshTimer;
     const expiresAt = this.tokens ? new Date(this.tokens.expiresAt).toISOString() : 'N/A';
-    const isFakeToken = this.tokens?.accessToken === 'placeholder-token';
+    const isFakeToken = this.tokens?.accessToken === 'placeholder-token' || this.tokens?.accessToken === 'mock-access-token-for-dev';
 
     console.log('Token Status:', {
       hasTokens,
@@ -542,7 +615,8 @@ export class AuthService {
       expiresIn: `${Math.round(expiresIn / 1000 / 60)} minutes`,
       refreshScheduled,
       expiresAt,
-      isFakeToken: isFakeToken ? '⚠️ FAKE TOKENS DETECTED' : '✅ Real tokens'
+      isFakeToken: isFakeToken ? '⚠️ FAKE TOKENS DETECTED' : '✅ Real tokens',
+      bypassMode: this.bypassAuthForDev ? '🚨 DEV BYPASS ENABLED' : '✅ Normal auth mode'
     });
 
     return {
@@ -551,7 +625,8 @@ export class AuthService {
       expiresIn,
       refreshScheduled,
       expiresAt,
-      isFakeToken
+      isFakeToken,
+      bypassMode: this.bypassAuthForDev
     };
   }
 
@@ -563,8 +638,13 @@ export class AuthService {
       throw new Error('No tokens available to refresh');
     }
     
-    if (this.tokens.accessToken === 'placeholder-token') {
-      throw new Error('Cannot refresh fake/placeholder tokens');
+    if (this.bypassAuthForDev) {
+      console.log('🔧 Bypass mode - performing mock token refresh');
+      return this.refreshTokens();
+    }
+    
+    if (this.tokens.accessToken === 'placeholder-token' || this.tokens.accessToken === 'mock-access-token-for-dev') {
+      throw new Error('Cannot refresh fake/placeholder tokens in normal mode');
     }
     
     return this.refreshTokens();
