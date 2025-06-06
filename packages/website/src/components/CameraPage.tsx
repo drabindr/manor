@@ -50,18 +50,66 @@ const CameraPage: React.FC<CameraPageProps> = ({
     return (saved === 'time-based' || saved === 'alphabetical' || saved === 'custom') ? saved : 'time-based';
   });
 
-  // Handle window resize for responsive behavior
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  };
+
+  // Handle window resize for responsive behavior with enhanced iOS optimizations
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
+      const width = window.innerWidth;
+      setIsMobile(width < 640);
+      
+      // Enhanced iOS-specific optimizations
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        // Force hardware acceleration for smooth scrolling
+        document.documentElement.style.setProperty('-webkit-overflow-scrolling', 'touch');
+        
+        // Optimize viewport height for iOS Safari
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        
+        // Adjust camera grid for better iPhone viewing
+        if (width <= 375) { // iPhone mini/SE
+          setColumns(2);
+        } else if (width <= 414) { // iPhone 13/14 Pro Max
+          setColumns(cameraViewMode === 'grid' ? 2 : 1);
+        }
+      }
     };
     
     if (typeof window !== 'undefined') {
       handleResize(); // Set initial value
       window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      // Add orientation change listener for better iPhone support
+      window.addEventListener('orientationchange', () => {
+        setTimeout(handleResize, 100); // Delay to ensure proper viewport calculation
+      });
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('orientationchange', handleResize);
+      };
     }
-  }, []);
+  }, [cameraViewMode]);
 
   // Persist view mode to localStorage whenever it changes
   useEffect(() => {
@@ -147,47 +195,57 @@ const CameraPage: React.FC<CameraPageProps> = ({
 
   return (
     <div className="camera-page-container w-full overflow-visible pt-2 pb-4 bg-gradient-to-b from-gray-900 to-black safe-area-padding-x">
+      {/* Enhanced Header with Better iPhone Optimizations */}
       <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between bg-black/30 backdrop-blur-md rounded-xl p-3 border border-gray-800/40 shadow-lg safe-area-padding-top">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="bg-gray-800/70 p-2 rounded-lg">
-            <UilVideo className="text-blue-400" size={20} sm:size={22} />
+            <UilVideo className="text-blue-400" size={isMobile ? 20 : 22} />
           </div>
           <div>
             <h2 className="text-gray-200 font-medium text-sm sm:text-base">Camera Feeds</h2>
             <p className="text-xs text-gray-400 hidden sm:block">{getSortLabel()} sorting</p>
           </div>
         </div>
-        <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className="text-xs text-gray-400 bg-gray-800/50 px-2 sm:px-2.5 py-1 rounded-full border border-gray-700/30">
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <div className="text-xs text-gray-400 bg-gray-800/60 backdrop-blur-sm px-2.5 sm:px-3 py-1.5 rounded-full border border-gray-700/40 shadow-lg">
             <span className="hidden sm:inline">{cameras.length + 1} cameras online</span>
             <span className="sm:hidden">{cameras.length + 1}</span>
           </div>
+          {/* Enhanced Sort Button with Better Touch Targets */}
           <button
-            onClick={cycleSortMode}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/80 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation"
+            onClick={() => {
+              cycleSortMode();
+              triggerHaptic('light');
+            }}
+            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Sort mode: ${getSortLabel()}`}
             title={`Current: ${getSortLabel()}. Click to cycle through sorting options.`}
           >
             {getSortIcon()}
           </button>
+          {/* Enhanced View Mode Toggle */}
           <button
-            onClick={() => setCameraViewMode(prev => prev === "grid" ? "list" : "grid")}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/80 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation"
+            onClick={() => {
+              setCameraViewMode(prev => prev === "grid" ? "list" : "grid");
+              triggerHaptic('light');
+            }}
+            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Switch to ${cameraViewMode === "grid" ? "list" : "grid"} view`}
           >
             {cameraViewMode === "grid" ? (
-              <UilListUl className="text-blue-400" size={20} />
+              <UilListUl className="text-blue-400" size={isMobile ? 18 : 20} />
             ) : (
-              <UilApps className="text-blue-400" size={20} />
+              <UilApps className="text-blue-400" size={isMobile ? 18 : 20} />
             )}
           </button>
-          {/* Button to cycle columns per row: 2 (default), 3, 4 */}
+          {/* Enhanced Columns Button with Better iPhone Touch Targets */}
           <button
             onClick={() => {
               setCameraViewMode('grid');
               setColumns((prev) => (prev === 4 ? 2 : prev + 1));
+              triggerHaptic('light');
             }}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/80 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation"
+            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Set columns per row (currently ${columns})`}
             title={`Columns: ${columns}. Click to cycle 2-4 columns.`}
           >
@@ -195,6 +253,8 @@ const CameraPage: React.FC<CameraPageProps> = ({
           </button>
         </div>
       </div>
+      
+      {/* Enhanced Camera Grid with Better Touch Interactions */}
       <div
         className="px-2 sm:px-4 grid gap-2 sm:gap-4"
         style={{
@@ -204,60 +264,95 @@ const CameraPage: React.FC<CameraPageProps> = ({
         {sortedCameras.map((camera) => (
           <div
             key={camera.name}
-            onClick={() => onExpandCamera(camera.name)}
-            className={`camera-card relative transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation ${
+            onClick={() => {
+              onExpandCamera(camera.name);
+              triggerHaptic('medium');
+            }}
+            className={`camera-card relative transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.96] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation will-change-transform ${
               cameraViewMode === "list" ? "aspect-video" : ""
             }`}
+            style={{
+              // Enhanced hardware acceleration for iPhone
+              transform: "translateZ(0)",
+              WebkitTransform: "translateZ(0)",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden"
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-30 group-hover:opacity-60 transition-opacity duration-300 z-10"></div>
-            <div className="absolute top-1 sm:top-2 left-1 sm:left-2 z-20 bg-black/70 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium border border-gray-700/50 shadow-lg">
-              <div className="flex items-center space-x-1 sm:space-x-1.5">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs sm:text-sm">{camera.customName || camera.parentRelations?.[0]?.displayName || "Camera"}</span>
+            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-gray-700/60 shadow-xl">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+                <span className="text-xs sm:text-sm text-white font-medium">{camera.customName || camera.parentRelations?.[0]?.displayName || "Camera"}</span>
               </div>
             </div>
             <div className="group h-full">
               <CameraCard camera={camera} ref={(el) => (cameraRefs.current[camera.name] = el)} />
+              {/* Enhanced Fullscreen Button with Better Touch Targets */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                <button className="bg-black/60 hover:bg-black/80 active:bg-black/90 text-white px-3 py-2.5 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 shadow-xl camera-button touch-manipulation">
-                  <UilExpandArrows size={18} />
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExpandCamera(camera.name);
+                    triggerHaptic('medium');
+                  }}
+                  className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                  aria-label="Open camera in fullscreen"
+                >
+                  <UilExpandArrows size={isMobile ? 16 : 18} />
                   <span className="font-medium button-text hidden sm:inline">Fullscreen</span>
                 </button>
               </div>
             </div>
           </div>
         ))}
+        
+        {/* Enhanced Casa Camera Card with Better Touch Interactions */}
         <div
-          onClick={() => onExpandCamera("CasaCam")}
-          className={`camera-card relative transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation ${
+          onClick={() => {
+            onExpandCamera("CasaCam");
+            triggerHaptic('medium');
+          }}
+          className={`camera-card relative transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.96] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation will-change-transform ${
             cameraViewMode === "list" ? "aspect-video" : ""
           }`}
+          style={{
+            // Enhanced hardware acceleration for iPhone
+            transform: "translateZ(0)",
+            WebkitTransform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden"
+          }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-30 group-hover:opacity-60 transition-opacity duration-300 z-10"></div>
-          <div className="absolute top-1 sm:top-2 left-1 sm:left-2 z-20 bg-black/70 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium border border-gray-700/50 shadow-lg">
-            <div className="flex items-center space-x-1 sm:space-x-1.5">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs sm:text-sm">Casa Camera</span>
+          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-gray-700/60 shadow-xl">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+              <span className="text-xs sm:text-sm text-white font-medium">Casa Camera</span>
             </div>
           </div>
           <div className="group h-full">
             <CasaCameraCard ref={casaCameraRef} />
+            {/* Enhanced Casa Camera Control Buttons */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 space-x-2 sm:space-x-3">
               <button
-                className="bg-black/60 hover:bg-black/80 active:bg-black/90 text-white px-2 sm:px-3 py-2 sm:py-2.5 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1 sm:space-x-2 shadow-xl camera-button touch-manipulation"
                 onClick={(e) => {
                   e.stopPropagation();
                   onExpandCamera("CasaCam");
+                  triggerHaptic('medium');
                 }}
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                aria-label="Open Casa Camera in fullscreen"
               >
-                <UilExpandArrows size={16} className="sm:size-18" />
+                <UilExpandArrows size={isMobile ? 16 : 18} />
                 <span className="font-medium button-text hidden sm:inline">Fullscreen</span>
               </button>
               <button
-                className="bg-black/60 hover:bg-black/80 active:bg-black/90 text-white px-2 sm:px-3 py-2 sm:py-2.5 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1 sm:space-x-2 shadow-xl camera-button touch-manipulation"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (typeof window !== "undefined") {
+                    triggerHaptic('medium');
+                    
                     // Use react-router navigation if available
                     if ((window as any).navigateToCasaHistory) {
                       (window as any).navigateToCasaHistory();
@@ -266,8 +361,10 @@ const CameraPage: React.FC<CameraPageProps> = ({
                     }
                   }
                 }}
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                aria-label="View Casa Camera history"
               >
-                <UilHistory size={16} className="sm:size-18" />
+                <UilHistory size={isMobile ? 16 : 18} />
                 <span className="font-medium button-text hidden sm:inline">History</span>
               </button>
             </div>

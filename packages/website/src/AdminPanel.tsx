@@ -23,6 +23,23 @@ const defaultIntegrations = {
   }
 };
 
+// Enhanced haptic feedback helper
+const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+  if ('vibrate' in navigator) {
+    switch (type) {
+      case 'light':
+        navigator.vibrate(10);
+        break;
+      case 'medium':
+        navigator.vibrate([50, 25, 50]);
+        break;
+      case 'heavy':
+        navigator.vibrate([100, 50, 100]);
+        break;
+    }
+  }
+};
+
 const AdminPanel: React.FC = () => {
   // API URL without trailing slash.
   const adminApiUrl = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod";
@@ -40,6 +57,7 @@ const AdminPanel: React.FC = () => {
 
   const handleCreateHome = async (e: React.FormEvent) => {
     e.preventDefault();
+    triggerHaptic('medium'); // Haptic feedback for form submission
     try {
       const res = await fetch(`${adminApiUrl}/homes`, {
         method: "POST",
@@ -52,6 +70,7 @@ const AdminPanel: React.FC = () => {
         setHomeName("");
         setIntegrations(defaultIntegrations);
         setMessage("Home created successfully!");
+        triggerHaptic('medium');
       } else {
         const errorData = await res.json();
         setMessage("Error: " + errorData.error);
@@ -73,6 +92,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleUpdateHome = async (homeId: string) => {
+    triggerHaptic('light'); // Light haptic for update action
     try {
       const res = await fetch(`${adminApiUrl}/homes/${homeId}`, {
         method: "PUT",
@@ -81,6 +101,7 @@ const AdminPanel: React.FC = () => {
       });
       if (res.ok) {
         setMessage("Home integrations updated successfully!");
+        triggerHaptic('medium');
       } else {
         const errorData = await res.json();
         setMessage("Error updating home: " + errorData.error);
@@ -95,6 +116,7 @@ const AdminPanel: React.FC = () => {
     if (!window.confirm("Are you sure you want to delete this home? This action cannot be undone.")) {
       return;
     }
+    triggerHaptic('heavy'); // Heavy haptic for destructive action
     try {
       const res = await fetch(`${adminApiUrl}/homes/${homeId}`, {
         method: "DELETE",
@@ -104,6 +126,7 @@ const AdminPanel: React.FC = () => {
       if (res.ok) {
         setHomes(homes.filter((home) => home.homeId !== homeId));
         setMessage("Home deleted successfully!");
+        triggerHaptic('heavy');
       } else {
         const errorData = await res.json();
         setMessage("Error deleting home: " + errorData.error);
@@ -115,20 +138,28 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header matching Casa Guard style */}
+    <div className="min-h-screen bg-black text-white ios-viewport-fix overscroll-none">
+      {/* Header matching Casa Guard style with safe area support */}
       <header
-        className="fixed top-0 w-full h-14 flex items-center justify-between bg-gray-800 border-b border-gray-700 px-4 z-50"
+        className="fixed top-0 w-full h-14 flex items-center justify-between bg-gray-800 border-b border-gray-700 px-4 z-50 ios-safe-top"
         style={{
           background:
             "linear-gradient(to right, rgba(40,40,40,0.8), rgba(30,30,30,0.8))",
           backdropFilter: "blur(6px)",
+          paddingTop: "max(1rem, env(safe-area-inset-top))",
+          height: "calc(3.5rem + env(safe-area-inset-top))",
         }}
       >
         <h1 className="text-3xl font-bold">Admin Panel</h1>
       </header>
 
-      <main className="pt-20 container mx-auto px-4">
+      <main 
+        className="container mx-auto px-4 safe-area-padding-x"
+        style={{
+          paddingTop: "calc(5rem + env(safe-area-inset-top))",
+          paddingBottom: "calc(2rem + env(safe-area-inset-bottom))",
+        }}
+      >
         {message && (
           <div className="mb-4 p-4 bg-green-800 text-green-300 rounded">
             {message}
@@ -136,8 +167,8 @@ const AdminPanel: React.FC = () => {
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Create Home Section */}
-          <section className="bg-gray-900 p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">
+          <section className="bg-gray-900/80 p-6 rounded-2xl shadow-xl border border-gray-700/50 backdrop-blur-sm">
+            <h2 className="text-2xl font-semibold border-b border-gray-700 pb-3 mb-6">
               Create Home
             </h2>
             <form onSubmit={handleCreateHome} className="space-y-4">
@@ -147,15 +178,15 @@ const AdminPanel: React.FC = () => {
                   type="text"
                   value={homeName}
                   onChange={(e) => setHomeName(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                   placeholder="e.g., 720 Front Rd"
                   required
                 />
               </div>
               <div className="space-y-4">
                 {/* Google Nest Integration */}
-                <fieldset className="border border-gray-700 p-4 rounded">
-                  <legend className="text-lg font-medium text-gray-200">
+                <fieldset className="border border-gray-700/60 p-5 rounded-xl bg-gray-800/30">
+                  <legend className="text-lg font-medium text-gray-200 px-3">
                     Google Nest Integration
                   </legend>
                   <div className="grid grid-cols-2 gap-4">
@@ -180,15 +211,15 @@ const AdminPanel: React.FC = () => {
                               e.target.value
                             )
                           }
-                          className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                         />
                       </div>
                     ))}
                   </div>
                 </fieldset>
                 {/* TP-Link Integration */}
-                <fieldset className="border border-gray-700 p-4 rounded">
-                  <legend className="text-lg font-medium text-gray-200">
+                <fieldset className="border border-gray-700/60 p-5 rounded-xl bg-gray-800/30">
+                  <legend className="text-lg font-medium text-gray-200 px-3">
                     TP-Link Integration
                   </legend>
                   <div className="mb-2">
@@ -205,7 +236,7 @@ const AdminPanel: React.FC = () => {
                           e.target.value
                         )
                       }
-                      className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                     />
                   </div>
                   <div className="mb-2">
@@ -222,7 +253,7 @@ const AdminPanel: React.FC = () => {
                           e.target.value
                         )
                       }
-                      className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                     />
                   </div>
                   <div className="mb-2">
@@ -235,7 +266,7 @@ const AdminPanel: React.FC = () => {
                       onChange={(e) =>
                         handleIntegrationChange("tplink", "deviceID", e.target.value)
                       }
-                      className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                     />
                   </div>
                   <div>
@@ -248,22 +279,23 @@ const AdminPanel: React.FC = () => {
                       onChange={(e) =>
                         handleIntegrationChange("tplink", "terminalUUID", e.target.value)
                       }
-                      className="w-full bg-gray-800 border border-gray-700 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-touch-safe min-h-[48px] touch-manipulation transition-all duration-200 focus:scale-[1.02] transform"
                     />
                   </div>
                 </fieldset>
               </div>
               <button
                 type="submit"
-                className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded hover:from-blue-700 hover:to-purple-700 transition"
+                className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-semibold text-lg min-h-[52px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                style={{ transform: 'translateZ(0)' }}
               >
                 Create Home
               </button>
             </form>
           </section>
           {/* View Homes Section */}
-          <section className="bg-gray-900 p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">
+          <section className="bg-gray-900/80 p-6 rounded-2xl shadow-xl border border-gray-700/50 backdrop-blur-sm">
+            <h2 className="text-2xl font-semibold border-b border-gray-700 pb-3 mb-6">
               Existing Homes
             </h2>
             {homes.length === 0 ? (
@@ -275,7 +307,7 @@ const AdminPanel: React.FC = () => {
                 {homes.map((home) => (
                   <div
                     key={home.homeId}
-                    className="p-4 border border-gray-700 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center"
+                    className="p-5 border border-gray-700/60 rounded-xl bg-gray-800/40 backdrop-blur-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all duration-200 hover:bg-gray-800/60 hover:border-gray-600/60"
                   >
                     <div>
                       <p className="font-bold text-xl">{home.name}</p>
@@ -284,16 +316,18 @@ const AdminPanel: React.FC = () => {
                         Normalized: {home.normalizedHome}
                       </p>
                     </div>
-                    <div className="flex space-x-2 mt-2 sm:mt-0">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-3 sm:mt-0 w-full sm:w-auto">
                       <button
                         onClick={() => handleUpdateHome(home.homeId)}
-                        className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition"
+                        className="bg-green-600 text-white py-3 px-5 rounded-xl hover:bg-green-700 transition-all duration-200 font-medium min-h-[48px] min-w-[120px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 haptic-light"
+                        style={{ transform: 'translateZ(0)' }}
                       >
                         Update Integrations
                       </button>
                       <button
                         onClick={() => handleDeleteHome(home.homeId)}
-                        className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition"
+                        className="bg-red-600 text-white py-3 px-5 rounded-xl hover:bg-red-700 transition-all duration-200 font-medium min-h-[48px] min-w-[120px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 haptic-heavy"
+                        style={{ transform: 'translateZ(0)' }}
                       >
                         Delete Home
                       </button>
@@ -305,8 +339,13 @@ const AdminPanel: React.FC = () => {
           </section>
         </div>
       </main>
-      <footer className="bg-gray-800 text-white py-4 mt-8">
-        <div className="container mx-auto px-4 text-center">
+      <footer 
+        className="bg-gray-800 text-white py-6 mt-8"
+        style={{
+          paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        <div className="container mx-auto px-4 text-center safe-area-padding-x">
           © {new Date().getFullYear()} Casa Guard. All rights reserved.
         </div>
       </footer>

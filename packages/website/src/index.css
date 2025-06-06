@@ -2,20 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS Safe Area Support */
+/* Enhanced iOS Safe Area Support with Custom Properties */
 :root {
   --safe-area-inset-top: env(safe-area-inset-top);
   --safe-area-inset-right: env(safe-area-inset-right);
   --safe-area-inset-bottom: env(safe-area-inset-bottom);
   --safe-area-inset-left: env(safe-area-inset-left);
+  
+  /* Enhanced Design System Variables */
+  --primary-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  --secondary-gradient: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%);
+  --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+  --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+  
+  /* Glass Morphism System */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-strong-bg: rgba(255, 255, 255, 0.12);
+  --glass-subtle-bg: rgba(255, 255, 255, 0.04);
+  --blur-strength: saturate(180%) blur(20px);
+  --blur-subtle: saturate(120%) blur(12px);
+  --blur-strong: saturate(200%) blur(30px);
+  
+  /* Enhanced Shadow System */
+  --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-medium: 0 12px 40px rgba(0, 0, 0, 0.15);
+  --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-button: 0 6px 20px rgba(0, 0, 0, 0.1);
+  --shadow-floating: 0 16px 48px rgba(0, 0, 0, 0.18);
+  
+  /* Enhanced Spacing and Layout */
+  --border-radius-xs: 8px;
+  --border-radius-sm: 12px;
+  --border-radius-md: 16px;
+  --border-radius-lg: 20px;
+  --border-radius-xl: 24px;
+  --border-radius-2xl: 32px;
+  --border-radius-3xl: 40px;
+  --spacing-unit: 4px;
+  
+  /* Animation System */
+  --animation-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animation-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --animation-snappy: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+  
+  /* iPhone-Specific Optimizations */
+  --ios-status-bar-height: 44px;
+  --ios-home-indicator-height: 34px;
+  --ios-safe-top: max(44px, env(safe-area-inset-top));
+  --ios-safe-bottom: max(34px, env(safe-area-inset-bottom));
+  --touch-target-min: 44px;
+  --font-size-touch-safe: 16px; /* Prevents zoom on iOS */
 }
 
-/* Custom touch-friendly utilities */
+/* Enhanced Custom Touch-Friendly Utilities */
 @layer utilities {
   .touch-manipulation {
     touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
   
+  .touch-feedback {
+    transition: transform var(--duration-fast) var(--animation-snappy), 
+                opacity var(--duration-fast) var(--animation-snappy), 
+                scale var(--duration-fast) var(--animation-snappy);
+  }
+  
+  .touch-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  
+  /* Enhanced Safe Area Support */
   .safe-area-padding {
     padding-top: max(1rem, var(--safe-area-inset-top));
     padding-left: max(0.5rem, var(--safe-area-inset-left));
@@ -29,28 +97,152 @@
   }
   
   .safe-area-padding-top {
-    padding-top: max(0.5rem, var(--safe-area-inset-top));
+    padding-top: max(1rem, var(--safe-area-inset-top));
+  }
+  
+  .safe-area-padding-bottom {
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+  
+  .ios-safe-top {
+    padding-top: var(--ios-safe-top);
+  }
+  
+  .ios-safe-bottom {
+    padding-bottom: var(--ios-safe-bottom);
+  }
+  
+  /* Glass Morphism Effects */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: var(--blur-strength);
+    -webkit-backdrop-filter: var(--blur-strength);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--blur-strength);
+    -webkit-backdrop-filter: var(--blur-strength);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-card);
+  }
+  
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    backdrop-filter: var(--blur-strong);
+    -webkit-backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .glass-subtle {
+    background: var(--glass-subtle-bg);
+    backdrop-filter: var(--blur-subtle);
+    -webkit-backdrop-filter: var(--blur-subtle);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Enhanced Button Styles */
+  .btn-primary {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-xl);
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: var(--font-size-touch-safe);
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    box-shadow: var(--shadow-button);
+    transition: all var(--duration-normal) var(--animation-smooth);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-floating);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .btn-secondary {
+    background: var(--glass-bg);
+    color: white;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-xl);
+    padding: 12px 24px;
+    font-weight: 500;
+    font-size: var(--font-size-touch-safe);
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    backdrop-filter: var(--blur-strength);
+    -webkit-backdrop-filter: var(--blur-strength);
+    box-shadow: var(--shadow-card);
+    transition: all var(--duration-normal) var(--animation-smooth);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn-secondary:hover {
+    background: var(--glass-strong-bg);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .btn-secondary:active {
+    transform: translateY(0) scale(0.98);
+    background: var(--glass-subtle-bg);
+  }
+  
+  /* Enhanced Typography */
+  .text-display {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  
+  .text-body-enhanced {
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+  }
+  
+  .text-touch-safe {
+    font-size: var(--font-size-touch-safe);
   }
 }
 
+/* Enhanced Body Styles with Better Typography */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #121212; /* Dark background for dark mode */
-  color: #ffffff; /* Light text color for readability */
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 35%, #334155 70%, #0f172a 100%);
+  background-attachment: fixed;
+  color: #f8fafc;
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  position: relative;
 }
 
+/* Enhanced Code Styling */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', 'JetBrains Mono', Consolas, 'Courier New',
     monospace;
-  color: #ccc; /* Lighter text color for code blocks in dark mode */
+  color: #e2e8f0;
+  font-feature-settings: 'liga' 1, 'calt' 1;
 }
 
-/* Improved touch experience */
+/* Enhanced Touch Experience with Haptic-Like Feedback */
 @layer utilities {
   .touch-action-none {
     touch-action: none;
@@ -58,26 +250,345 @@ code {
   
   .tap-highlight-transparent {
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   
-  /* Custom scrollbar for webkit browsers */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+  .haptic-light {
+    transition: all var(--duration-fast) var(--animation-snappy);
   }
   
-  .scrollbar-thin::-webkit-scrollbar-track {
+  .haptic-light:active {
+    transform: scale(0.99);
+    filter: brightness(0.95);
+  }
+  
+  .haptic-medium {
+    transition: all 120ms var(--animation-snappy);
+  }
+  
+  .haptic-medium:active {
+    transform: scale(0.97);
+    filter: brightness(0.9);
+  }
+  
+  .haptic-heavy {
+    transition: all var(--duration-normal) var(--animation-snappy);
+  }
+  
+  .haptic-heavy:active {
+    transform: scale(0.95);
+    filter: brightness(0.85);
+  }
+  
+  /* Enhanced Custom Scrollbar for WebKit Browsers */
+  .scrollbar-modern::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-modern::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
   }
   
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
+  .scrollbar-modern::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.6), rgba(245, 158, 11, 0.6));
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
-  /* Disable pull-to-refresh on mobile browsers */
+  .scrollbar-modern::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.8), rgba(245, 158, 11, 0.8));
+  }
+  
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Disable Pull-to-Refresh on Mobile Browsers */
   .overscroll-none {
     overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Enhanced Animation Utilities */
+  .animate-fade-in-up {
+    animation: fadeInUp var(--duration-slow) var(--animation-spring);
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 400ms var(--animation-spring);
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight var(--duration-slower) var(--animation-smooth);
+  }
+  
+  .animate-bounce-in {
+    animation: bounceIn var(--duration-slow) var(--animation-bounce);
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  /* Missing animation classes for Navigation component */
+  .animate-fade-in {
+    animation: fadeIn 200ms var(--animation-smooth);
+  }
+  
+  .animate-ping-slow {
+    animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  
+  /* Button interactive enhancement */
+  .button-interactive {
+    position: relative;
+    overflow: hidden;
+    transition: all var(--duration-normal) var(--animation-smooth);
+  }
+  
+  .button-interactive::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+    pointer-events: none;
+  }
+  
+  .button-interactive:active::before {
+    width: 200px;
+    height: 200px;
+  }
+  
+  /* Tab switching animation */
+  .tab-switching {
+    transform: scale(0.95) !important;
+    opacity: 0.8 !important;
+    transition: all 0.1s ease !important;
+  }
+  
+  /* Enhanced hardware acceleration utilities */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+  }
+  
+  .gpu-accelerated-opacity {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, opacity;
+  }
+  
+  /* Progress bar enhancements */
+  .progress-bar-enhanced {
+    background: linear-gradient(
+      90deg,
+      rgba(251, 191, 36, 0.1) 0%,
+      rgba(251, 191, 36, 0.3) 50%,
+      rgba(251, 191, 36, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite ease-in-out;
+  }
+  
+  /* Enhanced touch feedback for garage door and other large buttons */
+  .large-touch-feedback {
+    min-height: 72px;
+    min-width: 72px;
+    transition: all var(--duration-fast) var(--animation-snappy);
+  }
+  
+  .large-touch-feedback:active {
+    transform: scale(0.96);
+    filter: brightness(0.9);
+  }
+}
+
+/* Enhanced Keyframe Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%, 100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Enhanced Gradient Animations */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* iOS-Specific Optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific styles */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: var(--font-size-touch-safe) !important;
+  }
+  
+  /* Optimize button touch targets for iOS */
+  button, [role="button"] {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+  
+  /* Enhanced iOS scroll optimization */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix iOS Safari viewport issues */
+  .ios-viewport-fix {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}
+
+/* Enhanced Focus States for Accessibility */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color var(--duration-fast) var(--animation-smooth);
+}
+
+.focus-ring:focus-visible {
+  outline-color: rgba(251, 191, 36, 0.8);
+  outline-width: 2px;
+  outline-style: solid;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.2);
+    --glass-border: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-gradient,
+  .animate-float,
+  .animate-bounce-in {
+    animation: none !important;
   }
 }
 

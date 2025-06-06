@@ -188,15 +188,58 @@ const DeviceControl: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   
-  // Check for mobile screen size
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  };
+  
+  // Enhanced mobile detection with iPhone-specific optimizations
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
+      const width = window.innerWidth;
+      setIsMobile(width < 640);
+      
+      // Enhanced iOS-specific optimizations
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        // Force hardware acceleration for smooth scrolling
+        document.documentElement.style.setProperty('-webkit-overflow-scrolling', 'touch');
+        
+        // Optimize viewport height for iOS Safari
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        
+        // Add touch-friendly CSS classes
+        document.body.classList.add('ios-optimized');
+      }
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(checkMobile, 100); // Delay for proper viewport calculation
+    });
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('orientationchange', checkMobile);
+    };
   }, []);
   
   // Check if garage door should be positioned first (daytime) or last (nighttime)
@@ -220,50 +263,58 @@ const DeviceControl: React.FC = () => {
     return timeBasedPriorities.suggested.includes(roomName);
   };
 
-  // Function to render a room card with time-based optimizations
+  // Function to render a room card with enhanced iPhone touch interactions
   const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean; isSuggested: boolean; inactiveCount: number }) => {
     return (
       <div
-        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-200 hover:border-gray-600/50 ${
-          room.hasEssentialDevices ? 'border-yellow-600/50' : room.isSuggested ? 'border-blue-600/50' : 'border-gray-700/50'
+        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-300 hover:border-gray-600/50 touch-manipulation transform hover:scale-[1.01] active:scale-[0.99] ${
+          room.hasEssentialDevices ? 'border-yellow-600/50 shadow-yellow-900/20' : room.isSuggested ? 'border-blue-600/50 shadow-blue-900/20' : 'border-gray-700/50'
         }`}
+        style={{
+          // Enhanced hardware acceleration for iPhone
+          transform: "translateZ(0)",
+          WebkitTransform: "translateZ(0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          willChange: "transform, box-shadow"
+        }}
       >
         {/* Priority indicator for essential devices */}
         {room.hasEssentialDevices && (
-          <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+          <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-yellow-400/50"></div>
         )}
         
         {/* Suggested room indicator */}
         {room.isSuggested && !room.hasEssentialDevices && (
-          <div className="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+          <div className="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
         )}
         
-        {/* Glass effect overlay */}
-        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        {/* Enhanced glass effect overlay */}
+        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>
         
-        {/* Room Title with emoji icons - Compact for better space utilization */}
+        {/* Room Title with emoji icons - Enhanced for iPhone */}
         <div className="flex justify-between items-center mb-2.5 sm:mb-4">
           <div className="text-gray-200 font-medium flex items-center space-x-2">
-            <span className="text-base sm:text-lg">{getRoomIcon(room.name)}</span>
-            <span className="text-xs sm:text-base truncate">{room.name}</span>
+            <span className="text-base sm:text-lg filter drop-shadow-sm">{getRoomIcon(room.name)}</span>
+            <span className="text-xs sm:text-base truncate font-medium">{room.name}</span>
             {room.isSuggested && (
-              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30 hidden sm:inline">
+              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30 hidden sm:inline backdrop-blur-sm">
                 Suggested
               </span>
             )}
           </div>
           <div className="flex space-x-1 sm:space-x-2 text-xs">
-            <div className="text-gray-400 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-700/30">
+            <div className="text-gray-400 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-700/30 backdrop-blur-sm shadow-sm">
               {room.deviceCount}
             </div>
             {room.activeCount > 0 && (
-              <div className="text-yellow-300 bg-yellow-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="text-yellow-300 bg-yellow-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1 backdrop-blur-sm shadow-sm">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse shadow-sm"></div>
                 <span>{room.activeCount}</span>
               </div>
             )}
             {room.inactiveCount > 0 && (
-              <div className="text-gray-500 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/30">
+              <div className="text-gray-500 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/30 backdrop-blur-sm shadow-sm">
                 <span className="hidden sm:inline">{room.inactiveCount} off</span>
                 <span className="sm:hidden">{room.inactiveCount}</span>
               </div>
@@ -271,34 +322,44 @@ const DeviceControl: React.FC = () => {
           </div>
         </div>
         
-        {/* Light Controls - Optimized mobile grid with inactive devices first */}
+        {/* Enhanced Light Controls Grid - Optimized for iPhone touch targets */}
         <div
           className="grid gap-1.5 sm:gap-3"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
+            gridTemplateColumns: isMobile ? "repeat(auto-fill, minmax(75px, 1fr))" : "repeat(auto-fill, minmax(80px, 1fr))",
           }}
         >
           {/* Render inactive devices first for better visibility */}
           {room.lights
             .filter(light => light.relay_state === 0)
             .map((light) => (
-              <LightSwitch
+              <div 
                 key={light.deviceId}
-                light={light}
-                toggleLight={toggleLight}
-                iconPath={deviceIcons[light.alias]}
-              />
+                className="touch-manipulation"
+                onClick={() => triggerHaptic('light')}
+              >
+                <LightSwitch
+                  light={light}
+                  toggleLight={toggleLight}
+                  iconPath={deviceIcons[light.alias]}
+                />
+              </div>
             ))}
           {/* Then render active devices */}
           {room.lights
             .filter(light => light.relay_state === 1)
             .map((light) => (
-              <LightSwitch
+              <div 
                 key={light.deviceId}
-                light={light}
-                toggleLight={toggleLight}
-                iconPath={deviceIcons[light.alias]}
-              />
+                className="touch-manipulation"
+                onClick={() => triggerHaptic('light')}
+              >
+                <LightSwitch
+                  light={light}
+                  toggleLight={toggleLight}
+                  iconPath={deviceIcons[light.alias]}
+                />
+              </div>
             ))}
         </div>
       </div>
@@ -368,9 +429,12 @@ const DeviceControl: React.FC = () => {
       .filter((light): light is LightDevice => light !== undefined);
   }, [lights]);
 
-  // OPTIMIZATION: Memoized toggle function to prevent unnecessary re-renders
+  // OPTIMIZATION: Enhanced toggle function with haptic feedback
   const toggleLight = useCallback(async (deviceId: string, newState: boolean) => {
     try {
+      // Trigger haptic feedback immediately for responsive feel
+      triggerHaptic('light');
+      
       const device = lights.find(l => l.deviceId === deviceId);
       if (!device) return;
 
@@ -397,9 +461,17 @@ const DeviceControl: React.FC = () => {
               : light
           )
         );
+        
+        // Success haptic feedback
+        setTimeout(() => triggerHaptic('light'), 100);
+      } else {
+        // Error haptic feedback
+        triggerHaptic('heavy');
       }
     } catch (error) {
       console.error("Failed to toggle light:", error);
+      // Error haptic feedback
+      triggerHaptic('heavy');
     }
   }, [lights]);
 
@@ -457,41 +529,59 @@ const DeviceControl: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Compact header - mobile optimized */}
-      <div className="mx-2 sm:mx-4 mb-3 mt-2 flex items-center justify-between bg-gray-900 rounded-xl p-3 border border-gray-800/40 shadow-lg">
+      {/* Enhanced header with better iPhone touch targets */}
+      <div className="mx-2 sm:mx-4 mb-3 mt-2 flex items-center justify-between bg-gray-900/90 backdrop-blur-md rounded-xl p-3 border border-gray-800/40 shadow-lg touch-manipulation">
         <div className="flex items-center space-x-3">
-          <span className="text-xl">🏠</span>
-          <h2 className="text-gray-200 font-medium text-sm sm:text-base">Devices</h2>
+          <span className="text-xl filter drop-shadow-sm">🏠</span>
+          <div>
+            <h2 className="text-gray-200 font-medium text-sm sm:text-base">Smart Devices</h2>
+            <p className="text-xs text-gray-400 hidden sm:block">Tap to control your home</p>
+          </div>
         </div>
         <div className="flex items-center space-x-2 text-xs">
-          <div className="text-gray-400 bg-gray-800 px-2 py-1 rounded-full border border-gray-700/30">
-            {lights.length}
+          <div className="text-gray-400 bg-gray-800/70 px-2.5 py-1.5 rounded-full border border-gray-700/30 backdrop-blur-sm shadow-sm">
+            <span className="hidden sm:inline">Total: </span>{lights.length}
           </div>
-          <div className="text-yellow-400 bg-yellow-900/80 px-2 py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1">
-            <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
-            <span>{activeLightCount}</span>
+          <div className="text-yellow-400 bg-yellow-900/80 px-2.5 py-1.5 rounded-full border border-yellow-700/30 flex items-center space-x-1.5 backdrop-blur-sm shadow-sm">
+            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse shadow-sm"></div>
+            <span className="font-medium">{activeLightCount}</span>
           </div>
         </div>
       </div>
 
-      {/* Time-based contextual prompt - Enhanced mobile layout */}
-      <div className="mx-2 sm:mx-4 mb-3 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-800/40 shadow-lg">
-        <p className="text-blue-200 text-xs sm:text-sm text-center leading-relaxed">{timePrompt}</p>
+      {/* Enhanced time-based contextual prompt with better mobile layout */}
+      <div className="mx-2 sm:mx-4 mb-3 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-800/40 shadow-lg backdrop-blur-sm">
+        <p className="text-blue-200 text-xs sm:text-sm text-center leading-relaxed font-medium">{timePrompt}</p>
       </div>
       
-      {/* DEVICE CONTROLS - Enhanced responsive layout with optimized condensed rows */}
-      <div className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))'}}>
+      {/* Enhanced DEVICE CONTROLS with better iPhone optimizations */}
+      <div 
+        className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" 
+        style={{
+          gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(240px, 1fr))' : 'repeat(auto-fit, minmax(260px, 1fr))'
+        }}
+      >
         {/* Garage Door - Show at top during daytime (6 AM to 10 PM) */}
         {garageDoorFirst && (
           <div className="col-span-full">
-            <GarageDoor />
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('medium')}
+            >
+              <GarageDoor />
+            </div>
           </div>
         )}
         
-        {/* LG ThinQ Appliances Component - Prioritized during afternoon (11 AM - 5 PM) when lights are less relevant */}
+        {/* LG ThinQ Appliances Component - Prioritized during afternoon */}
         {lgAppliancesPrioritized && (
-          <div className="col-span-full px-2 sm:px-4">
-            <LGAppliances />
+          <div className="col-span-full">
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('light')}
+            >
+              <LGAppliances />
+            </div>
           </div>
         )}
         
@@ -516,15 +606,25 @@ const DeviceControl: React.FC = () => {
 
         {/* LG ThinQ Appliances - Show at bottom if not prioritized */}
         {!lgAppliancesPrioritized && (
-          <div className="col-span-full px-2 sm:px-4">
-            <LGAppliances />
+          <div className="col-span-full">
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('light')}
+            >
+              <LGAppliances />
+            </div>
           </div>
         )}
 
         {/* Garage Door - Show at bottom during nighttime */}
         {!garageDoorFirst && (
           <div className="col-span-full">
-            <GarageDoor />
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('medium')}
+            >
+              <GarageDoor />
+            </div>
           </div>
         )}
       </div>
