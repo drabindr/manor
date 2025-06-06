@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { UilUser, UilHome, UilSignout, UilPen, UilCheck } from '@iconscout/react-unicons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UilUsersAlt, UilHome, UilBolt, UilBell, UilCheck } from '@iconscout/react-unicons';
 import axios from 'axios';
 
 interface UserHomeStatusProps {
@@ -18,6 +18,28 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
   
   // Admin API URL
   const ADMIN_API_BASE_URL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod";
+  
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  }, []);
   
   // Get display name with fallback
   const userName = displayName || userId.substring(0, 5) + '...';
@@ -55,24 +77,26 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
       case 'home':
         return <UilHome className="text-green-500" size={18} />;
       case 'away':
-        return <UilSignout className="text-blue-500" size={18} />;
+        return <UilBolt className="text-blue-500" size={18} />;
       default:
-        return <UilUser className="text-gray-500" size={18} />;
+        return <UilUsersAlt className="text-gray-500" size={18} />;
     }
   };
 
   // Handle double click to open edit mode
-  const handleDoubleClick = () => {
+  const handleDoubleClick = useCallback(() => {
+    triggerHaptic('light');
     setIsEditing(true);
     setNewDisplayName(displayName || '');
     setError(null);
-  };
+  }, [displayName, triggerHaptic]);
 
   // Handle form submission to update display name
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    triggerHaptic('medium');
 
     try {
       // Use the admin API to update the display name
@@ -91,24 +115,35 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
 
       // Close the edit mode
       setIsEditing(false);
+      triggerHaptic('light');
     } catch (err) {
       console.error("Error saving display name:", err);
       setError(`Failed to save display name: ${err instanceof Error ? err.message : "Unknown error"}`);
+      triggerHaptic('heavy');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Handle cancel editing
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setIsEditing(false);
     setError(null);
-  };
+    triggerHaptic('light');
+  }, [triggerHaptic]);
 
   // Render edit mode
   if (isEditing) {
     return (
-      <div className="bg-gray-800 rounded-lg p-3 border border-blue-500/50 transition-all duration-300 shadow-lg">
+      <div 
+        className="bg-gray-800 rounded-lg p-3 border border-blue-500/50 transition-all duration-300 shadow-lg touch-manipulation"
+        style={{
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
+        }}
+      >
         <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
           <div className="flex items-center space-x-2">
             <div className="p-1.5 rounded-full bg-gray-700 border border-gray-600/30">
@@ -119,7 +154,12 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
               value={newDisplayName}
               onChange={(e) => setNewDisplayName(e.target.value)}
               placeholder="Enter display name"
-              className="flex-1 bg-gray-700 text-white rounded px-2 py-1 text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+              className="flex-1 bg-gray-700 text-white rounded px-2 py-1 text-sm border border-gray-600 focus:border-blue-500 focus:outline-none min-h-[44px] touch-manipulation"
+              style={{
+                fontSize: '16px', // Prevents zoom on iOS
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden'
+              }}
               autoFocus
             />
           </div>
@@ -130,18 +170,26 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
             </div>
           )}
 
-          <div className="flex justify-between">
+          <div className="flex justify-between space-x-2">
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-300 hover:text-white text-xs px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+              className="text-gray-300 hover:text-white text-xs px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-all duration-200 min-h-[44px] min-w-[80px] touch-manipulation"
+              style={{
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden'
+              }}
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center justify-center space-x-1 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center space-x-1 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[80px] touch-manipulation active:scale-95"
+              style={{
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden'
+              }}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -160,7 +208,14 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
   // Render normal view with double-click functionality
   return (
     <div 
-      className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 shadow-md hover:shadow-lg hover:bg-gray-800/70 cursor-pointer"
+      className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 shadow-md hover:shadow-lg hover:bg-gray-800/70 cursor-pointer touch-manipulation active:scale-[0.98] min-h-[60px]"
+      style={{
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        WebkitTapHighlightColor: 'transparent'
+      }}
       onDoubleClick={handleDoubleClick}
     >
       <div className="flex justify-between items-center">
@@ -170,14 +225,22 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
           </div>
           <div className="flex items-center space-x-1">
             <span className="text-sm text-gray-200 font-medium">{userName}</span>
-            <UilPen 
-              size={12} 
-              className="text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" 
+            <button
+              className="p-1 rounded hover:bg-gray-600/50 transition-colors touch-manipulation min-w-[32px] min-h-[32px] flex items-center justify-center active:scale-95"
+              style={{
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden'
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleDoubleClick();
               }}
-            />
+            >
+              <UilBell 
+                size={12} 
+                className="text-gray-400 hover:text-blue-400 transition-colors" 
+              />
+            </button>
           </div>
         </div>
         {getStatusIndicator()}

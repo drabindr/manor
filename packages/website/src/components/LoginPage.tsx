@@ -4,11 +4,35 @@ import { useAuth } from '../contexts/AuthContext';
 const LoginPage: React.FC = () => {
   const { signInWithApple, isLoading } = useAuth();
 
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  };
+
   const handleAppleSignIn = async () => {
     try {
+      triggerHaptic('light'); // Add haptic feedback for button press
       await signInWithApple();
     } catch (error) {
       console.error('Login failed:', error);
+      triggerHaptic('heavy'); // Add haptic feedback for error
     }
   };
 
@@ -32,13 +56,19 @@ const LoginPage: React.FC = () => {
               disabled={isLoading}
               className={`
                 w-full flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white
-                transition-all duration-200 transform
+                transition-all duration-200 transform touch-manipulation
+                min-h-[48px] 
                 ${isLoading 
                   ? 'bg-gray-600 cursor-not-allowed' 
                   : 'bg-black hover:bg-gray-900 hover:scale-105 active:scale-95'
                 }
                 shadow-lg hover:shadow-xl
               `}
+              style={{ 
+                WebkitTapHighlightColor: 'transparent',
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden'
+              }}
             >
               {isLoading ? (
                 <div className="flex items-center space-x-2">
