@@ -609,9 +609,6 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
             )}
           </div>
         </div>
-        
-        {/* Add bottom spacing to ensure content clears navigation */}
-        <div className="h-4 last-element-spacing"></div>
       </div>
     );
   }
