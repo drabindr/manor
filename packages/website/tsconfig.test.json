@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "types": ["@playwright/test"]
+  },
+  "include": ["tests/**/*", "src/**/*"],
+  "exclude": []
+}

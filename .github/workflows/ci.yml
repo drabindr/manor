@@ -1,7 +1,9 @@
-name: Deploy Manor
+name: Test and Deploy Manor
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -9,10 +11,61 @@ env:
   NODE_VERSION: '20'
 
 jobs:
+  test:
+    name: Comprehensive Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies for testing..."
+          cd packages/website
+          npm install
+
+      - name: Install Playwright browsers
+        run: |
+          cd packages/website
+          npx playwright install --with-deps
+
+      - name: Run comprehensive tests
+        run: |
+          cd packages/website
+          echo "🧪 Running comprehensive test suite with auth bypass..."
+          ./run-comprehensive-tests.sh
+        env:
+          CI: true
+          REACT_APP_BYPASS_AUTH_FOR_DEV: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: packages/website/test-results/
+          retention-days: 30
+
+      - name: Upload test summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-summary
+          path: packages/website/test-results/test-summary.md
+          retention-days: 30
+
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
-    if: github.ref_name == 'main'
+    needs: test
+    if: github.ref_name == 'main' && github.event_name == 'push'
     environment: production
     
     permissions:

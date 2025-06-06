@@ -9,6 +9,8 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
+    "test:comprehensive": "npm run test:comprehensive --workspace=@manor/website",
+    "test:ci": "npm run test:ci --workspace=@manor/website",
     "dev": "npm run dev --workspace=@manor/website",
     "deploy": "npm run deploy --workspace=@manor/cdk",
     "install:all": "npm install --workspaces",
