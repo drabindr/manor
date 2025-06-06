@@ -269,11 +269,11 @@ export class AuthService {
       return null;
     }
     
-    // Check if token is expired or will expire within 5 minutes
+    // Check if token is expired or will expire within 15 minutes (more aggressive)
     const timeUntilExpiry = this.tokens.expiresAt - Date.now();
-    const willExpireSoon = timeUntilExpiry <= (5 * 60 * 1000); // 5 minutes
+    const willExpireSoon = timeUntilExpiry <= (15 * 60 * 1000); // 15 minutes
     
-    if (willExpireSoon && this.tokens.refreshToken) {
+    if (willExpireSoon && this.tokens.refreshToken && !this.isRefreshing) {
       console.log('Access token will expire soon, refreshing...');
       // Try to refresh proactively if we have a refresh token
       this.refreshTokens().catch(error => {
@@ -440,9 +440,9 @@ export class AuthService {
       refreshTime = 5 * 60 * 1000; // 5 minutes for retry attempts
       console.log(`Scheduling RETRY token refresh in 5 minutes (retry attempt)`);
     } else {
-      // Subsequent refreshes: use normal schedule (10 minutes before expiry)
+      // Subsequent refreshes: use normal schedule (30 minutes before expiry for safety)
       const timeUntilExpiry = this.tokens.expiresAt - Date.now();
-      refreshTime = Math.max(timeUntilExpiry - (10 * 60 * 1000), 60000); // At least 1 minute from now
+      refreshTime = Math.max(timeUntilExpiry - (30 * 60 * 1000), 60000); // At least 1 minute from now
       console.log(`Scheduling token refresh in ${Math.round(refreshTime / 1000 / 60)} minutes`);
     }
 
