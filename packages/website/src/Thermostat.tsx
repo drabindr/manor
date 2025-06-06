@@ -822,19 +822,19 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
           </div>
           
           {/* Enhanced Fan & Eco Controls with iPhone optimizations */}
-          <div className="flex items-center space-x-3">
-            {/* Enhanced Fan Control */}
+          <div className="flex items-center space-x-2 xs:space-x-3">
+            {/* Enhanced Fan Control - iPhone Optimized */}
             <div className="relative">
               <button 
                 onClick={() => {
                   setFanDropdownOpen(!fanDropdownOpen);
                   triggerHaptic('light');
                 }}
-                className="group flex items-center space-x-2 px-4 py-3 rounded-lg 
+                className="group flex items-center space-x-2 px-3 xs:px-4 py-3 rounded-lg 
                            hover:bg-gray-800/50 active:bg-gray-700/60 
                            transition-all duration-200 ease-in-out touch-manipulation
                            border border-gray-700/30 backdrop-blur-sm
-                           min-h-[48px] min-w-[80px]"
+                           min-h-[48px] min-w-[100px] xs:min-w-[120px] flex-shrink-0"
                 style={{ 
                   WebkitTapHighlightColor: 'transparent',
                   transform: 'translateZ(0)',
@@ -842,10 +842,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 }}
               >
                 <UilWind
-                  className={thermostatData?.fanStatus === "ON" ? "text-blue-400 drop-shadow-sm" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm"}
-                  size={22}
+                  className={thermostatData?.fanStatus === "ON" ? "text-blue-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
+                  size={20}
                 />
-                <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium">Fan</span>
+                <span className="text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap">Fan</span>
               </button>
               {fanDropdownOpen && (
                 <div className="absolute bottom-full mb-2 right-0 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl z-20 border border-gray-700/50 w-36 overflow-hidden">
@@ -892,17 +892,17 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               )}
             </div>
             
-            {/* Enhanced Eco Mode Toggle */}
+            {/* Enhanced Eco Mode Toggle - iPhone Optimized */}
             <button 
               onClick={() => {
                 toggleEcoMode();
                 triggerHaptic('medium');
               }}
-              className={`group flex items-center space-x-2 px-4 py-3 rounded-lg 
+              className={`group flex items-center space-x-2 px-3 xs:px-4 py-3 rounded-lg 
                          hover:bg-gray-800/50 active:bg-gray-700/60 
                          transition-all duration-200 ease-in-out touch-manipulation
                          border border-gray-700/30 backdrop-blur-sm
-                         min-h-[48px] min-w-[80px]`}
+                         min-h-[48px] min-w-[100px] xs:min-w-[120px] flex-shrink-0`}
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
                 transform: 'translateZ(0)',
@@ -910,10 +910,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               }}
             >
               <UilTrees
-                className={ecoModeActive ? "text-green-400 drop-shadow-sm" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm"}
-                size={22}
+                className={ecoModeActive ? "text-green-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
+                size={20}
               />
-              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium">Eco</span>
+              <span className="text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap">Eco</span>
             </button>
           </div>
         </div>
@@ -942,32 +942,32 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             />
           </div>
           
-          {/* List of metrics with enhanced bars */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* List of metrics with enhanced bars - iPhone Optimized */}
+          <div className="grid grid-cols-2 gap-3 xs:gap-4 iphone-15pro:gap-2 iphone-max:gap-4">
             {Object.entries(airthingsData).map(([key, metric]) => {
               const barColor = getBarColor(metric.assessment);
               const barWidth = getBarWidth(metric.assessment);
               return (
                 <div
                   key={key}
-                  className={`flex flex-col bg-gray-800/30 p-3 rounded-lg border border-gray-700/40`}
+                  className={`flex flex-col bg-gray-800/30 p-2.5 xs:p-3 iphone-15pro:p-2 rounded-lg border border-gray-700/40`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-between mb-1.5 xs:mb-2">
+                    <div className="flex items-center space-x-1.5 xs:space-x-2">
                       <div className={`text-${key === 'temperature' ? 'red-400' : 
                                              key === 'humidity' ? 'blue-400' : 
                                              key === 'co2' ? 'purple-400' : 
                                              key === 'voc' ? 'yellow-400' : 
-                                             key === 'radon' ? 'orange-400' : 'green-400'}`}>
+                                             key === 'radon' ? 'orange-400' : 'green-400'} flex-shrink-0`}>
                         {metricIcons[key]}
                       </div>
-                      <div className="text-white font-medium text-sm">{key === "pm2_5" ? "PM2.5" : key.toUpperCase()}</div>
+                      <div className="text-white font-medium text-xs xs:text-sm iphone-15pro:text-xs truncate">{key === "pm2_5" ? "PM2.5" : key.toUpperCase()}</div>
                     </div>
-                    <div className="text-sm font-medium" style={{ color: barColor }}>
+                    <div className="text-xs xs:text-sm iphone-15pro:text-xs font-medium text-right" style={{ color: barColor }}>
                       {metric.value} {metric.unit}
                     </div>
                   </div>
-                  <div className="w-full h-2 bg-gray-700/50 rounded-full overflow-hidden mb-1">
+                  <div className="w-full h-1.5 xs:h-2 bg-gray-700/50 rounded-full overflow-hidden mb-1">
                     <div 
                       className={`h-full ${barColor} transition-all duration-700`} 
                       style={{ width: barWidth, boxShadow: `0 0 8px ${barColor.replace('bg-', '').replace('-500', '')}` }} 

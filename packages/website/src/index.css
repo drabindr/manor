@@ -714,3 +714,109 @@ code {
   }
 }
 
+/* iPhone Specific Optimizations for Air Quality & Thermostat */
+@media screen and (max-width: 393px) {
+  /* iPhone 15 Pro and smaller */
+  .air-quality-grid {
+    gap: 0.5rem;
+  }
+  
+  .air-quality-card {
+    padding: 0.5rem;
+  }
+  
+  .thermostat-control-button {
+    min-width: 95px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .thermostat-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .metric-value-text {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}
+
+@media screen and (min-width: 414px) and (max-width: 430px) {
+  /* iPhone 14 Pro Max */
+  .thermostat-control-button {
+    min-width: 110px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .thermostat-button-text {
+    font-size: 0.875rem;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  /* iPhone SE and older iPhones */
+  .air-quality-grid {
+    gap: 0.375rem;
+  }
+  
+  .air-quality-card {
+    padding: 0.375rem;
+  }
+  
+  .thermostat-control-button {
+    min-width: 85px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .metric-value-text {
+    font-size: 0.6875rem;
+  }
+}
+
+/* Enhanced touch targets for iPhone */
+.thermostat-touch-target {
+  min-height: 52px;
+  min-width: 52px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Air Quality Widget Enhancement */
+.air-quality-metric {
+  display: flex;
+  flex-direction: column;
+  min-height: 80px;
+}
+
+.air-quality-metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  min-height: 24px;
+}
+
+.air-quality-metric-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.air-quality-metric-label {
+  flex: 1;
+  margin-left: 0.5rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.air-quality-metric-value {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
