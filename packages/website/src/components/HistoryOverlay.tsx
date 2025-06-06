@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { UilHistory } from '@iconscout/react-unicons';
 import { FaCalendarAlt } from 'react-icons/fa';
@@ -22,19 +22,58 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDateReady, setIsDateReady] = useState<boolean>(false);
 
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  }, []);
+
+  // Enhanced close handler with haptic feedback
+  const handleClose = useCallback(() => {
+    triggerHaptic('light');
+    onClose();
+  }, [onClose, triggerHaptic]);
+
   // Escape key handler
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [handleClose]);
 
-  // Orientation watcher
+  // Enhanced orientation watcher with iPhone optimizations
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const onRes = () => setIsLandscape(window.innerWidth > window.innerHeight);
+    
+    const onRes = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+      
+      // Enhanced iOS-specific optimizations
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        // Optimize viewport height for iOS Safari
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }
+    };
+    
     window.addEventListener('resize', onRes);
     window.addEventListener('orientationchange', onRes);
     onRes();
@@ -76,14 +115,26 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-      {/* Fixed Header */}
+    <div 
+      className="fixed inset-0 bg-black z-[9999] flex flex-col touch-manipulation"
+      style={{
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden'
+      }}
+    >
+      {/* Enhanced Fixed Header with iPhone optimizations */}
       <div
         className="fixed top-0 left-0 right-0 pb-4 px-4 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/70 to-transparent backdrop-blur-sm transition-all duration-300 z-50"
         style={{
           paddingTop: isLandscape
             ? 'calc(env(safe-area-inset-top, 0px) + 20px)'
             : 'calc(env(safe-area-inset-top, 0px) + 80px)',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
       >
         <div className="text-white font-medium flex items-center space-x-2">
@@ -97,8 +148,15 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
           </div>
         </div>
         <button
-          onClick={onClose}
-          className="bg-gray-800/70 hover:bg-gray-700/90 text-white px-4 py-2 rounded-full flex items-center space-x-2 transition-all duration-300 border border-gray-700/50 shadow-lg"
+          onClick={handleClose}
+          className="bg-gray-800/70 hover:bg-gray-700/90 text-white px-4 py-2 rounded-full flex items-center space-x-2 transition-all duration-300 border border-gray-700/50 shadow-lg touch-manipulation active:scale-95 min-h-[48px]"
+          style={{
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            WebkitTapHighlightColor: 'transparent'
+          }}
         >
           <span>Close</span>
           <svg
@@ -118,7 +176,7 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
         </button>
       </div>
 
-      {/* Video Container now absolute under the fixed header */}
+      {/* Enhanced Video Container with iPhone optimizations */}
       <div
         className={`absolute inset-0 overflow-hidden ${
           isLandscape ? 'landscape-video-container' : ''
@@ -127,16 +185,24 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
           paddingBottom: isLandscape
             ? 'env(safe-area-inset-bottom, 0px)'
             : '0px',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden'
         }}
       >
         {/* Only render VideoPlayer when date is ready to prevent timing issues */}
         {isDateReady && selectedDate && (
           <VideoPlayer initialDate={selectedDate} isLandscape={isLandscape} />
         )}
-        {/* Show loading state while fetching date */}
+        {/* Enhanced loading state while fetching date */}
         {!isDateReady && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-white text-lg">Loading latest recordings...</div>
+            <div className="text-center">
+              <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div className="text-white text-lg font-medium">Loading latest recordings...</div>
+              <div className="text-gray-400 text-sm mt-2">Please wait while we prepare your video history</div>
+            </div>
           </div>
         )}
       </div>

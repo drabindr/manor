@@ -75,6 +75,28 @@ type ArmMode = "stay" | "away" | null;
 
 // Main component
 const CasaGuard: React.FC = () => {
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  }, []);
+
   // State management
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [isOnline, setIsOnline] = useState(false);
@@ -475,10 +497,10 @@ const CasaGuard: React.FC = () => {
 
   // Tab configuration - fixed order (no time-based logic)
   const tabs = useMemo(() => [
-    { id: "thermostat", label: "Climate", icon: UilTemperature },
-    { id: "cameras", label: "Cameras", icon: UilVideo },
-    { id: "devices", label: "Devices", icon: UilLightbulb },
-    { id: "security", label: "Security", icon: UilShieldCheck },
+    { id: "thermostat", label: "Climate", icon: (props: { size?: number; className?: string }) => <UilTemperature size={props.size} className={props.className} /> },
+    { id: "cameras", label: "Cameras", icon: (props: { size?: number; className?: string }) => <UilVideo size={props.size} className={props.className} /> },
+    { id: "devices", label: "Devices", icon: (props: { size?: number; className?: string }) => <UilLightbulb size={props.size} className={props.className} /> },
+    { id: "security", label: "Security", icon: (props: { size?: number; className?: string }) => <UilShieldCheck size={props.size} className={props.className} /> },
   ], []);
 
   // Scroll to top on tab change
@@ -568,13 +590,14 @@ const CasaGuard: React.FC = () => {
     }
   }, [refreshing, fetchCameras, fetchThermostatMinimal, fetchAlarmState]);
 
-  // Improved handling of tab changes to prevent unnecessary renders
+  // Improved handling of tab changes to prevent unnecessary renders with haptic feedback
   const handleSetActiveTab = useCallback((tabId: string) => {
     // Only update if tab is changing
     if (activeTab !== tabId) {
       setActiveTab(tabId);
+      triggerHaptic('light'); // Add haptic feedback for tab changes
     }
-  }, [activeTab]);
+  }, [activeTab, triggerHaptic]);
 
   const handleCloseExpandedCamera = useCallback(() => {
     setExpandedCameraName(null);

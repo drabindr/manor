@@ -428,7 +428,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
             <button
               onClick={refreshData}
               disabled={isRefreshing}
-              className="bg-gray-800 hover:bg-gray-700 text-blue-400 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 flex items-center justify-center"
+              className="bg-gray-800 hover:bg-gray-700 text-blue-400 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 flex items-center justify-center
+                        min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
+              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -564,11 +566,13 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={!hasPrevPage}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 
+                            min-h-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95 ${
                     hasPrevPage
                       ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
                       : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
                   }`}
+                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -588,11 +592,13 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={!hasNextPage}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200
+                            min-h-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95 ${
                     hasNextPage
                       ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
                       : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
                   }`}
+                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   <span className="text-sm">Next</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

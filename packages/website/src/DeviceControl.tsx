@@ -494,7 +494,9 @@ const DeviceControl: React.FC = () => {
         <div className="mt-4 flex justify-center">
           <button 
             onClick={() => fetchLights()}
-            className="px-4 py-2 bg-red-800/60 hover:bg-red-700/70 text-white rounded-full text-sm flex items-center space-x-2 border border-red-700/50 transition-all"
+            className="px-4 py-2 bg-red-800/60 hover:bg-red-700/70 text-white rounded-full text-sm flex items-center space-x-2 border border-red-700/50 transition-all
+                      min-h-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
+            style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
           >
             <span>Retry</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

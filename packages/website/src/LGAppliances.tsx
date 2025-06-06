@@ -226,8 +226,9 @@ const LGDeviceCard = memo(({
               className="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center
                        transition-all duration-300 bg-gradient-to-r from-yellow-700/70 to-yellow-600/70 hover:from-yellow-600/80 hover:to-yellow-500/80 active:from-yellow-800/90 active:to-yellow-700/90
                        text-white border border-yellow-500/60 shadow-lg hover:shadow-xl active:shadow-inner
-                       tap-highlight-transparent active:scale-95 backdrop-blur-sm"
+                       tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[48px] touch-manipulation transform"
               disabled={reconnecting}
+              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
             >
               <UilSync size={16} className={`mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
               <span>{reconnecting ? 'Reconnecting...' : 'Reconnect Device'}</span>
@@ -243,13 +244,14 @@ const LGDeviceCard = memo(({
                 }}
                 disabled={reconnecting || status.remoteControlEnabled === false}
                 className={`px-4 py-3 rounded-lg text-sm font-semibold flex items-center justify-center
-                           transition-all duration-300 ${
+                           transition-all duration-300 min-h-[48px] touch-manipulation transform ${
                              status.remoteControlEnabled === false
                                ? "bg-gray-600/50 text-gray-400 border border-gray-500/40 cursor-not-allowed"
                                : status.isPoweredOn
                                ? "bg-gradient-to-r from-red-700/70 to-red-600/70 hover:from-red-600/80 hover:to-red-500/80 active:from-red-800/90 active:to-red-700/90 text-white border border-red-500/60 shadow-lg hover:shadow-xl"
                                : "bg-gradient-to-r from-green-700/70 to-green-600/70 hover:from-green-600/80 hover:to-green-500/80 active:from-green-800/90 active:to-green-700/90 text-white border border-green-500/60 shadow-lg hover:shadow-xl"
                            } active:shadow-inner tap-highlight-transparent active:scale-95 backdrop-blur-sm`}
+                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
                 <UilPower size={16} className={`mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
                 <span>
@@ -270,12 +272,13 @@ const LGDeviceCard = memo(({
                 }}
                 disabled={!status.isPoweredOn}
                 className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium border transition-all duration-300 backdrop-blur-sm
-                          ${!status.isPoweredOn
+                          min-h-[48px] touch-manipulation transform ${!status.isPoweredOn
                             ? "bg-gray-700/50 text-gray-500 border-gray-500/40 cursor-not-allowed"
                             : selectedCycle
                               ? "bg-gradient-to-r from-blue-700/70 to-blue-600/70 text-white border-blue-500/60 shadow-lg"
                               : "bg-gray-700/80 text-gray-300 border-gray-500/60 hover:bg-gray-600/90 shadow-md"
                           } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
                 <option value="">Select Wash Cycle</option>
                 {cycles.map(cycle => (
@@ -294,10 +297,11 @@ const LGDeviceCard = memo(({
                   }}
                   disabled={!status.isPoweredOn}
                   className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center justify-center backdrop-blur-sm
-                            ${isActive
+                            min-h-[48px] touch-manipulation transform ${isActive
                               ? "bg-gradient-to-r from-red-600/80 to-red-500/80 hover:from-red-500/90 hover:to-red-400/90 text-white border border-red-400/60 shadow-lg hover:shadow-xl"
                               : "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500/90 hover:to-blue-400/90 text-white border border-blue-400/60 shadow-lg hover:shadow-xl"
                             } active:shadow-inner tap-highlight-transparent active:scale-95`}
+                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   {isActive ? <UilPower size={16} className="mr-2" /> : <UilPower size={16} className="mr-2" />}
                   <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
@@ -435,8 +439,9 @@ const LGPairedDeviceCard = memo(({
                 className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center
                          transition-all duration-300 bg-gradient-to-r from-yellow-700/70 to-yellow-600/70 hover:from-yellow-600/80 hover:to-yellow-500/80 active:from-yellow-800/90 active:to-yellow-700/90
                          text-white border border-yellow-500/60 shadow-lg hover:shadow-xl active:shadow-inner
-                         tap-highlight-transparent active:scale-95 backdrop-blur-sm"
+                         tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[48px] touch-manipulation transform"
                 disabled={isReconnecting}
+                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
                 <UilSync size={14} className={`mr-2 ${isReconnecting ? 'animate-spin' : ''}`} />
                 <span>{isReconnecting ? 'Reconnecting...' : 'Reconnect Device'}</span>
@@ -452,13 +457,14 @@ const LGPairedDeviceCard = memo(({
                   }}
                   disabled={isReconnecting || status.remoteControlEnabled === false}
                   className={`w-full py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center
-                             transition-all duration-300 ${
+                             transition-all duration-300 min-h-[48px] touch-manipulation transform ${
                                status.remoteControlEnabled === false
                                  ? "bg-gray-600/50 text-gray-400 border border-gray-500/40 cursor-not-allowed"
                                  : status.isPoweredOn
                                  ? "bg-gradient-to-r from-red-700/70 to-red-600/70 hover:from-red-600/80 hover:to-red-500/80 active:from-red-800/90 active:to-red-700/90 text-white border border-red-500/60 shadow-lg hover:shadow-xl"
                                  : "bg-gradient-to-r from-green-700/70 to-green-600/70 hover:from-green-600/80 hover:to-green-500/80 active:from-green-800/90 active:to-green-700/90 text-white border border-green-500/60 shadow-lg hover:shadow-xl"
                              } active:shadow-inner tap-highlight-transparent active:scale-95 backdrop-blur-sm`}
+                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   <UilPower size={14} className={`mr-2 ${isReconnecting ? 'animate-spin' : ''}`} />
                   <span>
@@ -479,12 +485,13 @@ const LGPairedDeviceCard = memo(({
                   }}
                   disabled={!status.isPoweredOn}
                   className={`w-full py-2.5 px-3 rounded-lg text-xs font-medium border transition-all duration-300 backdrop-blur-sm
-                            ${!status.isPoweredOn
+                            min-h-[48px] touch-manipulation transform ${!status.isPoweredOn
                               ? "bg-gray-700/50 text-gray-500 border-gray-500/40 cursor-not-allowed"
                               : selectedCycles[device.deviceId]
                                 ? "bg-gradient-to-r from-blue-700/70 to-blue-600/70 text-white border-blue-500/60 shadow-lg"
                                 : "bg-gray-700/80 text-gray-300 border-gray-500/60 hover:bg-gray-600/90 shadow-md"
                             } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   <option value="">Select Wash Cycle</option>
                   {cycles.map(cycle => (
@@ -977,8 +984,10 @@ const LGAppliances: React.FC = () => {
               <button 
                 onClick={() => fetchLGDevices(true)}
                 className="p-2 rounded-full bg-gray-800/80 hover:bg-gray-700/90 text-blue-400 border border-gray-700/50 
-                          transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                          transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                          min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
                 aria-label="Refresh devices"
+                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
                 <UilHistory size={18} />
               </button>
@@ -1018,7 +1027,8 @@ const LGAppliances: React.FC = () => {
                       }}
                       className="px-4 py-2 bg-red-800/60 hover:bg-red-700/70 text-white rounded-lg text-sm flex items-center space-x-2
                                 transition-colors duration-300 border border-red-600/50 shadow-sm
-                                tap-highlight-transparent active:scale-95"
+                                tap-highlight-transparent active:scale-95 min-h-[48px] touch-manipulation transform"
+                      style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                     >
                       <UilSync size={16} />
                       <span>Retry Connection</span>

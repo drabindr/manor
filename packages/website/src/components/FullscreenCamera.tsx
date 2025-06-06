@@ -20,6 +20,28 @@ const FullscreenCamera: React.FC<FullscreenCameraProps> = ({
     typeof window !== 'undefined' ? window.innerWidth > window.innerHeight : false
   );
 
+  // Enhanced iPhone haptic feedback helper
+  const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 40
+      };
+      navigator.vibrate(patterns[intensity]);
+    }
+    
+    // Enhanced haptic feedback for modern browsers
+    if ('hapticFeedback' in navigator) {
+      const intensityLevels = {
+        light: 0.3,
+        medium: 0.6,
+        heavy: 1.0
+      };
+      (navigator as any).hapticFeedback?.impact(intensityLevels[intensity]);
+    }
+  };
+
   // Close on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,8 +98,16 @@ const FullscreenCamera: React.FC<FullscreenCameraProps> = ({
         </div>
         <button
           type="button"
-          onClick={onClose}
-          className="flex items-center space-x-2 rounded-full bg-gray-800/70 px-4 py-2 text-white shadow-lg transition-all duration-300 border border-gray-700/50 hover:bg-gray-700/90 pointer-events-auto z-50"
+          onClick={() => {
+            triggerHaptic('light');
+            onClose();
+          }}
+          className="flex items-center space-x-2 rounded-full bg-gray-800/70 px-4 py-2 text-white shadow-lg transition-all duration-300 border border-gray-700/50 hover:bg-gray-700/90 active:bg-gray-600/90 pointer-events-auto z-50 touch-manipulation min-h-[44px]"
+          style={{ 
+            WebkitTapHighlightColor: 'transparent',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
+          }}
         >
           <span>Close</span>
           <svg
