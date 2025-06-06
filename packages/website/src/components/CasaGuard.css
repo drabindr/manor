@@ -9,9 +9,10 @@
   
   /* Optimize "720 Front" text for iPhone 15 Pro */
   .house-dropdown .veedu-text {
-    font-size: 1rem !important;
-    font-weight: 800 !important;
+    font-size: 0.875rem !important;
+    font-weight: 700 !important;
     white-space: nowrap !important;
+    letter-spacing: 0.015em !important;
   }
   
   /* Enhanced small screen optimizations */
@@ -49,7 +50,10 @@
   }
   
   .house-dropdown .veedu-text {
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.01em !important;
   }
   
   /* Optimize for iPhone mini */
