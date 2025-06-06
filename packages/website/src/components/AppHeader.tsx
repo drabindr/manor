@@ -51,7 +51,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <div 
-      className="top-app-bar w-full flex flex-col touch-manipulation" 
+      className="top-app-bar w-full flex flex-col touch-manipulation ios-safe-inset-x" 
       style={{ 
         paddingTop: isIOS ? "calc(env(safe-area-inset-top) + 2rem)" : "env(safe-area-inset-top)",
         // Enhanced hardware acceleration and performance optimizations
@@ -67,25 +67,25 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       }}
     >
       <div 
-        className="h-16 flex items-center justify-between px-3 sm:px-4 transition-all duration-300 ease-out"
+        className="h-16 flex items-center justify-between px-3 xs:px-3 sm:px-4 transition-all duration-300 ease-out app-header-content"
         style={{
-          // Enhanced iOS positioning with better spacing
+          // Enhanced iOS positioning with better spacing for iPhone 15 Pro
           marginTop: isIOS ? "12px" : "4px",
           // Add subtle interaction feedback
           transform: "translateZ(0)"
         }}
       >
-        <div className="flex items-center space-x-3 sm:space-x-4">
-          <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-3 xs:space-x-3 sm:space-x-4">
+          <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
             {/* Enhanced online indicator with better visual feedback */}
-            <div className={`w-3.5 h-3.5 rounded-full ${onlineIndicatorColor} shadow-xl transition-all duration-500 ring-2 ring-black/30 hover:scale-110 active:scale-95`} />
+            <div className={`w-3.5 h-3.5 rounded-full ${onlineIndicatorColor} shadow-xl transition-all duration-500 ring-2 ring-black/30 hover:scale-110 active:scale-95 status-indicator`} />
             <HouseDropdown />
           </div>
         </div>
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
           {/* Enhanced arm mode display with better touch targets */}
           <div
-            className={`text-xs sm:text-sm font-bold ${getArmModeColor()} px-3 py-1.5 rounded-full bg-gray-900/60 border border-gray-800/60 backdrop-blur-sm shadow-lg transition-all duration-300 hover:bg-gray-800/60 active:scale-95 touch-manipulation min-w-[60px] text-center`}
+            className={`text-xs xs:text-sm sm:text-sm font-bold ${getArmModeColor()} px-2.5 xs:px-3 py-1.5 rounded-full bg-gray-900/60 border border-gray-800/60 backdrop-blur-sm shadow-lg transition-all duration-300 hover:bg-gray-800/60 active:scale-95 touch-manipulation min-w-[55px] xs:min-w-[60px] text-center`}
           >
             {getArmModeDisplay()}
           </div>
