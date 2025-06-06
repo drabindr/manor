@@ -1,7 +1,17 @@
 /* Enhanced Mobile-First Responsive Design */
+
+/* iPhone 15 Pro specific optimizations (393px width) */
 @media only screen and (max-width: 393px) and (orientation: portrait) {
   .veedu-text { 
-    font-size: 0.5rem !important; 
+    font-size: 0.9rem !important; 
+    letter-spacing: 0.02em !important;
+  }
+  
+  /* Optimize "720 Front" text for iPhone 15 Pro */
+  .house-dropdown .veedu-text {
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
   }
   
   /* Enhanced small screen optimizations */
@@ -13,6 +23,33 @@
   .text-responsive {
     font-size: 14px !important;
     line-height: 1.4 !important;
+  }
+  
+  /* Optimize for iPhone 15 Pro touch targets */
+  .button-group {
+    gap: 10px !important;
+  }
+  
+  .icon-button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+  
+  /* Header spacing optimization for iPhone 15 Pro */
+  .app-header-content {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* iPhone mini and smaller devices (320px-374px) */
+@media only screen and (max-width: 374px) and (orientation: portrait) {
+  .veedu-text { 
+    font-size: 0.5rem !important; 
+  }
+  
+  .house-dropdown .veedu-text {
+    font-size: 0.8rem !important;
   }
   
   /* Optimize for iPhone mini */

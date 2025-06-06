@@ -217,6 +217,30 @@
   .text-touch-safe {
     font-size: var(--font-size-touch-safe);
   }
+  
+  /* Enhanced iPhone text rendering utilities */
+  .text-optimized {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1;
+  }
+  
+  .text-crisp {
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* iPhone-specific safe area utilities */
+  .ios-safe-inset-x {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  
+  .ios-safe-inset-y {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
 }
 
 /* Enhanced Body Styles with Better Typography */
@@ -614,6 +638,79 @@ code {
   .animate-float,
   .animate-bounce-in {
     animation: none !important;
+  }
+}
+
+/* iPhone 15 Pro Specific Optimizations (393px width) */
+@media only screen and (max-width: 393px) and (orientation: portrait) {
+  /* Optimize header layout for iPhone 15 Pro */
+  .top-app-bar {
+    padding-left: env(safe-area-inset-left, 12px);
+    padding-right: env(safe-area-inset-right, 12px);
+  }
+  
+  /* Improve text readability on iPhone 15 Pro */
+  .house-dropdown .veedu-text {
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.025em !important;
+    white-space: nowrap !important;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Optimize button spacing for iPhone 15 Pro */
+  .app-header-content {
+    gap: 8px;
+  }
+  
+  /* Enhanced touch targets for iPhone 15 Pro */
+  .touch-target-enhanced {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  
+  /* Improve visual hierarchy on iPhone 15 Pro */
+  .status-indicator {
+    width: 14px;
+    height: 14px;
+  }
+  
+  /* Optimize menu dropdown for iPhone 15 Pro */
+  .dropdown-menu {
+    max-width: calc(100vw - 24px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* iPhone 15 Pro Max and larger iPhones (430px+) */
+@media only screen and (min-width: 430px) and (orientation: portrait) {
+  .house-dropdown .veedu-text {
+    font-size: 1.25rem !important;
+    letter-spacing: 0.03em !important;
+  }
+  
+  .app-header-content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* iPhone 15 Pro Landscape optimizations */
+@media only screen and (max-width: 852px) and (orientation: landscape) and (max-height: 393px) {
+  .top-app-bar {
+    height: 48px;
+    padding-top: calc(env(safe-area-inset-top) + 8px);
+  }
+  
+  .house-dropdown .veedu-text {
+    font-size: 0.9rem !important;
+  }
+  
+  .app-header-content {
+    height: 48px;
+    margin-top: 8px;
   }
 }
 

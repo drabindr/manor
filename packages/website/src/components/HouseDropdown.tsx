@@ -25,20 +25,20 @@ const HouseDropdown: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <div className="relative house-dropdown">
       <button
         onClick={() => {
           triggerHaptic('light');
           setIsMenuOpen(!isMenuOpen);
         }}
-        className="flex items-center space-x-1 sm:space-x-2 p-2 sm:p-3 rounded-xl hover:bg-white/10 transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="flex items-center space-x-1 xs:space-x-1.5 sm:space-x-2 p-1.5 xs:p-2 sm:p-3 rounded-xl hover:bg-white/10 transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-white/20"
         style={{ transform: 'translateZ(0)' }}
       >
-        <span className="veedu-text text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm">
-          720 Front
+        <span className="veedu-text text-base xs:text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent tracking-wider drop-shadow-sm transition-all duration-200 text-optimized">
+          <span className="inline-block">720 Front</span>
         </span>
         <svg 
-          className={`w-3 h-3 sm:w-4 sm:h-4 text-white transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-white transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -48,7 +48,7 @@ const HouseDropdown: React.FC = () => {
       </button>
 
       {isMenuOpen && (
-        <div className="absolute left-0 top-full mt-3 w-56 sm:w-64 bg-gray-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-700/60 py-3 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0 animate-fade-in-up"
+        <div className="absolute left-0 top-full mt-3 w-56 sm:w-64 bg-gray-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-700/60 py-3 z-50 dropdown-menu animate-fade-in-up"
              style={{ transform: 'translateZ(0)' }}>
           <div className="px-4 py-3 border-b border-gray-700">
             <div className="flex items-center space-x-3">
