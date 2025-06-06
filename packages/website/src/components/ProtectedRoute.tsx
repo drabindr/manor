@@ -20,7 +20,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <img 
+            src="/logo2.png" 
+            alt="Casa Guard Logo" 
+            className="w-16 h-16 mx-auto mb-4 animate-pulse"
+          />
           <p className="text-white text-lg">Loading Casa Guard...</p>
         </div>
       </div>
