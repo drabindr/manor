@@ -89,43 +89,22 @@ class WebSocketService {
 
   // Connect to WebSocket server with connection lock
   public connect(): void {
-    console.log('DEBUG connect() called, current state:', {
-      connectionAttemptsPaused: this.connectionAttemptsPaused,
-      socketReadyState: this.socket?.readyState,
-      socketOpen: this.socket?.readyState === WebSocket.OPEN,
-      connecting: this.connecting,
-      permanentlyFailed: this.permanentlyFailed,
-      documentHidden: typeof document !== 'undefined' ? document.hidden : 'no document'
-    });
-    
     // Don't connect if attempts are paused
     if (this.connectionAttemptsPaused) {
-      console.log("DEBUG Connection attempts are paused, not connecting");
       logger.debug("Connection attempts are paused, not connecting");
       return;
     }
 
     if (this.socket?.readyState === WebSocket.OPEN || this.connecting || this.permanentlyFailed) {
-      console.log('DEBUG Early return due to existing connection state, details:', {
-        socketExists: !!this.socket,
-        socketReadyState: this.socket?.readyState,
-        isOpen: this.socket?.readyState === WebSocket.OPEN,
-        connecting: this.connecting,
-        permanentlyFailed: this.permanentlyFailed,
-        WebSocketOPEN: WebSocket.OPEN
-      });
       return;
     }
 
     try {
       this.connecting = true;
-      console.log("DEBUG Setting connecting = true, about to create WebSocket with URL:", this.url);
       logger.info("Connecting to WebSocket...");
       this.socket = new WebSocket(this.url);
-      console.log("DEBUG WebSocket created:", this.socket);
 
       this.socket.onopen = () => {
-        console.log("DEBUG WebSocket onopen triggered");
         this.connecting = false;
         this.handleOpen();
       };
@@ -136,7 +115,6 @@ class WebSocketService {
         this.handleClose(event);
       };
     } catch (error) {
-      console.log("DEBUG Exception in connect():", error);
       logger.error("Failed to connect to WebSocket server:", error);
       this.connecting = false;
       
