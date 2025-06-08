@@ -108,10 +108,24 @@ export async function getDeviceState(deviceId: string): Promise<any> {
 }
 
 export async function controlDevice(deviceId: string, payload: any): Promise<any> {
+  console.log(`[DEBUG] controlDevice called for ${deviceId} with payload:`, JSON.stringify(payload, null, 2));
+  
   const { userId, accessToken, countryCode } = await getCredentials();
   const headers = createHeaders(userId, accessToken, countryCode);
-  const response = await axios.post(`https://api-aic.lgthinq.com/devices/${deviceId}/control`, payload, { headers });
-  return response.data.response || {};
+  
+  try {
+    const response = await axios.post(`https://api-aic.lgthinq.com/devices/${deviceId}/control`, payload, { headers });
+    console.log(`[DEBUG] LG API response:`, JSON.stringify(response.data, null, 2));
+    return response.data.response || {};
+  } catch (error: any) {
+    console.log(`[DEBUG] LG API error:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
 }
 
 function buildControlPayload(deviceType: DeviceType, mode: OperationState): any {
@@ -131,10 +145,58 @@ export async function controlDryer(deviceId: string, mode: OperationState): Prom
 }
 
 export async function checkRemoteControlEnabled(deviceId: string): Promise<boolean> {
+  console.log(`[DEBUG] checkRemoteControlEnabled called for ${deviceId}`);
+  
   const profile = await getDeviceProfile(deviceId);
-  const enabled = profile.remoteControlEnable?.remoteControlEnabled === true;
-  if (!enabled) console.warn(`Remote control disabled for ${deviceId}`);
-  return enabled;
+  const state = await getDeviceState(deviceId);
+  console.log(`[DEBUG] Device state:`, JSON.stringify(state, null, 2));
+  console.log(`[DEBUG] Device profile structure:`, JSON.stringify({
+    hasProperty: !!profile.property,
+    isArray: Array.isArray(profile.property),
+    type: typeof profile.property
+  }, null, 2));
+  
+  let remoteControlEnabled = false;
+  
+  // Check profile first - this shows the capability (more reliable than current state)
+  if (profile.property && Array.isArray(profile.property)) {
+    const remoteControlProp = profile.property.find((p: any) => p.remoteControlEnable);
+    console.log(`[DEBUG] Device profile remote control prop:`, JSON.stringify(remoteControlProp, null, 2));
+    if (remoteControlProp?.remoteControlEnable?.remoteControlEnabled?.value?.r) {
+      remoteControlEnabled = remoteControlProp.remoteControlEnable.remoteControlEnabled.value.r.includes(true);
+      console.log(`[DEBUG] Found remote control capability in profile: ${remoteControlEnabled}`);
+    }
+  } else if (profile.property && typeof profile.property === 'object') {
+    // Handle non-array property structure
+    console.log(`[DEBUG] Profile property is object, checking for remoteControlEnable`);
+    if (profile.property.remoteControlEnable?.remoteControlEnabled?.value?.r) {
+      remoteControlEnabled = profile.property.remoteControlEnable.remoteControlEnabled.value.r.includes(true);
+      console.log(`[DEBUG] Found remote control capability in profile object: ${remoteControlEnabled}`);
+    }
+  }
+  
+  // If not found in profile, check current state as fallback
+  if (!remoteControlEnabled) {
+    if (Array.isArray(state) && state.length > 0) {
+      const firstState = state[0];
+      console.log(`[DEBUG] Checking array format, firstState:`, JSON.stringify(firstState.remoteControlEnable, null, 2));
+      if (firstState.remoteControlEnable?.remoteControlEnabled !== undefined) {
+        remoteControlEnabled = firstState.remoteControlEnable.remoteControlEnabled;
+        console.log(`[DEBUG] Found remote control in array format: ${remoteControlEnabled}`);
+      }
+    } else if (state.remoteControlEnable?.remoteControlEnabled !== undefined) {
+      remoteControlEnabled = state.remoteControlEnable.remoteControlEnabled;
+      console.log(`[DEBUG] Found remote control in direct format: ${remoteControlEnabled}`);
+    }
+  }
+  
+  console.log(`[DEBUG] Final remote control enabled: ${remoteControlEnabled}`);
+  
+  if (!remoteControlEnabled) {
+    console.warn(`Remote control disabled for ${deviceId}. State check: ${JSON.stringify(state.remoteControlEnable || (Array.isArray(state) && state[0]?.remoteControlEnable))}`);
+  }
+  
+  return remoteControlEnabled;
 }
 
 export async function getDeviceData(deviceId: string): Promise<any> {
@@ -240,22 +302,79 @@ export async function getDeviceData(deviceId: string): Promise<any> {
 }
 
 export async function startWashing(deviceId: string, cycle?: string): Promise<any> {
+  console.log(`[DEBUG] startWashing called for ${deviceId} with cycle: ${cycle}`);
+  
   // Check if remote control is enabled first
   const isEnabled = await checkRemoteControlEnabled(deviceId);
+  console.log(`[DEBUG] checkRemoteControlEnabled returned: ${isEnabled}`);
+  
   if (!isEnabled) {
+    console.log(`[DEBUG] Remote control check failed, throwing error`);
     throw new Error('Remote control is disabled for this device. Please enable it in the LG ThinQ app.');
   }
   
-  const payload: any = { 
-    location: { locationName: 'MAIN' }, 
-    operation: { washerOperationMode: OperationState.START }
-  };
+  console.log(`[DEBUG] Remote control check passed, proceeding with control`);
   
-  // If a specific cycle is provided, add it to the payload
+  // Try different payload structures based on cycle parameter
+  let payload: any;
+  
   if (cycle && Object.values(OperationState).includes(cycle as OperationState)) {
-    payload.cycle = { cycleType: cycle };
+    // Method 1: Include cycle in the operation
+    payload = { 
+      location: { locationName: 'MAIN' }, 
+      operation: { 
+        washerOperationMode: OperationState.START,
+        cycleType: cycle
+      }
+    };
+    console.log(`[DEBUG] Trying payload with cycle in operation:`, JSON.stringify(payload, null, 2));
+    
+    try {
+      return await controlDevice(deviceId, payload);
+    } catch (error: any) {
+      console.log(`[DEBUG] First approach failed, trying second approach...`);
+      
+      // Method 2: Set cycle as separate field at root level
+      payload = { 
+        location: { locationName: 'MAIN' }, 
+        operation: { washerOperationMode: OperationState.START },
+        cycle: cycle
+      };
+      console.log(`[DEBUG] Trying payload with cycle at root level:`, JSON.stringify(payload, null, 2));
+      
+      try {
+        return await controlDevice(deviceId, payload);
+      } catch (error2: any) {
+        console.log(`[DEBUG] Second approach failed, trying third approach...`);
+        
+        // Method 3: Use the cycle as the operation mode instead of START
+        payload = { 
+          location: { locationName: 'MAIN' }, 
+          operation: { washerOperationMode: cycle }
+        };
+        console.log(`[DEBUG] Trying payload with cycle as operation mode:`, JSON.stringify(payload, null, 2));
+        
+        try {
+          return await controlDevice(deviceId, payload);
+        } catch (error3: any) {
+          console.log(`[DEBUG] All cycle-specific approaches failed, falling back to basic START`);
+          // Fall back to basic START without cycle
+          payload = { 
+            location: { locationName: 'MAIN' }, 
+            operation: { washerOperationMode: OperationState.START }
+          };
+        }
+      }
+    }
+  } else {
+    // Basic START without cycle
+    payload = { 
+      location: { locationName: 'MAIN' }, 
+      operation: { washerOperationMode: OperationState.START }
+    };
   }
   
+  console.log(`[DEBUG] Final payload attempt:`, JSON.stringify(payload, null, 2));
   return controlDevice(deviceId, payload);
 }
 
@@ -286,19 +405,72 @@ export async function pauseWashing(deviceId: string): Promise<any> {
 }
 
 export async function startDrying(deviceId: string, cycle?: string): Promise<any> {
+  console.log(`[DEBUG] startDrying called for ${deviceId} with cycle: ${cycle}`);
+  
   const isEnabled = await checkRemoteControlEnabled(deviceId);
+  console.log(`[DEBUG] checkRemoteControlEnabled returned: ${isEnabled}`);
+  
   if (!isEnabled) {
     throw new Error('Remote control is disabled for this device. Please enable it in the LG ThinQ app.');
   }
   
-  const payload: any = { 
-    operation: { dryerOperationMode: OperationState.START }
-  };
+  console.log(`[DEBUG] Remote control check passed, proceeding with control`);
+  
+  // Try different payload structures based on cycle parameter
+  let payload: any;
   
   if (cycle && Object.values(OperationState).includes(cycle as OperationState)) {
-    payload.cycle = { cycleType: cycle };
+    // Method 1: Include cycle in the operation
+    payload = { 
+      operation: { 
+        dryerOperationMode: OperationState.START,
+        cycleType: cycle
+      }
+    };
+    console.log(`[DEBUG] Trying payload with cycle in operation:`, JSON.stringify(payload, null, 2));
+    
+    try {
+      return await controlDevice(deviceId, payload);
+    } catch (error: any) {
+      console.log(`[DEBUG] First approach failed, trying second approach...`);
+      
+      // Method 2: Set cycle as separate field at root level
+      payload = { 
+        operation: { dryerOperationMode: OperationState.START },
+        cycle: cycle
+      };
+      console.log(`[DEBUG] Trying payload with cycle at root level:`, JSON.stringify(payload, null, 2));
+      
+      try {
+        return await controlDevice(deviceId, payload);
+      } catch (error2: any) {
+        console.log(`[DEBUG] Second approach failed, trying third approach...`);
+        
+        // Method 3: Use the cycle as the operation mode instead of START
+        payload = { 
+          operation: { dryerOperationMode: cycle }
+        };
+        console.log(`[DEBUG] Trying payload with cycle as operation mode:`, JSON.stringify(payload, null, 2));
+        
+        try {
+          return await controlDevice(deviceId, payload);
+        } catch (error3: any) {
+          console.log(`[DEBUG] All cycle-specific approaches failed, falling back to basic START`);
+          // Fall back to basic START without cycle
+          payload = { 
+            operation: { dryerOperationMode: OperationState.START }
+          };
+        }
+      }
+    }
+  } else {
+    // Basic START without cycle
+    payload = { 
+      operation: { dryerOperationMode: OperationState.START }
+    };
   }
   
+  console.log(`[DEBUG] Final payload attempt:`, JSON.stringify(payload, null, 2));
   return controlDevice(deviceId, payload);
 }
 
