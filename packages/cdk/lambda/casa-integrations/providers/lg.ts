@@ -22,7 +22,10 @@ enum OperationState {
   BEDDING = 'BEDDING',
   QUICK_WASH = 'QUICK_WASH',
   HEAVY_DUTY = 'HEAVY_DUTY',
-  SANITIZE = 'SANITIZE'
+  SANITIZE = 'SANITIZE',
+  SPIN_RINSE = 'SPIN_RINSE',
+  DRAIN = 'DRAIN',
+  ADD_DRAIN = 'ADD_DRAIN'
 }
 
 enum DeviceType {
@@ -516,7 +519,7 @@ export async function getAvailableCycles(deviceId: string): Promise<string[]> {
   
   // Default cycles if none found in profile
   if (cycles.length === 0) {
-    return ['NORMAL', 'TOWEL', 'DELICATE', 'BEDDING', 'QUICK_WASH', 'HEAVY_DUTY'];
+    return ['NORMAL', 'TOWEL', 'DELICATE', 'BEDDING', 'QUICK_WASH', 'HEAVY_DUTY', 'SPIN_RINSE', 'DRAIN'];
   }
   
   return [...new Set(cycles)]; // Remove duplicates
@@ -541,4 +544,59 @@ export async function setDelayedStart(deviceId: string, hours: number): Promise<
   };
   
   return controlDevice(deviceId, payload);
+}
+
+export async function drainAndOff(deviceId: string): Promise<any> {
+  console.log(`[DEBUG] drainAndOff called for ${deviceId}`);
+  
+  const isEnabled = await checkRemoteControlEnabled(deviceId);
+  if (!isEnabled) {
+    throw new Error('Remote control is disabled for this device. Please enable it in the LG ThinQ app.');
+  }
+
+  // According to LG ThinQ API documentation, for washers:
+  // ADD_DRAIN operation will drain the water and then turn off
+  // This is the proper way to implement "Drain & Off" functionality
+  
+  try {
+    // Method 1: Try ADD_DRAIN operation (the proper LG way)
+    const addDrainPayload = { 
+      location: { locationName: 'MAIN' }, 
+      operation: { washerOperationMode: OperationState.ADD_DRAIN }
+    };
+    console.log(`[DEBUG] Trying ADD_DRAIN operation:`, JSON.stringify(addDrainPayload, null, 2));
+    
+    try {
+      return await controlDevice(deviceId, addDrainPayload);
+    } catch (error: any) {
+      console.log(`[DEBUG] ADD_DRAIN failed, trying POWER_OFF with drain:`, error.message);
+      
+      // Method 2: Try POWER_OFF (should automatically drain on modern LG washers)
+      const powerOffPayload = { 
+        location: { locationName: 'MAIN' }, 
+        operation: { washerOperationMode: OperationState.POWER_OFF }
+      };
+      console.log(`[DEBUG] Trying POWER_OFF:`, JSON.stringify(powerOffPayload, null, 2));
+      
+      try {
+        return await controlDevice(deviceId, powerOffPayload);
+      } catch (error2: any) {
+        console.log(`[DEBUG] POWER_OFF failed, trying sequence approach:`, error2.message);
+        
+        // Method 3: Sequential approach - Start SPIN_RINSE then STOP
+        console.log(`[DEBUG] Starting SPIN_RINSE cycle for draining...`);
+        await startWashing(deviceId, 'SPIN_RINSE');
+        
+        // Wait a moment for the cycle to start
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Then stop the washer (which should complete the drain and turn off)
+        console.log(`[DEBUG] Stopping washer after drain initiation...`);
+        return await stopWashing(deviceId);
+      }
+    }
+  } catch (error: any) {
+    console.error(`[ERROR] All drain and off methods failed:`, error.message);
+    throw new Error(`Failed to drain and turn off washer: ${error.message}`);
+  }
 }

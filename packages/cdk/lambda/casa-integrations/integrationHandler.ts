@@ -367,6 +367,10 @@ export const handler = async (
             case 'POWER_OFF':
               response = await lg.controlWasher(deviceId, mode);
               break;
+            case 'DRAIN':
+              // Use dedicated drainAndOff function for proper drain and power off sequence
+              response = await lg.drainAndOff(deviceId);
+              break;
             default:
               // Try using the generic control for custom modes
               response = await lg.controlWasher(deviceId, mode);
