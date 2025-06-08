@@ -1120,6 +1120,13 @@ const LGAppliances: React.FC = () => {
       <div className="bg-gradient-to-b from-gray-800/70 to-gray-900/90 rounded-xl border border-gray-700/30 shadow-xl overflow-hidden relative hover:shadow-blue-900/10 transition-shadow duration-300">
         <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
         
+        {/* LG Logo (Top Right) */}
+        <div className="absolute top-3 right-3 z-10">
+          <div className="bg-black/30 rounded-full p-1.5 backdrop-blur-sm">
+            <OptimizedImage src="/lg.svg" alt="LG" className="h-6 w-6 opacity-80 hover:opacity-100 transition-opacity duration-200" loading="lazy" decoding="async" />
+          </div>
+        </div>
+        
         {/* Header */}
         <div className="p-3 sm:p-4 border-b border-gray-600/30 flex items-center justify-between bg-gradient-to-r from-gray-800/40 to-gray-800/20">
           <div className="flex items-center space-x-2.5">
