@@ -37,7 +37,10 @@
     "start": "vite --host",
     "build": "vite build",
     "build:production": "cp .env.production .env && npm run build",
-    "test": "echo \"No test specified\" && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:basic": "vitest run src/utils/__tests__/ src/__tests__/CameraCard.test.tsx src/components/__tests__/AppHeader.test.tsx src/__tests__/DeviceControl.test.tsx",
     "predeploy": "npm run build:production",
     "deploy": "cd ../cdk && cdk deploy --require-approval never ManorWebsiteStack",
     "deploy:all": "cd ../cdk && cdk deploy --require-approval never --all",
@@ -66,10 +69,13 @@
     "@types/axios": "^0.14.4",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@vitest/coverage-v8": "^2.0.0",
     "autoprefixer": "^10.4.18",
     "aws-sdk": "^2.1692.0",
+    "jsdom": "^25.0.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.0.0"
   }
 }
