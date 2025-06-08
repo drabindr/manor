@@ -23,6 +23,15 @@ const isRunningState = (state: string): boolean => {
   return keywords.some(k => upper.includes(k));
 };
 
+// Helper to format cycle names for display
+const formatCycleName = (cycle: string): string => {
+  return cycle
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 // Helper to format running state for display
 const formatRunningState = (state: string): string => {
   if (!state) return "UNKNOWN";
@@ -94,6 +103,7 @@ const LGDeviceCard = memo(({
   device,
   status,
   selectedCycle,
+  availableCycles,
   onCycleSelect,
   onPowerToggle,
   onStartStop
@@ -101,12 +111,30 @@ const LGDeviceCard = memo(({
   device: LGDevice;
   status: LGDeviceStatus;
   selectedCycle?: string;
+  availableCycles?: string[];
   onCycleSelect: (cycle: string) => void;
   onPowerToggle: () => void;
   onStartStop: () => void;
 }) => {
   const [reconnecting, setReconnecting] = useState(false);
-  const cycles = ["NORMAL","TOWEL","DELICATE","BEDDING"];
+  
+  // Use available cycles or fallback to default
+  const cycles = availableCycles && availableCycles.length > 0 ? availableCycles : [
+    "NORMAL",
+    "QUICK_WASH", 
+    "HEAVY_DUTY",
+    "DELICATE",
+    "TOWEL",
+    "BEDDING",
+    "COTTON",
+    "SYNTHETIC",
+    "WOOL",
+    "STEAM",
+    "SANITIZE",
+    "SPIN_RINSE",
+    "ECO_WASH"
+  ];
+  
   const iconMap = {
     washer: "washing-machine.png",
     dryer: "dryer.png",
@@ -145,74 +173,77 @@ const LGDeviceCard = memo(({
   const deviceStatus = isActive ? "active" : (status.isPoweredOn ? "on" : "off");
 
   return (
-    <div className="relative bg-gradient-to-br from-gray-700/50 via-gray-800/70 to-gray-900/90 rounded-xl border border-gray-600/40 overflow-hidden shadow-xl transition-all duration-300 hover:shadow-blue-900/30 active:scale-[0.998] hover:border-gray-500/60 backdrop-blur-sm">
-      {/* Status Indicator with enhanced design */}
-      <div className={`absolute top-0 left-0 right-0 h-1 transition-all duration-500 ${
+    <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/80 to-gray-900/90 rounded-2xl border border-slate-600/30 overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-blue-900/20 active:scale-[0.998] hover:border-slate-500/50 backdrop-blur-md">
+      {/* Enhanced ambient glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3 pointer-events-none" />
+      
+      {/* Status Indicator with premium design */}
+      <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-700 ${
         isActive
-          ? "bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 animate-pulse shadow-lg shadow-blue-500/50"
+          ? "bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-400 animate-pulse shadow-lg shadow-blue-500/40"
           : status.isPoweredOn
-            ? "bg-gradient-to-r from-green-400 via-green-500 to-green-400 shadow-md shadow-green-500/30"
-            : "bg-gradient-to-r from-red-400 via-red-500 to-red-400 shadow-md shadow-red-500/30"
+            ? "bg-gradient-to-r from-green-400 via-emerald-500 to-green-400 shadow-md shadow-green-500/25"
+            : "bg-gradient-to-r from-gray-500 via-slate-400 to-gray-500 shadow-md shadow-gray-500/20"
       }`} />
 
-      {/* Running Animation with enhanced glow */}
+      {/* Enhanced Running Animation */}
       {isActive && (
-        <div className="absolute top-3 right-3 z-10">
-          <div className="relative flex h-3 w-3">
+        <div className="absolute top-4 right-4 z-10">
+          <div className="relative flex h-3.5 w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 shadow-lg shadow-blue-500/50" />
+            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/50" />
           </div>
         </div>
       )}
 
-      {/* Enhanced Header */}
-      <div className="p-4 flex items-center space-x-3">
-        <div className="relative w-12 h-12 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl border border-gray-600/50 shadow-inner flex-shrink-0">
+      {/* Enhanced Header with better typography */}
+      <div className="p-5 flex items-center space-x-4">
+        <div className="relative w-14 h-14 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl border border-slate-600/40 shadow-inner flex-shrink-0">
           <OptimizedImage
             src={`/device_icons/${iconMap[device.deviceType]}`}
             alt={device.deviceType}
-            className="w-8 h-8 object-contain opacity-90 transition-opacity duration-300"
+            className="w-9 h-9 object-contain opacity-90 transition-opacity duration-300"
             onError={handleImgError}
             loading="lazy"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-transparent rounded-2xl pointer-events-none" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-gray-100 font-semibold text-base truncate leading-tight tracking-wide">
+          <h3 className="text-slate-100 font-semibold text-lg truncate leading-tight tracking-wide">
             {device.deviceName !== "Unknown Device"
               ? device.deviceName
-              : `LG ${device.deviceType[0].toUpperCase() + device.deviceType.slice(1)}`}
+              : `${device.deviceType[0].toUpperCase() + device.deviceType.slice(1)}`}
           </h3>
-          <div className="text-gray-400 text-sm truncate mt-0.5">
+          <div className="text-slate-400 text-sm truncate mt-1">
             {device.modelName !== "Unknown Model"
               ? device.modelName
               : "Reconnecting..."}
           </div>
 
-          {/* Timer inline with enhanced styling */}
+          {/* Timer with enhanced premium styling */}
           {showTimer && status.remainingTime && (
-            <div className="flex items-center mt-2 px-2 py-1 bg-blue-900/30 rounded-lg border border-blue-700/40">
-              <UilClock className="h-3 w-3 mr-1.5 text-blue-400" />
-              <span className="text-xs text-blue-300 font-medium">{status.remainingTime} min remaining</span>
+            <div className="flex items-center mt-3 px-3 py-2 bg-blue-900/20 rounded-xl border border-blue-700/30 backdrop-blur-sm">
+              <UilClock className="h-4 w-4 mr-2 text-blue-400" />
+              <span className="text-sm text-blue-300 font-medium">{status.remainingTime} min remaining</span>
             </div>
           )}
         </div>
-        <div className={`px-3 py-2 rounded-full text-xs font-semibold transition-all duration-300 flex-shrink-0 backdrop-blur-sm ${
+        <div className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex-shrink-0 backdrop-blur-sm ${
           device.deviceType === "unknown"
-            ? "bg-yellow-900/40 text-yellow-300 border border-yellow-700/50 shadow-md shadow-yellow-500/20"
+            ? "bg-amber-900/30 text-amber-300 border border-amber-700/40 shadow-md shadow-amber-500/15"
             : isActive
-              ? "bg-blue-900/50 text-blue-200 border border-blue-700/60 animate-pulse shadow-lg shadow-blue-500/30"
+              ? "bg-blue-900/40 text-blue-200 border border-blue-700/50 animate-pulse shadow-lg shadow-blue-500/25"
               : status.isPoweredOn
-                ? "bg-green-900/50 text-green-200 border border-green-700/60 shadow-md shadow-green-500/20"
-                : "bg-red-900/50 text-red-200 border border-red-700/60 shadow-md shadow-red-500/20"
+                ? "bg-emerald-900/40 text-emerald-200 border border-emerald-700/50 shadow-md shadow-emerald-500/15"
+                : "bg-slate-800/60 text-slate-300 border border-slate-600/50 shadow-md shadow-slate-500/10"
         }`}>
           {badgeText}
         </div>
       </div>
 
-      {/* Enhanced Controls */}
-      <div className="px-4 pb-4">
+      {/* Enhanced Controls with premium styling */}
+      <div className="px-5 pb-5">
         <div className="flex gap-3">
           {/* Power Button */}
           {device.deviceType === "unknown" ? (
@@ -223,14 +254,14 @@ const LGDeviceCard = memo(({
                 triggerHapticFeedback(hapticPatterns.WARNING);
                 setTimeout(() => setReconnecting(false), 3000);
               }}
-              className="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center
-                       transition-all duration-300 bg-gradient-to-r from-yellow-700/70 to-yellow-600/70 hover:from-yellow-600/80 hover:to-yellow-500/80 active:from-yellow-800/90 active:to-yellow-700/90
-                       text-white border border-yellow-500/60 shadow-lg hover:shadow-xl active:shadow-inner
-                       tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[48px] touch-manipulation transform"
+              className="flex-1 py-3.5 px-5 rounded-xl text-sm font-semibold flex items-center justify-center
+                       transition-all duration-300 bg-gradient-to-r from-amber-700/60 to-amber-600/60 hover:from-amber-600/70 hover:to-amber-500/70 active:from-amber-800/80 active:to-amber-700/80
+                       text-white border border-amber-500/50 shadow-lg hover:shadow-xl active:shadow-inner
+                       tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[52px] touch-manipulation transform"
               disabled={reconnecting}
               style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
             >
-              <UilSync size={16} className={`mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
+              <UilSync size={18} className={`mr-2.5 ${reconnecting ? 'animate-spin' : ''}`} />
               <span>{reconnecting ? 'Reconnecting...' : 'Reconnect Device'}</span>
             </button>
           ) : (
@@ -243,25 +274,27 @@ const LGDeviceCard = memo(({
                   setTimeout(() => setReconnecting(false), 2000);
                 }}
                 disabled={reconnecting || status.remoteControlEnabled === false}
-                className={`px-4 py-3 rounded-lg text-sm font-semibold flex items-center justify-center
-                           transition-all duration-300 min-h-[48px] touch-manipulation transform ${
+                className={`px-5 py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center
+                           transition-all duration-300 min-h-[52px] touch-manipulation transform ${
                              status.remoteControlEnabled === false
-                               ? "bg-gray-600/50 text-gray-400 border border-gray-500/40 cursor-not-allowed"
+                               ? "bg-slate-600/40 text-slate-400 border border-slate-500/30 cursor-not-allowed"
                                : status.isPoweredOn
-                               ? "bg-gradient-to-r from-red-700/70 to-red-600/70 hover:from-red-600/80 hover:to-red-500/80 active:from-red-800/90 active:to-red-700/90 text-white border border-red-500/60 shadow-lg hover:shadow-xl"
-                               : "bg-gradient-to-r from-green-700/70 to-green-600/70 hover:from-green-600/80 hover:to-green-500/80 active:from-green-800/90 active:to-green-700/90 text-white border border-green-500/60 shadow-lg hover:shadow-xl"
+                               ? "bg-gradient-to-r from-rose-700/60 to-rose-600/60 hover:from-rose-600/70 hover:to-rose-500/70 active:from-rose-800/80 active:to-rose-700/80 text-white border border-rose-500/50 shadow-lg hover:shadow-xl"
+                               : "bg-gradient-to-r from-emerald-700/60 to-emerald-600/60 hover:from-emerald-600/70 hover:to-emerald-500/70 active:from-emerald-800/80 active:to-emerald-700/80 text-white border border-emerald-500/50 shadow-lg hover:shadow-xl"
                            } active:shadow-inner tap-highlight-transparent active:scale-95 backdrop-blur-sm`}
                 style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
-                <UilPower size={16} className={`mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
+                <UilPower size={18} className={`mr-2.5 ${reconnecting ? 'animate-spin' : ''}`} />
                 <span>
                   {status.remoteControlEnabled === false 
                     ? "Remote Disabled" 
-                    : status.isPoweredOn ? "Turn Off" : "Turn On"}
+                    : status.isPoweredOn 
+                      ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
+                      : "Turn On"}
                 </span>
               </button>
 
-              {/* Cycle Dropdown */}
+              {/* Enhanced Cycle Dropdown */}
               <select
                 value={selectedCycle || ""}
                 onChange={(e) => {
@@ -271,24 +304,24 @@ const LGDeviceCard = memo(({
                   }
                 }}
                 disabled={!status.isPoweredOn}
-                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium border transition-all duration-300 backdrop-blur-sm
-                          min-h-[48px] touch-manipulation transform ${!status.isPoweredOn
-                            ? "bg-gray-700/50 text-gray-500 border-gray-500/40 cursor-not-allowed"
+                className={`flex-1 py-3.5 px-5 rounded-xl text-sm font-medium border transition-all duration-300 backdrop-blur-sm
+                          min-h-[52px] touch-manipulation transform ${!status.isPoweredOn
+                            ? "bg-slate-700/40 text-slate-500 border-slate-500/30 cursor-not-allowed"
                             : selectedCycle
-                              ? "bg-gradient-to-r from-blue-700/70 to-blue-600/70 text-white border-blue-500/60 shadow-lg"
-                              : "bg-gray-700/80 text-gray-300 border-gray-500/60 hover:bg-gray-600/90 shadow-md"
-                          } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                              ? "bg-gradient-to-r from-blue-700/60 to-blue-600/60 text-white border-blue-500/50 shadow-lg"
+                              : "bg-slate-700/60 text-slate-300 border-slate-500/50 hover:bg-slate-600/70 shadow-md"
+                          } focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400/60`}
                 style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
                 <option value="">Select Wash Cycle</option>
-                {cycles.map(cycle => (
+                {cycles.map((cycle: string) => (
                   <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
-                    {cycle}
+                    {formatCycleName(cycle)}
                   </option>
                 ))}
               </select>
 
-              {/* Start/Stop button */}
+              {/* Enhanced Start/Stop button */}
               {selectedCycle && (
                 <button
                   onClick={() => {
@@ -296,14 +329,14 @@ const LGDeviceCard = memo(({
                     triggerHapticFeedback(hapticPatterns.SUCCESS);
                   }}
                   disabled={!status.isPoweredOn}
-                  className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center justify-center backdrop-blur-sm
-                            min-h-[48px] touch-manipulation transform ${isActive
-                              ? "bg-gradient-to-r from-red-600/80 to-red-500/80 hover:from-red-500/90 hover:to-red-400/90 text-white border border-red-400/60 shadow-lg hover:shadow-xl"
-                              : "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500/90 hover:to-blue-400/90 text-white border border-blue-400/60 shadow-lg hover:shadow-xl"
+                  className={`px-5 py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center backdrop-blur-sm
+                            min-h-[52px] touch-manipulation transform ${isActive
+                              ? "bg-gradient-to-r from-rose-600/70 to-rose-500/70 hover:from-rose-500/80 hover:to-rose-400/80 text-white border border-rose-400/50 shadow-lg hover:shadow-xl"
+                              : "bg-gradient-to-r from-blue-600/70 to-blue-500/70 hover:from-blue-500/80 hover:to-blue-400/80 text-white border border-blue-400/50 shadow-lg hover:shadow-xl"
                             } active:shadow-inner tap-highlight-transparent active:scale-95`}
                   style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
-                  {isActive ? <UilPower size={16} className="mr-2" /> : <UilPower size={16} className="mr-2" />}
+                  {isActive ? <UilPower size={18} className="mr-2.5" /> : <UilPower size={18} className="mr-2.5" />}
                   <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
                 </button>
               )}
@@ -312,8 +345,8 @@ const LGDeviceCard = memo(({
         </div>
       </div>
       
-      {/* Bottom accent line */}
-      <div className="h-1 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30" />
+      {/* Enhanced bottom accent line */}
+      <div className="h-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20" />
     </div>
   );
 });
@@ -325,6 +358,7 @@ const LGPairedDeviceCard = memo(({
   washerStatus,
   dryerStatus,
   selectedCycles,
+  availableCycles,
   onCycleSelect,
   onPowerToggle,
   onStartStop
@@ -334,12 +368,32 @@ const LGPairedDeviceCard = memo(({
   washerStatus: LGDeviceStatus;
   dryerStatus: LGDeviceStatus;
   selectedCycles: Record<string, string>;
+  availableCycles: Record<string, string[]>;
   onCycleSelect: (deviceId: string, cycle: string) => void;
   onPowerToggle: (device: LGDevice) => void;
   onStartStop: (device: LGDevice) => void;
 }) => {
   const [reconnecting, setReconnecting] = useState<Record<string, boolean>>({});
-  const cycles = ["NORMAL","TOWEL","DELICATE","BEDDING"];
+  
+  // Function to get cycles for a device (with fallback)
+  const getCyclesForDevice = (deviceId: string) => {
+    const deviceCycles = availableCycles[deviceId];
+    return deviceCycles && deviceCycles.length > 0 ? deviceCycles : [
+      "NORMAL",
+      "QUICK_WASH", 
+      "HEAVY_DUTY",
+      "DELICATE",
+      "TOWEL", 
+      "BEDDING",
+      "COTTON",
+      "SYNTHETIC",
+      "WOOL",
+      "STEAM",
+      "SANITIZE",
+      "SPIN_RINSE",
+      "ECO_WASH"
+    ];
+  };
   
   const isActiveDevice = (device: LGDevice, status: LGDeviceStatus) => 
     isRunningState(status.currentState);
@@ -366,60 +420,60 @@ const LGPairedDeviceCard = memo(({
     
     return (
       <div className="flex-1 relative min-w-0">
-        {/* Status Indicator with enhanced design */}
-        <div className={`absolute top-0 left-0 right-0 h-1 transition-all duration-500 ${
+        {/* Enhanced Status Indicator */}
+        <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-700 ${
           isActive
-            ? "bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 animate-pulse shadow-lg shadow-blue-500/50"
+            ? "bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-400 animate-pulse shadow-lg shadow-blue-500/40"
             : status.isPoweredOn
-              ? "bg-gradient-to-r from-green-400 via-green-500 to-green-400 shadow-md shadow-green-500/30"
-              : "bg-gradient-to-r from-red-400 via-red-500 to-red-400 shadow-md shadow-red-500/30"
+              ? "bg-gradient-to-r from-green-400 via-emerald-500 to-green-400 shadow-md shadow-green-500/25"
+              : "bg-gradient-to-r from-gray-500 via-slate-400 to-gray-500 shadow-md shadow-gray-500/20"
         }`} />
 
-        {/* Running Animation with enhanced glow */}
+        {/* Enhanced Running Animation */}
         {isActive && (
-          <div className="absolute top-3 right-3 z-10">
-            <div className="relative flex h-2.5 w-2.5">
+          <div className="absolute top-4 right-4 z-10">
+            <div className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500 shadow-lg shadow-blue-500/50" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/50" />
             </div>
           </div>
         )}
 
-        {/* Device Header */}
-        <div className="p-4 pb-3">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="relative w-10 h-10 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl border border-gray-600/50 shadow-inner flex-shrink-0">
-              <span className="text-blue-400 text-lg font-bold tracking-tight">{deviceIcon}</span>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none" />
+        {/* Enhanced Device Header */}
+        <div className="p-5 pb-4">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="relative w-12 h-12 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl border border-slate-600/40 shadow-inner flex-shrink-0">
+              <span className="text-blue-400 text-xl font-bold tracking-tight">{deviceIcon}</span>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-transparent rounded-xl pointer-events-none" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-gray-100 font-semibold text-sm truncate leading-tight tracking-wide">
+              <h4 className="text-slate-100 font-semibold text-base truncate leading-tight tracking-wide">
                 {deviceName}
               </h4>
-              <div className="text-gray-400 text-xs truncate mt-0.5">
+              <div className="text-slate-400 text-sm truncate mt-1">
                 {device.modelName !== "Unknown Model" ? device.modelName : "Reconnecting..."}
               </div>
             </div>
           </div>
 
-          {/* Status Badge with enhanced design */}
-          <div className={`inline-flex px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 backdrop-blur-sm ${
+          {/* Enhanced Status Badge */}
+          <div className={`inline-flex px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 backdrop-blur-sm ${
             device.deviceType === "unknown"
-              ? "bg-yellow-900/40 text-yellow-300 border border-yellow-700/50 shadow-md shadow-yellow-500/20"
+              ? "bg-amber-900/30 text-amber-300 border border-amber-700/40 shadow-md shadow-amber-500/15"
               : isActive
-                ? "bg-blue-900/50 text-blue-200 border border-blue-700/60 animate-pulse shadow-lg shadow-blue-500/30"
+                ? "bg-blue-900/40 text-blue-200 border border-blue-700/50 animate-pulse shadow-lg shadow-blue-500/25"
                 : status.isPoweredOn
-                  ? "bg-green-900/50 text-green-200 border border-green-700/60 shadow-md shadow-green-500/20"
-                  : "bg-red-900/50 text-red-200 border border-red-700/60 shadow-md shadow-red-500/20"
+                  ? "bg-emerald-900/40 text-emerald-200 border border-emerald-700/50 shadow-md shadow-emerald-500/15"
+                  : "bg-slate-800/60 text-slate-300 border border-slate-600/50 shadow-md shadow-slate-500/10"
           }`}>
             {badgeText}
           </div>
 
-          {/* Timer with enhanced styling */}
+          {/* Enhanced Timer */}
           {showTimer(device, status) && status.remainingTime && (
-            <div className="flex items-center mt-2 px-2 py-1 bg-blue-900/30 rounded-lg border border-blue-700/40">
-              <UilClock className="h-3 w-3 mr-1.5 text-blue-400" />
-              <span className="text-xs text-blue-300 font-medium">{status.remainingTime} min remaining</span>
+            <div className="flex items-center mt-3 px-3 py-2 bg-blue-900/20 rounded-xl border border-blue-700/30 backdrop-blur-sm">
+              <UilClock className="h-4 w-4 mr-2 text-blue-400" />
+              <span className="text-sm text-blue-300 font-medium">{status.remainingTime} min remaining</span>
             </div>
           )}
         </div>
@@ -470,7 +524,9 @@ const LGPairedDeviceCard = memo(({
                   <span>
                     {status.remoteControlEnabled === false 
                       ? "Remote Disabled" 
-                      : status.isPoweredOn ? "Turn Off" : "Turn On"}
+                      : status.isPoweredOn 
+                        ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
+                        : "Turn On"}
                   </span>
                 </button>
 
@@ -494,9 +550,9 @@ const LGPairedDeviceCard = memo(({
                   style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
                 >
                   <option value="">Select Wash Cycle</option>
-                  {cycles.map(cycle => (
+                  {getCyclesForDevice(device.deviceId).map((cycle: string) => (
                     <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
-                      {cycle}
+                      {formatCycleName(cycle)}
                     </option>
                   ))}
                 </select>
@@ -528,33 +584,22 @@ const LGPairedDeviceCard = memo(({
   };
 
   return (
-    <div className="relative bg-gradient-to-br from-gray-700/50 via-gray-800/70 to-gray-900/90 rounded-xl border border-gray-600/40 overflow-hidden shadow-xl transition-all duration-300 hover:shadow-blue-900/30 active:scale-[0.998] hover:border-gray-500/60 backdrop-blur-sm">
-      {/* Ambient glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+    <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/80 to-gray-900/90 rounded-2xl border border-slate-600/30 overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-blue-900/20 active:scale-[0.998] hover:border-slate-500/50 backdrop-blur-md">
+      {/* Enhanced ambient glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3 pointer-events-none" />
       
-      {/* Header with title */}
-      <div className="relative p-4 border-b border-gray-600/30 bg-gradient-to-r from-gray-800/60 to-gray-700/40">
-        <div className="flex items-center justify-center space-x-3">
-          <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 p-2 rounded-xl border border-gray-600/50 shadow-inner">
-            <UilPower className="text-blue-400" size={18} />
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none" />
-          </div>
-          <h3 className="text-gray-100 font-semibold text-base tracking-wide">LG Appliances</h3>
-        </div>
-      </div>
-
       {/* Side-by-side device layout - responsive for mobile */}
-      <div className="flex flex-col sm:flex-row sm:divide-x sm:divide-gray-600/30">
+      <div className="flex flex-col sm:flex-row sm:divide-x sm:divide-slate-600/20">
         <DeviceColumn device={washer} status={washerStatus} />
         
-        {/* Horizontal separator for mobile */}
-        <div className="block sm:hidden h-px bg-gradient-to-r from-transparent via-gray-600/50 to-transparent mx-4" />
+        {/* Enhanced horizontal separator for mobile */}
+        <div className="block sm:hidden h-px bg-gradient-to-r from-transparent via-slate-600/40 to-transparent mx-5" />
         
         <DeviceColumn device={dryer} status={dryerStatus} />
       </div>
       
-      {/* Bottom accent line */}
-      <div className="h-1 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30" />
+      {/* Enhanced bottom accent line */}
+      <div className="h-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20" />
     </div>
   );
 });
@@ -563,10 +608,28 @@ const LGAppliances: React.FC = () => {
   const [lgDevices, setLgDevices] = useState<LGDevice[]>([]);
   const [lgStatus, setLgStatus] = useState<Record<string,LGDeviceStatus>>({});
   const [selectedCycles, setSelectedCycles] = useState<Record<string,string>>({});
+  const [availableCycles, setAvailableCycles] = useState<Record<string,string[]>>({});
   const [lgLoading, setLgLoading] = useState(true);
   const [lgError, setLgError] = useState<string|null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Default fallback cycles if dynamic fetching fails
+  const fallbackCycles = [
+    "NORMAL",
+    "QUICK_WASH", 
+    "HEAVY_DUTY",
+    "DELICATE",
+    "TOWEL",
+    "BEDDING",
+    "COTTON",
+    "SYNTHETIC",
+    "WOOL",
+    "STEAM",
+    "SANITIZE",
+    "SPIN_RINSE",
+    "ECO_WASH"
+  ];
 
   // OPTIMIZATION: Separate state for actual polling interval used by useEffect
   const [activePollingInterval, setActivePollingInterval] = useState(300000); // 5 minutes default
@@ -628,7 +691,7 @@ const LGAppliances: React.FC = () => {
         { method:"GET", headers:{ "Accept":"application/json","Content-Type":"application/json" } }
       );
       if (listRes.status === 401) {
-        setLgError("LG ThinQ authorization expired. Please reconnect.");
+        setLgError("Smart appliance authorization expired. Please reconnect your account.");
         setLgDevices([]);
         return;
       }
@@ -711,6 +774,11 @@ const LGAppliances: React.FC = () => {
       setLgStatus(newStatus);
       setLgError(null);
       
+      // 3) Fetch available cycles for all devices (only on initial load or when devices change)
+      if (initialLoad || devices.length !== lgDevices.length) {
+        await fetchCyclesForAllDevices(devices);
+      }
+      
       // Calculate optimal polling interval based on current device states
       const newInterval = calculatePollingInterval(newStatus);
       if (Math.abs(newInterval - currentPollingInterval) > 1000) { // Only update if difference is >1s to avoid noise
@@ -719,7 +787,7 @@ const LGAppliances: React.FC = () => {
       }
     } catch(err:any) {
       console.error("fetchLGDevices error", err);
-      setLgError("Failed to load LG appliances");
+      setLgError("Failed to load smart appliances");
       setLgDevices([]);
     } finally {
       setLgLoading(false);
@@ -727,7 +795,7 @@ const LGAppliances: React.FC = () => {
     }
   };
 
-  // Power toggle
+  // Power toggle with drain functionality for washers
   const handlePowerToggle = async (dev: LGDevice) => {
     const cur = lgStatus[dev.deviceId];
     
@@ -739,7 +807,39 @@ const LGAppliances: React.FC = () => {
       return;
     }
     
-    // Note: isPoweredOn now has a fallback to false, so it shouldn't be undefined
+    // Special handling for washers when turning off - initiate drain
+    if (dev.deviceType === "washer" && cur.isPoweredOn) {
+      // For washers being turned off, use DRAIN mode instead of POWER_OFF
+      const mode = "DRAIN";
+      
+      // optimistic UI for drain
+      setLgStatus(ps => ({
+        ...ps,
+        [dev.deviceId]: {
+          ...ps[dev.deviceId],
+          currentState: "Draining..."
+        }
+      }));
+
+      try {
+        await fetch(
+          `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
+          {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ data:{ deviceId: dev.deviceId, mode } })
+          }
+        );
+        // Refresh data immediately after successful drain action
+        setTimeout(() => fetchLGDevices(false), 2000);
+      } catch(err) {
+        console.error("Drain initiation error", err);
+        fetchLGDevices(true);
+      }
+      return;
+    }
+    
+    // Standard power toggle for other cases
     const mode = cur.isPoweredOn ? "POWER_OFF" : "POWER_ON";
 
     // optimistic UI
@@ -922,6 +1022,56 @@ const LGAppliances: React.FC = () => {
     };
   };
 
+  // Fetch available cycles for a device
+  const fetchAvailableCycles = async (deviceId: string) => {
+    try {
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/washer/cycles",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ data: { deviceId } })
+        }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        // The API returns the cycles directly from getAvailableCycles
+        const cycles = Array.isArray(result) ? result : [];
+        const finalCycles = cycles.length > 0 ? cycles : fallbackCycles;
+        
+        setAvailableCycles(prev => ({
+          ...prev,
+          [deviceId]: finalCycles
+        }));
+        return finalCycles;
+      } else {
+        console.warn(`Failed to fetch cycles for device ${deviceId}, using fallback`);
+        setAvailableCycles(prev => ({
+          ...prev,
+          [deviceId]: fallbackCycles
+        }));
+        return fallbackCycles;
+      }
+    } catch (error) {
+      console.error(`Error fetching cycles for device ${deviceId}:`, error);
+      setAvailableCycles(prev => ({
+        ...prev,
+        [deviceId]: fallbackCycles
+      }));
+      return fallbackCycles;
+    }
+  };
+
+  // Fetch cycles for all devices
+  const fetchCyclesForAllDevices = async (devices: LGDevice[]) => {
+    const cyclePromises = devices
+      .filter(device => device.deviceType === "washer" || device.deviceType === "dryer")
+      .map(device => fetchAvailableCycles(device.deviceId));
+    
+    await Promise.all(cyclePromises);
+  };
+
   // Adaptive polling based on device states
   useEffect(() => {
     fetchLGDevices(true);
@@ -973,10 +1123,11 @@ const LGAppliances: React.FC = () => {
         {/* Header */}
         <div className="p-3 sm:p-4 border-b border-gray-600/30 flex items-center justify-between bg-gradient-to-r from-gray-800/40 to-gray-800/20">
           <div className="flex items-center space-x-2.5">
-            <div className="bg-gray-800 p-2 rounded-lg border border-gray-600/50 shadow-inner">
-              <UilPower className="text-blue-400" size={20} />
+            <div className="bg-gradient-to-br from-blue-700 to-blue-800 p-2 rounded-lg border border-blue-600/50 shadow-inner relative">
+              <UilPower className="text-blue-100" size={20} />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-lg pointer-events-none" />
             </div>
-            <h2 className="text-gray-100 font-medium text-base">LG ThinQ Appliances</h2>
+            <h2 className="text-gray-100 font-semibold text-lg tracking-wide">Laundry Appliances</h2>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -996,15 +1147,6 @@ const LGAppliances: React.FC = () => {
             {isRefreshing && (
               <div className="p-2 rounded-full bg-gray-800/80 text-blue-400 border border-gray-700/50">
                 <UilSync size={18} className="animate-spin" />
-              </div>
-            )}
-            
-            {!lgLoading && (
-              <div className="text-xs text-blue-300 bg-blue-900/40 px-3 py-1.5 rounded-full border border-blue-800/40 flex items-center space-x-2 shadow-inner">
-                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-                <span>{lgDevices.length} {lgDevices.length === 1 ? 'device' : 'devices'}</span>
-                <span className="text-gray-400">•</span>
-                <span>{Math.round(activePollingInterval / 1000)}s</span>
               </div>
             )}
           </div>
@@ -1042,13 +1184,13 @@ const LGAppliances: React.FC = () => {
           {/* Loading State */}
           {lgLoading ? (
             <>
-              <div className="py-6 flex flex-col items-center justify-center text-gray-300 mb-6">
-                <div className="bg-gray-800/80 p-4 rounded-full border border-gray-600/50 shadow-inner mb-4">
-                  <UilSync className="animate-spin text-blue-400" size={36} />
+                <div className="py-6 flex flex-col items-center justify-center text-gray-300 mb-6">
+                  <div className="bg-gray-800/80 p-4 rounded-full border border-gray-600/50 shadow-inner mb-4">
+                    <UilSync className="animate-spin text-blue-400" size={36} />
+                  </div>
+                  <p className="text-lg">Loading smart appliances...</p>
+                  <p className="text-gray-500 text-sm mt-2">Please wait while we connect to your devices</p>
                 </div>
-                <p className="text-lg">Loading LG appliances...</p>
-                <p className="text-gray-500 text-sm mt-2">Please wait while we connect to your devices</p>
-              </div>
               
               <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {[...Array(3)].map((_, i) => (
@@ -1063,8 +1205,8 @@ const LGAppliances: React.FC = () => {
                     <div className="bg-gray-800/80 p-4 rounded-full border border-gray-600/50 shadow-inner mb-4">
                       <UilPower className="text-gray-400" size={36} />
                     </div>
-                    <p className="text-lg">No LG appliances found</p>
-                    <p className="text-gray-500 text-sm mt-2">Connect your LG ThinQ account to see your devices</p>
+                    <p className="text-lg">No smart appliances found</p>
+                    <p className="text-gray-500 text-sm mt-2">Connect your smart home appliances to see them here</p>
                   </div>
                 ) : (
                   /* Device Grid - Check for paired washer/dryer first */
@@ -1084,6 +1226,7 @@ const LGAppliances: React.FC = () => {
                               washerStatus={lgStatus[washer.deviceId] || { currentState: "UNKNOWN", isPoweredOn: false }}
                               dryerStatus={lgStatus[dryer.deviceId] || { currentState: "UNKNOWN", isPoweredOn: false }}
                               selectedCycles={selectedCycles}
+                              availableCycles={availableCycles}
                               onPowerToggle={handlePowerToggle}
                               onCycleSelect={handleCycleSelect}
                               onStartStop={handleStartStop}
@@ -1101,6 +1244,7 @@ const LGAppliances: React.FC = () => {
                                 device={washer}
                                 status={lgStatus[washer.deviceId] || { currentState: "UNKNOWN", isPoweredOn: false }}
                                 selectedCycle={selectedCycles[washer.deviceId]}
+                                availableCycles={availableCycles[washer.deviceId]}
                                 onPowerToggle={() => handlePowerToggle(washer)}
                                 onCycleSelect={cycle => handleCycleSelect(washer.deviceId, cycle)}
                                 onStartStop={() => handleStartStop(washer)}
@@ -1112,6 +1256,7 @@ const LGAppliances: React.FC = () => {
                                 device={dryer}
                                 status={lgStatus[dryer.deviceId] || { currentState: "UNKNOWN", isPoweredOn: false }}
                                 selectedCycle={selectedCycles[dryer.deviceId]}
+                                availableCycles={availableCycles[dryer.deviceId]}
                                 onPowerToggle={() => handlePowerToggle(dryer)}
                                 onCycleSelect={cycle => handleCycleSelect(dryer.deviceId, cycle)}
                                 onStartStop={() => handleStartStop(dryer)}
@@ -1125,6 +1270,7 @@ const LGAppliances: React.FC = () => {
                                 device={dev}
                                 status={lgStatus[dev.deviceId] || { currentState: "UNKNOWN", isPoweredOn: false }}
                                 selectedCycle={selectedCycles[dev.deviceId]}
+                                availableCycles={availableCycles[dev.deviceId]}
                                 onPowerToggle={() => handlePowerToggle(dev)}
                                 onCycleSelect={cycle => handleCycleSelect(dev.deviceId, cycle)}
                                 onStartStop={() => handleStartStop(dev)}
