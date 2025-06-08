@@ -120,6 +120,7 @@ async function getDeviceList(token: string): Promise<any[]> {
             );
             return {
               ...device,
+              relay_state: 0, // Default to OFF for devices with missing data
               error: 'responseData is missing or invalid',
             };
           }
@@ -132,6 +133,7 @@ async function getDeviceList(token: string): Promise<any[]> {
             );
             return {
               ...device,
+              relay_state: 0, // Default to OFF for devices with errors
               error: responseData.msg || 'Unknown error',
             };
           }
@@ -145,6 +147,7 @@ async function getDeviceList(token: string): Promise<any[]> {
           );
           return {
             ...device,
+            relay_state: 0, // Default to OFF for devices with communication errors
             error: error.response?.data?.msg || error.message || 'Unknown error',
           };
         }
