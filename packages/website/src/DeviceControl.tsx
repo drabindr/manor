@@ -33,6 +33,8 @@ const deviceIcons: Record<string, string> = {
   "Mariah closet": "/device_icons/girl_closet.png",
   "Mariah closet 2": "/device_icons/girl_closet.png",
   "Luka room lamp": "/device_icons/luka_room_lamp.png",
+  "TV": "/device_icons/tv.png",
+  // Note: Xmas Tree removed since it's typically unplugged and filtered out
 };
 
 type LightDevice = {
@@ -47,6 +49,7 @@ const getRoomIcon = (groupName: string) => {
   const iconMap: Record<string, string> = {
     Kitchen: "☕",
     Bedroom: "🛏️", 
+    LivingRoom: "📺",
     Outdoor: "🌳",
     Bathroom: "🚿",
     Garage: "🚗",
@@ -69,16 +72,16 @@ const getTimeBasedPriorityDevices = () => {
       suggested: ["Bathroom", "Kitchen"]
     };
   } else if (hour >= 11 && hour < 17) {
-    // Afternoon: Kitchen, LG appliances (lights less relevant when not dark)
+    // Afternoon: Kitchen, TV, LG appliances (lights less relevant when not dark)
     return {
-      essential: ["Coffee machine"],
-      suggested: ["Kitchen"]
+      essential: ["Coffee machine", "TV"],
+      suggested: ["Kitchen", "LivingRoom"]
     };
   } else if (hour >= 17 && hour < 22) {
-    // Evening: Outdoor lights, kitchen, bedroom
+    // Evening: Outdoor lights, kitchen, bedroom, TV
     return {
-      essential: ["Outdoor potlights", "Outdoor Lamps", "Coffee machine", "Bedroom"],
-      suggested: ["Outdoor", "Kitchen", "Bedroom"]
+      essential: ["Outdoor potlights", "Outdoor Lamps", "Coffee machine", "Bedroom", "TV"],
+      suggested: ["Outdoor", "Kitchen", "Bedroom", "LivingRoom"]
     };
   } else {
     // Night: Bedroom, bathroom, outdoor security
@@ -92,6 +95,7 @@ const getTimeBasedPriorityDevices = () => {
 const groupedLights: Record<string, string[]> = {
   Kitchen: ["Coffee machine"],
   Bedroom: ["Bedroom", "Lamp", "Baby room noise"],
+  LivingRoom: ["TV"], // Xmas Tree removed since it's typically unplugged
   Outdoor: [
     "Outdoor potlights",
     "Outdoor Lamps", 
@@ -111,19 +115,19 @@ const getTimeBasedRoomOrder = () => {
   
   // Morning (6 AM - 11 AM): Prioritize Kitchen, Bathroom, Bedroom
   if (hour >= 6 && hour < 11) {
-    return ["Kitchen", "Bathroom", "Bedroom", "Office", "Outdoor", "Garage", "Closet", "LukaRoom"];
+    return ["Kitchen", "Bathroom", "Bedroom", "LivingRoom", "Office", "Outdoor", "Garage", "Closet", "LukaRoom"];
   }
-  // Afternoon/Work hours (11 AM - 5 PM): Prioritize Kitchen, Bathroom (lights less relevant when not dark)
+  // Afternoon/Work hours (11 AM - 5 PM): Prioritize Kitchen, Living Room, Bathroom (lights less relevant when not dark)
   else if (hour >= 11 && hour < 17) {
-    return ["Kitchen", "Bathroom", "Bedroom", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
+    return ["Kitchen", "LivingRoom", "Bathroom", "Bedroom", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
   }
-  // Evening (5 PM - 10 PM): Prioritize Kitchen, Outdoor, Bedroom
+  // Evening (5 PM - 10 PM): Prioritize Kitchen, Living Room, Outdoor, Bedroom
   else if (hour >= 17 && hour < 22) {
-    return ["Kitchen", "Outdoor", "Bedroom", "Bathroom", "Office", "Garage", "Closet", "LukaRoom"];
+    return ["Kitchen", "LivingRoom", "Outdoor", "Bedroom", "Bathroom", "Office", "Garage", "Closet", "LukaRoom"];
   }
   // Night (10 PM - 6 AM): Prioritize Bedroom, Bathroom, Kitchen
   else {
-    return ["Bedroom", "Bathroom", "Kitchen", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
+    return ["Bedroom", "Bathroom", "Kitchen", "LivingRoom", "Outdoor", "Office", "Garage", "Closet", "LukaRoom"];
   }
 };
 
@@ -394,10 +398,12 @@ const DeviceControl: React.FC = () => {
       const hueData = await hueResponse.json();
 
       const combinedLights = [
-        ...(Array.isArray(tplinkData) ? tplinkData : []).map((light) => ({
-          ...light,
-          provider: "tplink",
-        })),
+        ...(Array.isArray(tplinkData) ? tplinkData : [])
+          .filter((light) => light.status === 1 && !light.error) // Only include online devices without errors
+          .map((light) => ({
+            ...light,
+            provider: "tplink",
+          })),
         ...Object.keys(hueData).map((lightId) => ({
           alias: hueData[lightId].name,
           deviceId: lightId,
