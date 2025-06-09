@@ -6,6 +6,7 @@ import * as hue from './providers/hue';
 import * as google from './providers/google'; // Import the Google Nest provider
 import * as airthings from './providers/airthings';
 import * as lg from './providers/lg'; // Import the LG ThinQ provider
+import { getCachedStream, setCachedStream, hasCachedStream, CachedStreamData } from './utils/sessionCache';
 
 // In-memory cache for Google devices
 // { data: any; timestamp: number }
@@ -57,10 +58,47 @@ async function listGoogleDevicesWithCache() {
 }
 
 /**
- * Wrap google.executeDeviceCommand with retries.
+ * Wrap google.executeDeviceCommand with retries and caching for camera streams.
  */
-async function executeGoogleDeviceCommand(deviceId: string, command: string, params?: any) {
-  return executeWithRetries(() => google.executeDeviceCommand(deviceId, command, params));
+async function executeGoogleDeviceCommand(deviceId: string, command: string, params?: any, sessionId?: string) {
+  // Check if this is a camera live stream command and if we have a session ID
+  if (sessionId && command === 'sdm.devices.commands.CameraLiveStream.GenerateWebRtcStream') {
+    // Check cache first
+    const cachedData = getCachedStream(sessionId, deviceId);
+    if (cachedData) {
+      console.log(`[Cache Hit] Returning cached stream data for session ${sessionId}, device ${deviceId}`);
+      return {
+        results: {
+          answerSdp: cachedData.answerSdp,
+          mediaSessionId: cachedData.mediaSessionId,
+          expiresAt: cachedData.expiresAt
+        }
+      };
+    }
+    
+    console.log(`[Cache Miss] Fetching new stream from Google for session ${sessionId}, device ${deviceId}`);
+  }
+  
+  // Execute the command with retries
+  const result = await executeWithRetries(() => google.executeDeviceCommand(deviceId, command, params));
+  
+  // Cache the result if it's a successful camera stream generation
+  if (sessionId && command === 'sdm.devices.commands.CameraLiveStream.GenerateWebRtcStream' && result?.results) {
+    const { answerSdp, mediaSessionId, expiresAt } = result.results;
+    if (answerSdp && mediaSessionId && expiresAt) {
+      const cacheData: CachedStreamData = {
+        answerSdp,
+        mediaSessionId,
+        expiresAt,
+        timestamp: Date.now(),
+        deviceId
+      };
+      setCachedStream(sessionId, deviceId, cacheData);
+      console.log(`[Cache Set] Cached stream data for session ${sessionId}, device ${deviceId}`);
+    }
+  }
+  
+  return result;
 }
 
 /**
@@ -70,7 +108,6 @@ async function getGoogleDeviceSettings(deviceId: string) {
   return executeWithRetries(() => google.getDeviceSettings(deviceId));
 }
 
-// Export the handler function
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
@@ -79,6 +116,9 @@ export const handler = async (
   const provider = event.pathParameters?.provider;
   const deviceType = event.pathParameters?.deviceType;
   const action = event.pathParameters?.action;
+  
+  // Extract session ID from headers
+  const sessionId = event.headers?.['x-session-id'] || event.headers?.['X-Session-ID'];
 
   // Helper function to create responses with CORS headers
   const createResponse = (
@@ -89,7 +129,7 @@ export const handler = async (
       statusCode,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Session-ID',
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
       },
       body: JSON.stringify(body),
@@ -244,8 +284,8 @@ export const handler = async (
 
           const { deviceId, command, params } = requestBody.data;
 
-          // Execute command with retries
-          response = await executeGoogleDeviceCommand(deviceId, command, params);
+          // Execute command with retries and caching support
+          response = await executeGoogleDeviceCommand(deviceId, command, params, sessionId);
         } else {
           return createResponse(400, {
             error: `Unknown action '${action}' for devices under Google provider`,
@@ -286,8 +326,8 @@ export const handler = async (
 
           const { deviceId, command, params } = requestBody.data;
 
-          // Execute command with retries
-          response = await executeGoogleDeviceCommand(deviceId, command, params);
+          // Execute command with retries and caching support
+          response = await executeGoogleDeviceCommand(deviceId, command, params, sessionId);
         } else {
           return createResponse(400, {
             error: `Unknown action '${action}' for device type '${deviceType}' under Google provider`,
