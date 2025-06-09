@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background-color: #0f172a; margin: 0; padding: 0;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>manor234</title>
+    
+    <!-- Immediate background fix script - runs before any other resources -->
+    <script>
+      // Immediately set dark background to prevent white flash
+      document.documentElement.style.backgroundColor = '#0f172a';
+      document.documentElement.style.margin = '0';
+      document.documentElement.style.padding = '0';
+    </script>
     
     <!-- DNS prefetch for external resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
@@ -15,15 +25,23 @@
     
     <!-- Critical inline CSS for instant loading -->
     <style>
+      /* Immediate background fix to prevent white flash */
+      html {
+        background-color: #0f172a !important;
+        margin: 0;
+        padding: 0;
+      }
+      
       /* Critical loading styles */
       body {
         margin: 0;
+        padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
           'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
           sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #0f172a;
+        background-color: #0f172a !important;
         color: white;
       }
       
@@ -31,19 +49,28 @@
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        background-color: #0f172a;
+      }
+      
+      /* Ensure no white background anywhere */
+      * {
+        box-sizing: border-box;
       }
       
       /* Initial loading spinner */
       .initial-loader {
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #0f172a;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 24px;
+        z-index: 9999;
       }
       
       .spinner {
@@ -150,7 +177,7 @@
       }
     </script>
   </head>
-  <body>
+  <body style="background-color: #0f172a; margin: 0; padding: 0;">
     <!-- Initial loading screen -->
     <div class="initial-loader">
       <div class="spinner">
