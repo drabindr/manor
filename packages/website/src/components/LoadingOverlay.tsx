@@ -72,23 +72,24 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ isLoading }) => {
             style={{ willChange: 'transform' }}
           ></div>
           <div
-            className="absolute inset-1 rounded-full border-t-4 border-yellow-400 animate-spin"
+            className="absolute inset-2 rounded-full border-t-3 border-yellow-400 animate-spin"
             style={{ 
               animationDuration: "1.5s",
+              animationDirection: "reverse",
               willChange: 'transform' 
             }}
           ></div>
-          <div
-            className="absolute inset-2 rounded-full border-t-4 border-yellow-300 animate-spin"
-            style={{ 
-              animationDuration: "2s",
-              willChange: 'transform' 
-            }}
-          ></div>
-          <div className="text-yellow-400 text-xl font-bold">V</div>
+          <div className="relative z-10 flex items-center justify-center">
+            <img 
+              src="/logo2.png" 
+              alt="MANOR logo" 
+              className="w-12 h-12 object-contain"
+            />
+          </div>
         </div>
       </div>
-      <div className="text-white text-xl font-medium">Connecting to your home...</div>
+      <div className="text-yellow-400 text-2xl font-bold tracking-wider uppercase mb-4">MANOR</div>
+      <div className="text-white text-lg font-medium">Connecting to your home...</div>
       <div className="mt-4 text-gray-400 text-sm">Loading thermostat and camera data</div>
       <div className="mt-6 w-64 h-1 bg-gray-800 rounded-full overflow-hidden">
         <div

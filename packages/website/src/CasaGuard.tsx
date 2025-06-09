@@ -743,16 +743,74 @@ const CasaGuard: React.FC = () => {
   );
 };
 
-// Simple loading fallbacks - these can be memoized too since they never change
+// Simple loading fallbacks - consistent with MANOR branding
 const LoadingFallback = React.memo(() => (
-  <div className="fixed inset-0 bg-black flex items-center justify-center">
-    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-yellow-400 will-change-transform"></div>
+  <div className="fixed inset-0 bg-black flex flex-col items-center justify-center">
+    <div className="relative mb-6">
+      <div 
+        className="w-20 h-20 rounded-full border-4 border-gray-800 flex items-center justify-center"
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0)'
+        }}
+      >
+        <div 
+          className="absolute inset-0 rounded-full border-t-4 border-yellow-500 animate-spin"
+          style={{ willChange: 'transform' }}
+        ></div>
+        <div
+          className="absolute inset-2 rounded-full border-t-3 border-yellow-400 animate-spin"
+          style={{ 
+            animationDuration: "1.5s",
+            animationDirection: "reverse",
+            willChange: 'transform' 
+          }}
+        ></div>
+        <div className="relative z-10 flex items-center justify-center">
+          <img 
+            src="/logo2.png" 
+            alt="MANOR logo" 
+            className="w-12 h-12 object-contain"
+          />
+        </div>
+      </div>
+    </div>
+    <div className="text-yellow-400 text-2xl font-bold tracking-wider uppercase">MANOR</div>
   </div>
 ));
 
 const TabLoadingFallback = React.memo(() => (
-  <div className="w-full h-64 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-yellow-400 will-change-transform"></div>
+  <div className="w-full h-64 flex flex-col items-center justify-center">
+    <div className="relative mb-4">
+      <div 
+        className="w-12 h-12 rounded-full border-3 border-gray-800 flex items-center justify-center"
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0)'
+        }}
+      >
+        <div 
+          className="absolute inset-0 rounded-full border-t-3 border-yellow-500 animate-spin"
+          style={{ willChange: 'transform' }}
+        ></div>
+        <div
+          className="absolute inset-1 rounded-full border-t-2 border-yellow-400 animate-spin"
+          style={{ 
+            animationDuration: "1.5s",
+            animationDirection: "reverse",
+            willChange: 'transform' 
+          }}
+        ></div>
+        <div className="relative z-10 flex items-center justify-center">
+          <img 
+            src="/logo2.png" 
+            alt="MANOR logo" 
+            className="w-6 h-6 object-contain"
+          />
+        </div>
+      </div>
+    </div>
+    <div className="text-yellow-400 text-lg font-bold tracking-wider uppercase">MANOR</div>
   </div>
 ));
 
