@@ -1,4 +1,4 @@
-// sessionCache.ts - DynamoDB-backed cache for camera stream sessions
+// sessionCache.ts - Hybrid cache for camera stream sessions (in-memory + DynamoDB)
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
@@ -7,6 +7,9 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, ScanComm
 const ddbClient = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(ddbClient);
 const TABLE_NAME = process.env.SESSION_CACHE_TABLE || '';
+
+// In-memory cache for fastest access
+const memoryCache = new Map<string, CacheEntry>();
 
 export interface CachedStreamData {
   answerSdp: string;
@@ -43,25 +46,50 @@ function generateCacheKey(sessionId: string, deviceId: string): string {
 }
 
 /**
+ * Clean up expired entries from in-memory cache
+ */
+function cleanupMemoryCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of memoryCache.entries()) {
+    if ((now - entry.timestamp) > STREAM_CACHE_TTL_MS) {
+      memoryCache.delete(key);
+    }
+  }
+}
+
+/**
  * Get cached stream data for a session and device
+ * Uses hybrid caching: memory first, then DynamoDB
  */
 export async function getCachedStream(sessionId: string, deviceId: string): Promise<CachedStreamData | null> {
+  const key = generateCacheKey(sessionId, deviceId);
+  const now = Date.now();
+  
+  // Clean up expired memory cache entries
+  cleanupMemoryCache();
+  
+  // First, check in-memory cache
+  const memoryEntry = memoryCache.get(key);
+  if (memoryEntry && (now - memoryEntry.timestamp) <= STREAM_CACHE_TTL_MS) {
+    console.log(`[Memory Cache Hit] Found cached stream for session ${sessionId}, device ${deviceId}`);
+    return memoryEntry.data;
+  }
+  
+  // If not in memory, check DynamoDB
   try {
-    const key = generateCacheKey(sessionId, deviceId);
-    
     const result = await dynamodb.send(new GetCommand({
       TableName: TABLE_NAME,
       Key: { cacheKey: key }
     }));
     
     if (!result.Item) {
+      console.log(`[Cache Miss] No cached stream found for session ${sessionId}, device ${deviceId}`);
       return null;
     }
     
     const item = result.Item as CacheItem;
     
     // Check if item is expired (extra safety check beyond TTL)
-    const now = Date.now();
     if (item.timestamp && (now - item.timestamp) > STREAM_CACHE_TTL_MS) {
       // Clean up expired item
       await dynamodb.send(new DeleteCommand({
@@ -71,26 +99,45 @@ export async function getCachedStream(sessionId: string, deviceId: string): Prom
       return null;
     }
     
-    return {
+    const cachedData: CachedStreamData = {
       answerSdp: item.answerSdp,
       mediaSessionId: item.mediaSessionId,
       expiresAt: item.expiresAt,
       timestamp: item.timestamp,
       deviceId: item.deviceId
     };
+    
+    // Update memory cache with data from DynamoDB
+    memoryCache.set(key, {
+      data: cachedData,
+      timestamp: item.timestamp
+    });
+    
+    console.log(`[DynamoDB Cache Hit] Found cached stream in DynamoDB for session ${sessionId}, device ${deviceId}, updated memory cache`);
+    return cachedData;
+    
   } catch (error) {
-    console.error('Error getting cached stream:', error);
+    console.error('Error getting cached stream from DynamoDB:', error);
     return null;
   }
 }
 
 /**
  * Cache stream data for a session and device
+ * Stores in both memory and DynamoDB
  */
 export async function setCachedStream(sessionId: string, deviceId: string, data: CachedStreamData): Promise<void> {
+  const key = generateCacheKey(sessionId, deviceId);
+  const now = Date.now();
+  
+  // Store in memory cache first (fastest access)
+  memoryCache.set(key, {
+    data: data,
+    timestamp: now
+  });
+  
+  // Then store in DynamoDB for persistence
   try {
-    const key = generateCacheKey(sessionId, deviceId);
-    const now = Date.now();
     const ttl = Math.floor((now + STREAM_CACHE_TTL_MS) / 1000); // Convert to Unix timestamp
     
     const item: CacheItem = {
@@ -107,14 +154,18 @@ export async function setCachedStream(sessionId: string, deviceId: string, data:
       TableName: TABLE_NAME,
       Item: item
     }));
+    
+    console.log(`[Cache Set] Stored stream data in both memory and DynamoDB for session ${sessionId}, device ${deviceId}`);
   } catch (error) {
-    console.error('Error setting cached stream:', error);
+    console.error('Error setting cached stream in DynamoDB:', error);
     // Don't throw error to avoid breaking the main flow
+    // Memory cache is still set, so some benefit remains
   }
 }
 
 /**
  * Check if cached stream data exists for a session and device
+ * Checks both memory and DynamoDB
  */
 export async function hasCachedStream(sessionId: string, deviceId: string): Promise<boolean> {
   try {
@@ -128,13 +179,20 @@ export async function hasCachedStream(sessionId: string, deviceId: string): Prom
 
 /**
  * Clear all cached streams for a specific session
+ * Clears from both memory and DynamoDB
  */
 export async function clearSessionCache(sessionId: string): Promise<void> {
+  const prefix = `stream:${sessionId}:`;
+  
+  // Clear from memory cache
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefix)) {
+      memoryCache.delete(key);
+    }
+  }
+  
+  // Clear from DynamoDB
   try {
-    // Since we can't do a query on a non-key attribute efficiently,
-    // we'll scan for items with the session prefix and delete them
-    const prefix = `stream:${sessionId}:`;
-    
     const scanResult = await dynamodb.send(new ScanCommand({
       TableName: TABLE_NAME,
       FilterExpression: 'begins_with(cacheKey, :prefix)',
@@ -155,15 +213,35 @@ export async function clearSessionCache(sessionId: string): Promise<void> {
       await Promise.all(deletePromises);
     }
   } catch (error) {
-    console.error('Error clearing session cache:', error);
+    console.error('Error clearing session cache from DynamoDB:', error);
     // Don't throw error to avoid breaking the main flow
   }
 }
 
 /**
  * Get cache statistics for monitoring
+ * Includes both memory and DynamoDB statistics
  */
-export async function getCacheStats(): Promise<{ totalEntries: number; sessionCount: number }> {
+export async function getCacheStats(): Promise<{ 
+  totalEntries: number; 
+  sessionCount: number; 
+  memoryEntries: number; 
+  dynamodbEntries: number; 
+  memorySessions: number;
+}> {
+  // Get memory cache stats
+  cleanupMemoryCache(); // Clean expired entries first
+  const memoryEntries = memoryCache.size;
+  const memorySessions = new Set<string>();
+  
+  for (const key of memoryCache.keys()) {
+    const parts = key.split(':');
+    if (parts.length >= 2) {
+      memorySessions.add(parts[1]);
+    }
+  }
+  
+  // Get DynamoDB stats
   try {
     const scanResult = await dynamodb.send(new ScanCommand({
       TableName: TABLE_NAME,
@@ -171,26 +249,35 @@ export async function getCacheStats(): Promise<{ totalEntries: number; sessionCo
     }));
     
     const items = scanResult.Items || [];
-    const sessions = new Set<string>();
+    const dynamodbSessions = new Set<string>();
     
     for (const item of items) {
       if (item.cacheKey && typeof item.cacheKey === 'string') {
         const parts = item.cacheKey.split(':');
         if (parts.length >= 2) {
-          sessions.add(parts[1]);
+          dynamodbSessions.add(parts[1]);
         }
       }
     }
     
+    // Total unique sessions (union of memory and DynamoDB)
+    const allSessions = new Set([...memorySessions, ...dynamodbSessions]);
+    
     return {
-      totalEntries: items.length,
-      sessionCount: sessions.size
+      totalEntries: memoryEntries + items.length,
+      sessionCount: allSessions.size,
+      memoryEntries: memoryEntries,
+      dynamodbEntries: items.length,
+      memorySessions: memorySessions.size
     };
   } catch (error) {
-    console.error('Error getting cache stats:', error);
+    console.error('Error getting cache stats from DynamoDB:', error);
     return {
-      totalEntries: 0,
-      sessionCount: 0
+      totalEntries: memoryEntries,
+      sessionCount: memorySessions.size,
+      memoryEntries: memoryEntries,
+      dynamodbEntries: 0,
+      memorySessions: memorySessions.size
     };
   }
 }
