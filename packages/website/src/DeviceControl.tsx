@@ -271,8 +271,8 @@ const DeviceControl: React.FC = () => {
   const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean; isSuggested: boolean; inactiveCount: number }) => {
     return (
       <div
-        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-300 hover:border-gray-600/50 touch-manipulation transform hover:scale-[1.01] active:scale-[0.99] ${
-          room.hasEssentialDevices ? 'border-yellow-600/50 shadow-yellow-900/20' : room.isSuggested ? 'border-blue-600/50 shadow-blue-900/20' : 'border-gray-700/50'
+        className={`relative p-2.5 sm:p-4 widget-base overflow-hidden touch-manipulation transform hover:scale-[1.01] active:scale-[0.99] ${
+          room.hasEssentialDevices ? 'active' : room.isSuggested ? 'border-blue-600/30 shadow-blue-900/15' : ''
         }`}
         style={{
           // Enhanced hardware acceleration for iPhone
@@ -285,16 +285,16 @@ const DeviceControl: React.FC = () => {
       >
         {/* Priority indicator for essential devices */}
         {room.hasEssentialDevices && (
-          <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-yellow-400/50"></div>
+          <div className="absolute top-3 right-3 w-2 h-2 bg-amber-400 rounded-full animate-pulse shadow-lg shadow-amber-400/50"></div>
         )}
         
         {/* Suggested room indicator */}
         {room.isSuggested && !room.hasEssentialDevices && (
-          <div className="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+          <div className="absolute top-3 right-3 w-2 h-2 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
         )}
         
         {/* Enhanced glass effect overlay */}
-        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>
+        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-2xl"></div>
         
         {/* Room Title with emoji icons - Enhanced for iPhone */}
         <div className="flex justify-between items-center mb-2.5 sm:mb-4">
@@ -302,23 +302,23 @@ const DeviceControl: React.FC = () => {
             <span className="text-base sm:text-lg filter drop-shadow-sm">{getRoomIcon(room.name)}</span>
             <span className="text-xs sm:text-base truncate font-medium">{room.name}</span>
             {room.isSuggested && (
-              <span className="text-xs text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-700/30 hidden sm:inline backdrop-blur-sm">
+              <span className="text-xs text-blue-400 bg-blue-900/20 px-1.5 py-0.5 rounded-full border border-blue-600/20 hidden sm:inline backdrop-blur-sm">
                 Suggested
               </span>
             )}
           </div>
           <div className="flex space-x-1 sm:space-x-2 text-xs">
-            <div className="text-gray-400 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-700/30 backdrop-blur-sm shadow-sm">
+            <div className="text-gray-300 bg-gray-800/60 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/20 backdrop-blur-sm shadow-sm">
               {room.deviceCount}
             </div>
             {room.activeCount > 0 && (
-              <div className="text-yellow-300 bg-yellow-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-yellow-700/30 flex items-center space-x-1 backdrop-blur-sm shadow-sm">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse shadow-sm"></div>
+              <div className="text-amber-300 bg-amber-900/20 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-amber-600/20 flex items-center space-x-1 backdrop-blur-sm shadow-sm">
+                <div className="w-1 h-1 bg-amber-400 rounded-full animate-pulse shadow-sm"></div>
                 <span>{room.activeCount}</span>
               </div>
             )}
             {room.inactiveCount > 0 && (
-              <div className="text-gray-500 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/30 backdrop-blur-sm shadow-sm">
+              <div className="text-gray-400 bg-gray-800/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-gray-600/20 backdrop-blur-sm shadow-sm">
                 <span className="hidden sm:inline">{room.inactiveCount} off</span>
                 <span className="sm:hidden">{room.inactiveCount}</span>
               </div>

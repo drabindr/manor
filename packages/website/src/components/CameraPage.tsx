@@ -196,9 +196,9 @@ const CameraPage: React.FC<CameraPageProps> = ({
   return (
     <div className="camera-page-container w-full overflow-visible pt-2 pb-4 bg-gradient-to-b from-gray-900 to-black safe-area-padding-x">
       {/* Enhanced Header with Better iPhone Optimizations */}
-      <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between bg-black/30 backdrop-blur-md rounded-xl p-3 border border-gray-800/40 shadow-lg safe-area-padding-top">
+      <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between widget-header p-3 safe-area-padding-top">
         <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="bg-gray-800/70 p-2 rounded-lg">
+          <div className="bg-slate-800/70 p-2 rounded-lg">
             <UilVideo className="text-blue-400" size={isMobile ? 20 : 22} />
           </div>
           <div>
@@ -207,7 +207,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-1.5 sm:space-x-2">
-          <div className="text-xs text-gray-400 bg-gray-800/60 backdrop-blur-sm px-2.5 sm:px-3 py-1.5 rounded-full border border-gray-700/40 shadow-lg">
+          <div className="text-xs text-gray-300 bg-slate-800/60 backdrop-blur-sm px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-600/20 shadow-lg">
             <span className="hidden sm:inline">{cameras.length + 1} cameras online</span>
             <span className="sm:hidden">{cameras.length + 1}</span>
           </div>
@@ -217,7 +217,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
               cycleSortMode();
               triggerHaptic('light');
             }}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
+            className="bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-slate-600/20 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Sort mode: ${getSortLabel()}`}
             title={`Current: ${getSortLabel()}. Click to cycle through sorting options.`}
           >
@@ -229,7 +229,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
               setCameraViewMode(prev => prev === "grid" ? "list" : "grid");
               triggerHaptic('light');
             }}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
+            className="bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-slate-600/20 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Switch to ${cameraViewMode === "grid" ? "list" : "grid"} view`}
           >
             {cameraViewMode === "grid" ? (
@@ -245,7 +245,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
               setColumns((prev) => (prev === 4 ? 2 : prev + 1));
               triggerHaptic('light');
             }}
-            className="bg-gray-800/70 hover:bg-gray-700/80 active:bg-gray-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-gray-700/30 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
+            className="bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600/90 p-2.5 sm:p-3 rounded-lg transition-all duration-200 border border-slate-600/20 touch-manipulation transform active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shadow-lg hover:shadow-xl"
             aria-label={`Set columns per row (currently ${columns})`}
             title={`Columns: ${columns}. Click to cycle 2-4 columns.`}
           >
@@ -268,7 +268,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
               onExpandCamera(camera.name);
               triggerHaptic('medium');
             }}
-            className={`camera-card relative transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.96] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation will-change-transform ${
+            className={`camera-card relative widget-base hover:scale-[1.02] active:scale-[0.96] cursor-pointer overflow-hidden group touch-manipulation will-change-transform ${
               cameraViewMode === "list" ? "aspect-video" : ""
             }`}
             style={{
@@ -280,7 +280,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-30 group-hover:opacity-60 transition-opacity duration-300 z-10"></div>
-            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-gray-700/60 shadow-xl">
+            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-slate-600/40 shadow-xl">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
                 <span className="text-xs sm:text-sm text-white font-medium">{camera.customName || camera.parentRelations?.[0]?.displayName || "Camera"}</span>
@@ -296,7 +296,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
                     onExpandCamera(camera.name);
                     triggerHaptic('medium');
                   }}
-                  className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                  className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-slate-600/40 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
                   aria-label="Open camera in fullscreen"
                 >
                   <UilExpandArrows size={isMobile ? 16 : 18} />
@@ -313,7 +313,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
             onExpandCamera("CasaCam");
             triggerHaptic('medium');
           }}
-          className={`camera-card relative transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.96] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation will-change-transform ${
+          className={`camera-card relative widget-base hover:scale-[1.02] active:scale-[0.96] cursor-pointer overflow-hidden group touch-manipulation will-change-transform ${
             cameraViewMode === "list" ? "aspect-video" : ""
           }`}
           style={{
@@ -325,7 +325,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-30 group-hover:opacity-60 transition-opacity duration-300 z-10"></div>
-          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-gray-700/60 shadow-xl">
+          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-slate-600/40 shadow-xl">
             <div className="flex items-center space-x-1.5 sm:space-x-2">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
               <span className="text-xs sm:text-sm text-white font-medium">Casa Camera</span>
@@ -341,7 +341,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
                   onExpandCamera("CasaCam");
                   triggerHaptic('medium');
                 }}
-                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-slate-600/40 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
                 aria-label="Open Casa Camera in fullscreen"
               >
                 <UilExpandArrows size={isMobile ? 16 : 18} />
