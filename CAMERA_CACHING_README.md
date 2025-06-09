@@ -11,26 +11,43 @@ This implementation adds a server-side caching mechanism to prevent repeated cal
 #### 1. Session Cache (`packages/cdk/lambda/casa-integrations/utils/sessionCache.ts`)
 
 **Key Features:**
-- In-memory cache storage using JavaScript Map
-- 5-minute TTL (Time To Live) for cached stream data
+- **DynamoDB-backed persistent storage** for session cache data
+- 5-minute TTL (Time To Live) for cached stream data with automatic cleanup
 - Session-based cache keys: `stream:{sessionId}:{deviceId}`
-- Automatic cleanup of expired entries
+- **Cold start resilience** - cache persists across Lambda instance restarts
+- **Multi-instance sharing** - cache data shared between Lambda instances
+- Error-resilient design - cache failures don't break main functionality
 - Cache statistics and monitoring
 
 **Core Functions:**
-- `getCachedStream()` - Retrieve cached stream data
-- `setCachedStream()` - Store stream data in cache
-- `hasCachedStream()` - Check if valid cache exists
-- `clearSessionCache()` - Clear all cache for a session
+- `getCachedStream()` - Retrieve cached stream data (async)
+- `setCachedStream()` - Store stream data in cache (async)
+- `hasCachedStream()` - Check if valid cache exists (async)
+- `clearSessionCache()` - Clear all cache for a session (async)
+
+**DynamoDB Schema:**
+- **Table Name**: `SessionCacheTable`
+- **Partition Key**: `cacheKey` (string) - format: `stream:{sessionId}:{deviceId}`
+- **TTL Attribute**: `ttl` (number) - Unix timestamp for automatic cleanup
+- **Additional Attributes**: `answerSdp`, `mediaSessionId`, `expiresAt`, `timestamp`, `deviceId`
 
 #### 2. Integration Handler Updates (`packages/cdk/lambda/casa-integrations/integrationHandler.ts`)
 
 **Changes Made:**
 - Added session ID extraction from `X-Session-ID` header
-- Modified `executeGoogleDeviceCommand()` to check cache before calling Google API
+- Modified `executeGoogleDeviceCommand()` to use **async cache operations**
 - Added caching for `GenerateWebRtcStream` commands only
 - Updated CORS headers to allow `X-Session-ID` header
 - Added cache hit/miss logging
+- **Error handling** for cache operations to ensure main functionality continues
+
+#### 3. CDK Infrastructure (`packages/cdk/lib/casa-integrations-cdk-stack.ts`)
+
+**Added Components:**
+- **SessionCacheTable** DynamoDB table with TTL configuration
+- Lambda permissions for DynamoDB read/write operations
+- Environment variable `SESSION_CACHE_TABLE` for table name
+- Updated CORS configuration to include `X-Session-ID` header
 
 ### Frontend Components
 
@@ -105,7 +122,10 @@ This implementation adds a server-side caching mechanism to prevent repeated cal
 ### Reliability Improvements
 - **Reduced API Rate Limiting**: Fewer calls to Google's API
 - **Session Persistence**: Camera streams survive page refreshes
+- **Cold Start Resilience**: Cache persists across Lambda instance restarts
+- **Multi-Instance Sharing**: Cache data shared between Lambda instances
 - **Graceful Degradation**: Falls back to Google API on cache misses
+- **Error Resilience**: Cache failures don't break main camera functionality
 
 ### Monitoring & Debugging
 - **Cache Statistics**: Monitor cache hit/miss ratios
@@ -117,25 +137,33 @@ This implementation adds a server-side caching mechanism to prevent repeated cal
 ### Cache TTL Settings
 - **Backend Cache**: 5 minutes (`STREAM_CACHE_TTL_MS = 5 * 60 * 1000`)
 - **Frontend Session**: 10 minutes (`SESSION_TTL = 10 * 60 * 1000`)
+- **DynamoDB TTL**: Automatic cleanup via `ttl` attribute
 
 ### Session Management
 - **Session Key**: `manor_camera_session` in localStorage
 - **Session ID Format**: `{timestamp}-{random}` for uniqueness
-- **Automatic Cleanup**: Expired entries removed periodically
+- **Cache Storage**: DynamoDB table `SessionCacheTable`
+- **Automatic Cleanup**: DynamoDB TTL handles expired entries
+
+### Environment Variables
+- `SESSION_CACHE_TABLE`: DynamoDB table name for cache storage
+- `AWS_REGION`: AWS region for DynamoDB operations
 
 ## Security Considerations
 
-1. **In-Memory Only**: Cache data is not persisted to disk
+1. **DynamoDB Security**: Cache data is stored in DynamoDB with proper IAM permissions
 2. **Session Isolation**: Each session has isolated cache entries  
 3. **TTL Enforcement**: Automatic expiration prevents stale data
 4. **CORS Protection**: Only allowed headers are accepted
+5. **Error Handling**: Cache failures are logged but don't expose sensitive data
 
 ## Future Enhancements
 
-1. **Redis Integration**: Replace in-memory cache with Redis for scaling
+1. **~~Redis Integration~~**: ✅ **COMPLETED** - Replaced in-memory cache with DynamoDB for persistence
 2. **Cache Warming**: Pre-populate cache for frequently used cameras
-3. **Analytics**: Track cache performance metrics
+3. **Analytics**: Track cache performance metrics via CloudWatch
 4. **Adaptive TTL**: Adjust cache duration based on usage patterns
+5. **Cache Prefetching**: Intelligently pre-fetch streams for likely next access
 
 ## Testing
 
