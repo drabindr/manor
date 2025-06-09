@@ -27,12 +27,25 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 const hideInitialLoader = () => {
   const initialLoader = document.querySelector('.initial-loader');
   if (initialLoader) {
-    // Add fade out transition
-    initialLoader.style.transition = 'opacity 0.3s ease-out';
-    initialLoader.style.opacity = '0';
-    setTimeout(() => {
-      document.body.classList.add('app-loaded');
-    }, 300);
+    // Check if the app content is actually ready
+    const rootElement = document.getElementById('root');
+    const hasAppContent = rootElement && rootElement.children.length > 0;
+    
+    if (hasAppContent) {
+      // Add fade out transition
+      initialLoader.style.transition = 'opacity 0.3s ease-out';
+      initialLoader.style.opacity = '0';
+      setTimeout(() => {
+        document.body.classList.add('app-loaded');
+        // Remove the loader completely after fade out
+        if (initialLoader.parentNode) {
+          initialLoader.parentNode.removeChild(initialLoader);
+        }
+      }, 300);
+    } else {
+      // If content isn't ready, try again in a bit
+      setTimeout(hideInitialLoader, 100);
+    }
   } else {
     document.body.classList.add('app-loaded');
   }
@@ -45,7 +58,7 @@ root.render(
 );
 
 // Hide loader after app is mounted and ready to show content
-// Give a bit more time for React components to initialize
-setTimeout(hideInitialLoader, 500);
+// Use a shorter timeout and more intelligent detection
+setTimeout(hideInitialLoader, 200);
 
 reportWebVitals();
