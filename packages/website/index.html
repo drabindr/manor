@@ -161,18 +161,18 @@
       // Critical resource hints
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => {
-          // Prefetch likely navigation targets
-          const prefetchLinks = [
-            '/src/components/CameraPage.tsx',
-            '/src/Thermostat.tsx',
-            '/src/DeviceControl.tsx'
-          ];
-          prefetchLinks.forEach(href => {
-            const link = document.createElement('link');
-            link.rel = 'modulepreload';
-            link.href = href;
-            document.head.appendChild(link);
-          });
+          // Prefetch likely navigation targets - commented out as these should be handled by Vite's dynamic imports
+          // const prefetchLinks = [
+          //   '/src/components/CameraPage.tsx',
+          //   '/src/Thermostat.tsx',
+          //   '/src/DeviceControl.tsx'
+          // ];
+          // prefetchLinks.forEach(href => {
+          //   const link = document.createElement('link');
+          //   link.rel = 'modulepreload';
+          //   link.href = href;
+          //   document.head.appendChild(link);
+          // });
         });
       }
     </script>
