@@ -7,7 +7,6 @@ import React, {
   useState,
 } from 'react';
 import { logger } from './utils/Logger';
-import SessionService from './services/SessionService';
 import type { CameraDevice } from './components/CameraPage';
 
 export type CameraCardProps = {
@@ -26,10 +25,6 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   const cameraNameRef = useRef(camera.name);
   const maxRetries = 400;
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('Loading camera...');
-
-  // Get session service instance
-  const sessionService = SessionService.getInstance();
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
@@ -152,11 +147,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
       // Show loading on first attempt
       if (retryAttempt === 0) {
         setIsLoading(true);
-        setLoadingMessage('Checking cache...');
       }
-
-      // Get session ID
-      const sessionId = sessionService.getSessionId();
 
       initializePeerConnection();
 
@@ -165,15 +156,11 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
 
         if (mediaSessionIdRef.current) {
           // Extend existing stream
-          setLoadingMessage('Extending stream...');
           const response = await fetch(
             'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
               method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'X-Session-ID': sessionId
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 data: {
                   deviceId: cameraNameRef.current,
@@ -195,8 +182,6 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             } else if (response.status === 404 || response.status === 410) {
               logger.warn('[Extend] Session expired. Starting new session.');
               mediaSessionIdRef.current = null;
-              // Clear the cached session for this device
-              sessionService.clearDeviceMediaSession(cameraNameRef.current);
               getLiveStream();
             } else {
               logger.warn(`[Extend] Non-500 error. Attempt ${retryAttempt + 1}`);
@@ -218,17 +203,6 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           // Generate new stream
           if (!pcRef.current) return;
 
-          // Check for cached session first
-          const cachedMediaSessionId = sessionService.getDeviceMediaSession(cameraNameRef.current);
-          if (cachedMediaSessionId) {
-            logger.debug('[Generate] Found cached media session, attempting to use it');
-            mediaSessionIdRef.current = cachedMediaSessionId;
-            // Try to extend the cached session first
-            getLiveStream(retryAttempt);
-            return;
-          }
-
-          setLoadingMessage('Generating new stream...');
           const offerSdp = await createOffer();
           if (!offerSdp) {
             logger.warn(`[Generate] Offer SDP invalid. Attempt ${retryAttempt + 1}`);
@@ -242,10 +216,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
               method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'X-Session-ID': sessionId
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 data: {
                   deviceId: cameraNameRef.current,
@@ -266,15 +237,11 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
 
           const data = await response.json();
           const answerSdp = data.results?.answerSdp;
-          const mediaSessionId = data.results?.mediaSessionId;
+          const sessionId = data.results?.mediaSessionId;
           expiresAt = data.results?.expiresAt;
 
-          if (answerSdp && mediaSessionId) {
-            mediaSessionIdRef.current = mediaSessionId;
-            // Store the media session ID in the session service
-            sessionService.setDeviceMediaSession(cameraNameRef.current, mediaSessionId);
-            sessionService.refreshSession();
-            
+          if (answerSdp && sessionId) {
+            mediaSessionIdRef.current = sessionId;
             await pcRef.current.setRemoteDescription(
               new RTCSessionDescription({ type: 'answer', sdp: answerSdp })
             );
@@ -325,7 +292,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
           <div className="text-white text-sm flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            {loadingMessage}
+            Loading camera...
           </div>
         </div>
       )}
