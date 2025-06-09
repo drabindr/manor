@@ -64,7 +64,7 @@ async function executeGoogleDeviceCommand(deviceId: string, command: string, par
   // Check if this is a camera live stream command and if we have a session ID
   if (sessionId && command === 'sdm.devices.commands.CameraLiveStream.GenerateWebRtcStream') {
     // Check cache first
-    const cachedData = getCachedStream(sessionId, deviceId);
+    const cachedData = await getCachedStream(sessionId, deviceId);
     if (cachedData) {
       console.log(`[Cache Hit] Returning cached stream data for session ${sessionId}, device ${deviceId}`);
       return {
@@ -93,7 +93,7 @@ async function executeGoogleDeviceCommand(deviceId: string, command: string, par
         timestamp: Date.now(),
         deviceId
       };
-      setCachedStream(sessionId, deviceId, cacheData);
+      await setCachedStream(sessionId, deviceId, cacheData);
       console.log(`[Cache Set] Cached stream data for session ${sessionId}, device ${deviceId}`);
     }
   }
