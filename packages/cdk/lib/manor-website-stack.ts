@@ -87,7 +87,7 @@ export class ManorWebsiteStack extends cdk.Stack {
               override: true,
             },
             contentSecurityPolicy: {
-              contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: blob: https:; connect-src 'self' https://*.amazonaws.com https://*.execute-api.us-east-1.amazonaws.com wss://*.execute-api.us-east-1.amazonaws.com wss:; worker-src 'self' blob:; child-src 'self' blob:",
+              contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' data:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' data: blob: https:; connect-src 'self' https://*.amazonaws.com https://*.execute-api.us-east-1.amazonaws.com https://*.amazoncognito.com wss://*.execute-api.us-east-1.amazonaws.com wss:; worker-src 'self' blob:; child-src 'self' blob:",
               override: true,
             },
           },
