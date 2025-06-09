@@ -45,6 +45,19 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
 
     integrationLambda.addToRolePolicy(ssmPolicy);
 
+    // Create DynamoDB table for session cache
+    const sessionCacheTable = new Table(this, 'SessionCacheTable', {
+      partitionKey: { name: 'cacheKey', type: AttributeType.STRING },
+      billingMode: cdk.aws_dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl', // Automatic cleanup of expired cache entries
+    });
+
+    // Grant Lambda function access to the session cache table
+    sessionCacheTable.grantReadWriteData(integrationLambda);
+
+    // Add session cache table environment variable
+    integrationLambda.addEnvironment('SESSION_CACHE_TABLE', sessionCacheTable.tableName);
+
     // Create the REST API with default CORS options
     const api = new RestApi(this, 'CasaIntegrationsApi', {
       restApiName: 'Casa Integrations Service',
@@ -52,7 +65,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
         allowMethods: Cors.ALL_METHODS,
-        allowHeaders: Cors.DEFAULT_HEADERS,
+        allowHeaders: [...Cors.DEFAULT_HEADERS, 'X-Session-ID'],
       },
     });
 
