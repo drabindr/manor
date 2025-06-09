@@ -42,15 +42,15 @@ const LightSwitch: React.FC<LightSwitchProps> = ({ light, toggleLight, iconPath 
   
   return (
     <div
-      className={`flex flex-col items-center justify-between px-2 py-3 rounded-xl transition-all duration-200 cursor-pointer w-full backdrop-blur-sm touch-manipulation transform hover:scale-105 active:scale-95 ${
-        isOn ? 'ring-2 ring-yellow-500/30 shadow-lg shadow-yellow-500/20' : 'ring-1 ring-gray-700/30 shadow-md'
+      className={`flex flex-col items-center justify-between px-2 py-3 widget-base transition-all duration-200 cursor-pointer w-full touch-manipulation transform hover:scale-105 active:scale-95 ${
+        isOn ? 'active ring-2 ring-amber-400/40' : ''
       } ${isPressed ? 'scale-95' : 'scale-100'}`}
       style={{
-        background: `linear-gradient(to bottom, ${
+        background: `${
           isOn 
-            ? 'rgba(45, 40, 15, 0.85), rgba(35, 30, 10, 0.95)' 
-            : 'rgba(25, 25, 25, 0.85), rgba(18, 18, 18, 0.95)'
-        }), ${iconPath ? `url(${iconPath})` : 'none'} center center / cover no-repeat`,
+            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 41, 59, 0.95) 100%)' 
+            : 'var(--widget-bg)'
+        }${iconPath ? `, url(${iconPath}) center center / cover no-repeat` : ''}`,
         transform: `${isOn ? 'scale(1.02)' : 'scale(1)'} ${isPressed ? 'scale(0.95)' : ''}`,
         // Enhanced hardware acceleration for iPhone
         willChange: "transform, box-shadow",
@@ -80,9 +80,9 @@ const LightSwitch: React.FC<LightSwitchProps> = ({ light, toggleLight, iconPath 
     >
       {/* Enhanced light glow effect when on */}
       {isOn && (
-        <div className="absolute inset-0 rounded-xl bg-yellow-400/8 backdrop-blur-sm pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-yellow-400/25 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-yellow-300/30 rounded-full blur-lg"></div>
+        <div className="absolute inset-0 rounded-2xl bg-amber-400/8 backdrop-blur-sm pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-amber-400/25 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-amber-300/30 rounded-full blur-lg"></div>
         </div>
       )}
       
@@ -91,7 +91,7 @@ const LightSwitch: React.FC<LightSwitchProps> = ({ light, toggleLight, iconPath 
         <span className="text-xs font-medium text-white px-1 truncate block drop-shadow-sm">
           {light.alias}
         </span>
-        <span className={`text-xs mt-1 block font-medium drop-shadow-sm ${isOn ? 'text-yellow-300' : 'text-gray-400'}`}>
+        <span className={`text-xs mt-1 block font-medium drop-shadow-sm ${isOn ? 'text-amber-300' : 'text-gray-400'}`}>
           {isOn ? 'ON' : 'OFF'}
         </span>
       </div>

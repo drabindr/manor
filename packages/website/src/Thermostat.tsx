@@ -504,7 +504,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   return (
     <div className="flex flex-col space-y-6 w-screen -ml-4 px-4">
       {/* =============== THERMOSTAT CARD =============== */}
-      <div className="bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-2xl shadow-2xl overflow-hidden w-full relative min-h-[380px] flex flex-col">
+      <div className="widget-base w-full relative min-h-[380px] flex flex-col bg-gradient-to-b from-slate-800/90 to-slate-900/95">
         {/* Glass reflective overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent h-1/2 pointer-events-none"></div>
         
@@ -764,12 +764,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   triggerHaptic('medium');
                 }
               }}
-              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
-                         hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
-                         active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
+              className="thermostat-temp-btn bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600/90
                          text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
                          transition-all duration-200 ease-in-out
-                         border border-gray-600/40 shadow-lg hover:shadow-xl 
+                         border border-slate-600/30 shadow-lg hover:shadow-xl 
                          active:scale-95 touch-manipulation 
                          min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
                          backdrop-blur-sm"
@@ -800,12 +798,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   triggerHaptic('medium');
                 }
               }}
-              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
-                         hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
-                         active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
+              className="thermostat-temp-btn bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600/90
                          text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
                          transition-all duration-200 ease-in-out
-                         border border-gray-600/40 shadow-lg hover:shadow-xl 
+                         border border-slate-600/30 shadow-lg hover:shadow-xl 
                          active:scale-95 touch-manipulation 
                          min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
                          backdrop-blur-sm"
@@ -833,9 +829,9 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   triggerHaptic('light');
                 }}
                 className="thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
-                           hover:bg-gray-800/50 active:bg-gray-700/60 
+                           bg-slate-800/50 hover:bg-slate-700/60 active:bg-slate-600/70
                            transition-all duration-200 ease-in-out touch-manipulation
-                           border border-gray-700/30 backdrop-blur-sm
+                           border border-slate-600/30 backdrop-blur-sm
                            min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0"
                 style={{ 
                   WebkitTapHighlightColor: 'transparent',
@@ -901,9 +897,9 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 triggerHaptic('medium');
               }}
               className={`thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
-                         hover:bg-gray-800/50 active:bg-gray-700/60 
+                         bg-slate-800/50 hover:bg-slate-700/60 active:bg-slate-600/70
                          transition-all duration-200 ease-in-out touch-manipulation
-                         border border-gray-700/30 backdrop-blur-sm
+                         border border-slate-600/30 backdrop-blur-sm
                          min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0`}
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
@@ -923,7 +919,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       
       {/* =============== AIRTHINGS CARD =============== */}
       {airthingsData && (
-        <div className="relative p-4 bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-xl shadow-lg overflow-hidden w-full">
+        <div className="relative p-4 widget-base overflow-hidden w-full bg-gradient-to-b from-slate-800/90 to-slate-900/95">
           {/* Glass reflective overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent h-1/3 pointer-events-none"></div>
           
@@ -952,14 +948,14 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
               return (
                 <div
                   key={key}
-                  className={`flex flex-col bg-gray-800/30 p-2.5 xs:p-3 iphone-15pro:p-2 rounded-lg border border-gray-700/40`}
+                  className={`flex flex-col bg-slate-800/30 p-2.5 xs:p-3 iphone-15pro:p-2 rounded-lg border border-slate-600/30 backdrop-blur-sm`}
                 >
                   <div className="flex items-center justify-between mb-1.5 xs:mb-2">
                     <div className="flex items-center space-x-1.5 xs:space-x-2">
                       <div className={`text-${key === 'temperature' ? 'red-400' : 
                                              key === 'humidity' ? 'blue-400' : 
                                              key === 'co2' ? 'purple-400' : 
-                                             key === 'voc' ? 'yellow-400' : 
+                                             key === 'voc' ? 'amber-400' : 
                                              key === 'radon' ? 'orange-400' : 'green-400'} flex-shrink-0`}>
                         {metricIcons[key]}
                       </div>
@@ -969,7 +965,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                       {metric.value} {metric.unit}
                     </div>
                   </div>
-                  <div className="w-full h-1.5 xs:h-2 bg-gray-700/50 rounded-full overflow-hidden mb-1">
+                  <div className="w-full h-1.5 xs:h-2 bg-slate-700/50 rounded-full overflow-hidden mb-1">
                     <div 
                       className={`h-full ${barColor} transition-all duration-700`} 
                       style={{ width: barWidth, boxShadow: `0 0 8px ${barColor.replace('bg-', '').replace('-500', '')}` }} 
