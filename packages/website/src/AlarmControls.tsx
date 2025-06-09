@@ -377,26 +377,27 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   return (
     <div className="flex items-center">
       {fetchError && (
-        <div className="mr-4 p-2 widget-glass border border-red-500/40 rounded-xl text-center">
+        <div className="mr-4 p-2 bg-red-600/20 border border-red-600/40 rounded-md text-center">
           <p className="text-sm text-red-400">{fetchError}</p>
         </div>
       )}
       {retryAttempts > 0 && (
-        <div className="mr-4 p-2 widget-glass border border-amber-500/40 rounded-xl text-center">
-          <p className="text-sm text-amber-400">Verifying command... ({retryAttempts}/{MAX_RETRY_ATTEMPTS})</p>
+        <div className="mr-4 p-2 bg-yellow-600/20 border border-yellow-600/40 rounded-md text-center">
+          <p className="text-sm text-yellow-400">Verifying command... ({retryAttempts}/{MAX_RETRY_ATTEMPTS})</p>
         </div>
       )}
       {/* Enhanced Alarm Control Buttons - iPhone Optimized */}
       {armMode === null ? (
         <div className="relative group" ref={dropdownRef}>
           {/* Enhanced split button container with better touch targets */}
-          <div className={`flex items-center widget-base overflow-hidden
-                         bg-gradient-to-br from-blue-600/80 via-blue-500/80 to-blue-700/80
-                         border-blue-400/30 backdrop-filter blur-md
+          <div className={`flex items-center rounded-xl shadow-lg overflow-hidden
+                         bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700
+                         border border-blue-400/30
+                         transition-all duration-300 ease-in-out touch-manipulation
                          ${
                            commandPending || refreshing
                              ? "opacity-60 cursor-not-allowed scale-95"
-                             : "hover:border-blue-300/60 active:scale-95 transform will-change-transform"
+                             : "hover:shadow-xl hover:shadow-blue-500/30 active:scale-95 hover:border-blue-300/60 transform will-change-transform"
                          }`}
                style={{ 
                  minHeight: '48px', // Increased for better touch targets
@@ -463,7 +464,7 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
           
           {/* Enhanced dropdown menu with better touch targets */}
           {dropdownOpen && (
-            <div className="absolute top-full right-0 mt-2 widget-glass rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="absolute top-full right-0 mt-2 bg-gray-900/95 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl z-50 overflow-hidden">
               <button
                 onClick={() => {
                   armAway();
@@ -500,13 +501,13 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
             triggerHaptic('heavy');
           }}
           disabled={commandPending || refreshing}
-          className={`relative flex items-center justify-center gap-3 py-3 px-5 text-sm font-bold widget-base text-white
-                   bg-gradient-to-r from-red-600/80 via-red-500/80 to-red-600/80
-                   border-red-400/30 backdrop-filter blur-md
+          className={`relative flex items-center justify-center gap-3 py-3 px-5 text-sm font-bold rounded-xl text-white shadow-lg
+                   bg-gradient-to-r from-red-600 via-red-500 to-red-600
+                   transition-all duration-300 ease-in-out touch-manipulation
                    ${
                      commandPending || refreshing
                        ? "opacity-75 cursor-not-allowed scale-95"
-                       : "active:scale-95 hover:border-red-300/60 transform will-change-transform"
+                       : "active:scale-95 active:shadow-inner hover:shadow-xl hover:from-red-500 hover:to-red-500 transform will-change-transform"
                    }`}
           style={{ 
             minHeight: '48px',

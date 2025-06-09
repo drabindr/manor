@@ -26,18 +26,6 @@
   --blur-subtle: saturate(120%) blur(12px);
   --blur-strong: saturate(200%) blur(30px);
   
-  /* Unified Widget System - Consistent with Nest/Airthings themes */
-  --widget-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.90) 0%, rgba(15, 23, 42, 0.95) 100%);
-  --widget-bg-glass: rgba(30, 41, 59, 0.85);
-  --widget-border: rgba(148, 163, 184, 0.15);
-  --widget-border-hover: rgba(59, 130, 246, 0.25);
-  --widget-border-active: rgba(251, 191, 36, 0.35);
-  --widget-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  --widget-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.2);
-  --widget-shadow-active: 0 8px 32px rgba(251, 191, 36, 0.15);
-  --widget-radius: 16px;
-  --widget-radius-large: 20px;
-  
   /* Enhanced Shadow System */
   --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.12);
   --shadow-medium: 0 12px 40px rgba(0, 0, 0, 0.15);
@@ -612,46 +600,6 @@ code {
   .ios-viewport-fix {
     height: 100vh;
     height: -webkit-fill-available;
-  }
-  
-  /* Unified Widget System Classes */
-  .widget-base {
-    background: var(--widget-bg);
-    backdrop-filter: var(--blur-subtle);
-    -webkit-backdrop-filter: var(--blur-subtle);
-    border: 1px solid var(--widget-border);
-    border-radius: var(--widget-radius);
-    box-shadow: var(--widget-shadow);
-    transition: all var(--duration-normal) var(--animation-smooth);
-  }
-  
-  .widget-base:hover {
-    border-color: var(--widget-border-hover);
-    box-shadow: var(--widget-shadow-hover);
-    transform: translateY(-1px);
-  }
-  
-  .widget-base.active {
-    border-color: var(--widget-border-active);
-    box-shadow: var(--widget-shadow-active);
-  }
-  
-  .widget-glass {
-    background: var(--widget-bg-glass);
-    backdrop-filter: var(--blur-strength);
-    -webkit-backdrop-filter: var(--blur-strength);
-    border: 1px solid var(--widget-border);
-    border-radius: var(--widget-radius);
-    box-shadow: var(--widget-shadow);
-  }
-  
-  .widget-header {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: var(--blur-subtle);
-    -webkit-backdrop-filter: var(--blur-subtle);
-    border: 1px solid var(--widget-border);
-    border-radius: var(--widget-radius);
-    box-shadow: var(--shadow-medium);
   }
 }
 
