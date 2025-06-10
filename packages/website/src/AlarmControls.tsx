@@ -6,6 +6,7 @@ import {
 } from "@iconscout/react-unicons";
 import { EventContext } from "./EventContext";
 import { wsService } from "./WebSocketService";
+import { useAuth } from "./contexts/AuthContext";
 
 type ArmMode = "stay" | "away" | null;
 
@@ -29,6 +30,7 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
   onAlarmStateChange,
 }) => {
   const { addEvent } = useContext(EventContext);
+  const { user, signOut } = useAuth();
   const [commandPending, setCommandPending] = useState(false);
   const [lastStateUpdate, setLastStateUpdate] = useState<number>(0);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -462,36 +464,95 @@ const AlarmControls: React.FC<AlarmControlsProps> = ({
             </button>
           </div>
           
-          {/* Enhanced dropdown menu with better touch targets */}
+          {/* Enhanced dropdown menu with user info and controls */}
           {dropdownOpen && (
-            <div className="absolute top-full right-0 mt-2 bg-gray-900/95 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl z-50 overflow-hidden">
-              <button
-                onClick={() => {
-                  armAway();
-                  setDropdownOpen(false);
-                  triggerHaptic('medium');
-                }}
-                disabled={commandPending || refreshing}
-                className={`w-full flex items-center gap-3 py-4 px-4 text-sm font-semibold text-white
-                         transition-all duration-300 ease-in-out touch-manipulation
-                         ${
-                           commandPending || refreshing
-                             ? "opacity-60 cursor-not-allowed"
-                             : "hover:bg-green-600/20 hover:border-green-400/30 active:scale-95 active:bg-green-600/30"
-                         }`}
-                style={{ 
-                  minHeight: '52px',
-                  minWidth: '140px'
-                }}
-              >
-                {commandPending && pendingCommand === "Arm Away" ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <span className="text-lg">🔑</span>
-                )}
-                <span className="text-green-300 tracking-wide font-medium">ARM AWAY</span>
-              </button>
+            <div className="absolute top-full right-0 mt-2 bg-gray-900/95 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ minWidth: '280px' }}>
+              {/* User Information Section */}
+              {user && (
+                <>
+                  <div className="px-5 py-4 border-b border-gray-500/20">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center liquid-glass-strong"
+                           style={{
+                             background: "linear-gradient(135deg, rgba(255, 91, 4, 0.2), rgba(244, 212, 124, 0.15))",
+                             border: "1px solid rgba(255, 91, 4, 0.3)"
+                           }}>
+                        <span className="text-orange-400 text-sm font-bold">
+                          {user.givenName?.[0]}{user.familyName?.[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">
+                          {user.givenName} {user.familyName}
+                        </p>
+                        <p className="text-gray-300 text-xs">{user.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Security Controls Section */}
+              <div className="py-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2 px-4">Security Controls</p>
+                <button
+                  onClick={() => {
+                    armAway();
+                    setDropdownOpen(false);
+                    triggerHaptic('medium');
+                  }}
+                  disabled={commandPending || refreshing}
+                  className={`w-full flex items-center gap-3 py-4 px-4 text-sm font-semibold text-white
+                           transition-all duration-300 ease-in-out touch-manipulation
+                           ${
+                             commandPending || refreshing
+                               ? "opacity-60 cursor-not-allowed"
+                               : "hover:bg-green-600/20 hover:border-green-400/30 active:scale-95 active:bg-green-600/30"
+                           }`}
+                  style={{ 
+                    minHeight: '52px'
+                  }}
+                >
+                  {commandPending && pendingCommand === "Arm Away" ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span className="text-lg">🔑</span>
+                  )}
+                  <span className="text-green-300 tracking-wide font-medium">ARM AWAY</span>
+                </button>
+              </div>
+
+              {/* Sign Out Section */}
+              {user && (
+                <div className="border-t border-gray-700 py-2">
+                  <button
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      signOut();
+                      setDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition-all duration-200 flex items-center space-x-2 min-h-[48px] touch-manipulation rounded-xl mx-2 focus:outline-none focus:ring-2 focus:ring-red-500/50 active:bg-red-900/30"
+                    style={{ transform: 'translateZ(0)' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
             </div>
+          )}
+
+          {/* Backdrop to close dropdown */}
+          {dropdownOpen && (
+            <div 
+              className="fixed inset-0 z-40 tap-highlight-transparent touch-manipulation" 
+              onClick={() => {
+                triggerHaptic('light');
+                setDropdownOpen(false);
+              }}
+            ></div>
           )}
         </div>
       ) : (

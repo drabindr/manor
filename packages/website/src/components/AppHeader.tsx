@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import AlarmControls from '../AlarmControls';
-import HouseDropdown from './HouseDropdown';
 import { useNotifications } from './NotificationsProvider';
 
 interface AppHeaderProps {
@@ -79,7 +78,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
             {/* Enhanced online indicator with better visual feedback */}
             <div className={`w-3.5 h-3.5 rounded-full ${onlineIndicatorColor} shadow-xl transition-all duration-500 ring-2 ring-black/30 hover:scale-110 active:scale-95 status-indicator`} />
-            <HouseDropdown />
+            
+            {/* Simple house name text */}
+            <span className="veedu-text text-lg xs:text-xl sm:text-2xl font-black text-liquid-primary tracking-wide drop-shadow-md transition-all duration-300 text-optimized whitespace-nowrap"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(255, 91, 4, 1), rgba(244, 212, 124, 1))",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    fontFamily: "var(--font-display)",
+                    fontWeight: "900",
+                    letterSpacing: "0.02em",
+                    textShadow: "0 2px 4px rgba(255, 91, 4, 0.3)"
+                  }}>
+              720 Front
+            </span>
           </div>
         </div>
         <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
