@@ -566,7 +566,7 @@ const DeviceControl: React.FC = () => {
       <div 
         className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" 
         style={{
-          gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(240px, 1fr))' : 'repeat(auto-fit, minmax(260px, 1fr))'
+          gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(160px, 1fr))' : 'repeat(auto-fit, minmax(200px, 1fr))'
         }}
       >
         {/* Garage Door - Show at top during daytime (6 AM to 10 PM) */}
