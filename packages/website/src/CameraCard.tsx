@@ -7,13 +7,15 @@ import React, {
   useState,
 } from 'react';
 import { logger } from './utils/Logger';
+import { performance } from './utils/performance';
 import type { CameraDevice } from './components/CameraPage';
 
 export type CameraCardProps = {
   camera: CameraDevice;
+  priority?: number; // Lower numbers = higher priority, default 0
 };
 
-const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref) => {
+const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priority = 0 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
@@ -23,12 +25,39 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const renewalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraNameRef = useRef(camera.name);
-  const maxRetries = 400;
+  const maxRetries = 5; // Reduced from 400 for faster failure detection
   const [isLoading, setIsLoading] = useState(true);
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
     offerToReceiveAudio: true,
+  };
+
+  // Optimized fetch configuration for better performance
+  const createOptimizedFetchConfig = () => {
+    const config: RequestInit = {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+      },
+      keepalive: true
+    };
+
+    // Add timeout support if available
+    try {
+      if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+        config.signal = AbortSignal.timeout(8000); // 8 second timeout
+      }
+    } catch (e) {
+      // Fallback for browsers without AbortSignal.timeout
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 8000);
+      config.signal = controller.signal;
+    }
+
+    return config;
   };
 
   // Guard to avoid spamming re-initialization
@@ -52,6 +81,14 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           logger.debug('[ontrack] Received remote track');
           videoRef.current.srcObject = event.streams[0];
           setIsLoading(false); // Video is now loading/playing
+          
+          // Track successful camera load when video starts playing
+          const videoElement = videoRef.current;
+          const handleCanPlay = () => {
+            performance.cameraMetrics.endCameraLoad(camera.name, true);
+            videoElement.removeEventListener('canplay', handleCanPlay);
+          };
+          videoElement.addEventListener('canplay', handleCanPlay);
         }
       };
 
@@ -141,6 +178,8 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
       if (retryAttempt >= maxRetries) {
         logger.error('[getLiveStream] Max retries reached.');
         setIsLoading(false);
+        // Track failed camera load
+        performance.cameraMetrics.endCameraLoad(camera.name, false);
         return;
       }
 
@@ -159,8 +198,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           const response = await fetch(
             'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              ...createOptimizedFetchConfig(),
               body: JSON.stringify({
                 data: {
                   deviceId: cameraNameRef.current,
@@ -174,11 +212,11 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           if (!response.ok) {
             logger.error(`[Extend] Error ${response.status}: ${response.statusText}`);
             if (response.status === 500) {
-              // Increase the pause on 500
+              // Server error - use exponential backoff but cap at 5 seconds
               logger.warn(`[Extend] 500 error, backoff... Attempt ${retryAttempt + 1}`);
               setTimeout(() => {
                 getLiveStream(retryAttempt + 1);
-              }, 2000 * Math.pow(2, retryAttempt));
+              }, Math.min(1000 * Math.pow(2, retryAttempt), 5000));
             } else if (response.status === 404 || response.status === 410) {
               logger.warn('[Extend] Session expired. Starting new session.');
               mediaSessionIdRef.current = null;
@@ -187,7 +225,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
               logger.warn(`[Extend] Non-500 error. Attempt ${retryAttempt + 1}`);
               setTimeout(() => {
                 getLiveStream(retryAttempt + 1);
-              }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
+              }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff for other errors
             }
             return;
           }
@@ -208,15 +246,14 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.warn(`[Generate] Offer SDP invalid. Attempt ${retryAttempt + 1}`);
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
+            }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
             return;
           }
 
           const response = await fetch(
             'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              ...createOptimizedFetchConfig(),
               body: JSON.stringify({
                 data: {
                   deviceId: cameraNameRef.current,
@@ -231,7 +268,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.error(`[Generate] Error ${response.status}: ${response.statusText}`);
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
+            }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
             return;
           }
 
@@ -254,24 +291,35 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
             logger.error('[Generate] Missing answerSdp or mediaSessionId');
             setTimeout(() => {
               getLiveStream(retryAttempt + 1);
-            }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
+            }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
           }
         }
       } catch (error) {
         logger.error('[getLiveStream] Error:', error);
+        // More aggressive retry for network errors, but with reasonable cap
         setTimeout(() => {
           getLiveStream(retryAttempt + 1);
-        }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
+        }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000));
       }
     },
     [createOffer, initializePeerConnection, scheduleRenewal]
   );
 
   useEffect(() => {
-    initializePeerConnection();
-    getLiveStream();
+    // Implement priority-based loading: high priority cameras load immediately,
+    // lower priority cameras are staggered to reduce initial network congestion
+    const loadDelay = priority * 800; // 800ms delay per priority level
+    
+    const initTimer = setTimeout(() => {
+      // Start performance tracking
+      performance.cameraMetrics.startCameraLoad(camera.name);
+      
+      initializePeerConnection();
+      getLiveStream();
+    }, loadDelay);
 
     return () => {
+      clearTimeout(initTimer);
       if (renewalTimerRef.current) {
         clearTimeout(renewalTimerRef.current);
         renewalTimerRef.current = null;
@@ -281,7 +329,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         pcRef.current = null;
       }
     };
-  }, [getLiveStream, initializePeerConnection]);
+  }, [getLiveStream, initializePeerConnection, priority]);
 
   return (
     <div
