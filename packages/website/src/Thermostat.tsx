@@ -158,6 +158,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const [airthingsData, setAirthingsData] = useState<AirthingsData | null>(null);
   const [isTemperatureChanging, setIsTemperatureChanging] = useState(false);
   const [ecoModeActive, setEcoModeActive] = useState(false);
+  const [heatCoolMode, setHeatCoolMode] = useState<'heat' | 'cool'>('heat'); // Track which boundary to adjust in HEATCOOL mode
 
   // Enhanced iPhone haptic feedback helper
   const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
@@ -329,11 +330,27 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   }, [thermostatData?.setpoint]);
 
   /**
+   * Get the current active setpoint for HEATCOOL mode
+   */
+  const getActiveSetpoint = () => {
+    if (thermostatData?.mode === "HEATCOOL") {
+      return heatCoolMode === 'heat' ? thermostatData.heatCelsius : thermostatData.coolCelsius;
+    }
+    return localSetpoint;
+  };
+
+  /**
    * Handler to set the thermostat temperature
    */
   const setThermostatTemperature = (newSetpoint: number) => {
     console.log("Setting new setpoint to:", newSetpoint);
-    setLocalSetpoint(newSetpoint);
+    if (thermostatData?.mode === "HEATCOOL") {
+      console.log(`Adjusting ${heatCoolMode} setpoint to:`, newSetpoint);
+      // In HEATCOOL mode, we need to adjust the specific boundary
+      // This would typically make an API call to update either heat or cool boundary
+    } else {
+      setLocalSetpoint(newSetpoint);
+    }
   };
 
   /**
@@ -371,7 +388,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const radiusTicks = 110;
   const minTemp = 10;
   const maxTemp = 30;
-  const setpointTemp = localSetpoint !== null ? localSetpoint : 20;
+  const setpointTemp = getActiveSetpoint() !== null ? getActiveSetpoint() : 20;
   const setpointAngle = ((setpointTemp - minTemp) / (maxTemp - minTemp)) * 270 - 135;
   const setpointRad = (setpointAngle * Math.PI) / 180;
   const xSet = centerX + radiusTicks * Math.cos(setpointRad);
@@ -660,11 +677,17 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
             }}
           >
             <div className="text-5xl font-light tracking-tight">
-              {localSetpoint !== null ? Math.round(localSetpoint) : "--"}°
+              {getActiveSetpoint() !== null ? Math.round(getActiveSetpoint()) : "--"}°
             </div>
             {thermostatData && (
               <div className="text-sm mt-1 text-gray-300 opacity-80">
-                Current: {thermostatData.currentTemperature.toFixed(1)}°C
+                {thermostatData.mode === "HEATCOOL" ? (
+                  <span>
+                    {heatCoolMode === 'heat' ? 'Heat' : 'Cool'}: {getActiveSetpoint()?.toFixed(1)}°C
+                  </span>
+                ) : (
+                  <span>Current: {thermostatData.currentTemperature.toFixed(1)}°C</span>
+                )}
               </div>
             )}
             <div className="text-sm text-blue-400 flex items-center mt-2 space-x-1">
@@ -676,155 +699,221 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         
         {/* Controls Container */}
         <div className="thermostat-controls flex items-center justify-between px-2 xs:px-3 sm:px-6 py-3 bg-black/40 border-t border-gray-800/50 backdrop-blur-sm gap-1 xs:gap-2">
-          {/* Enhanced Mode Control with iPhone optimizations */}
-          <div className="relative flex-shrink-0">
+          {/* Left Controls: Mode + Eco */}
+          <div className="flex items-center space-x-1 xs:space-x-2 flex-shrink-0">
+            {/* Enhanced Mode Control with iPhone optimizations */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setModeDropdownOpen(!modeDropdownOpen);
+                  triggerHaptic('light');
+                }}
+                className="thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
+                           hover:bg-gray-800/50 active:bg-gray-700/60 
+                           transition-all duration-200 ease-in-out touch-manipulation
+                           border border-gray-700/30 backdrop-blur-sm
+                           min-h-[48px] min-w-[70px] xs:min-w-[80px]"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden'
+                }}
+              >
+                <span className={`transition-colors duration-200 drop-shadow-sm`} style={{ color: getModeColor() }}>
+                  {thermostatData?.mode === "HEAT" && <UilFire size={22} />}
+                  {thermostatData?.mode === "COOL" && <UilSnowflake size={22} />}
+                  {thermostatData?.mode === "HEATCOOL" && (
+                    <div className="flex space-x-1">
+                      <UilFire size={18} className="text-red-500" />
+                      <UilSnowflake size={18} className="text-blue-500" />
+                    </div>
+                  )}
+                  {thermostatData?.mode === "OFF" && <UilCircle size={22} />}
+                </span>
+                <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium">Mode</span>
+              </button>
+              {modeDropdownOpen && (
+                <div className="absolute bottom-full mb-2 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl z-20 border border-gray-700/50 w-40 overflow-hidden">
+                  {["HEAT", "COOL", "HEATCOOL", "OFF"].map((modeOption) => (
+                    <button
+                      key={modeOption}
+                      onClick={() => {
+                        changeThermostatMode(modeOption);
+                        triggerHaptic('medium');
+                      }}
+                      className={`block w-full text-left px-4 py-3.5 text-sm 
+                                 hover:bg-gray-700/60 active:bg-gray-600/60 
+                                 transition-all duration-200 ease-in-out touch-manipulation
+                                 ${thermostatData?.mode === modeOption ? "bg-gray-700/50" : ""} 
+                                 ${modeOption === "HEAT" ? "text-red-400" : ""} 
+                                 ${modeOption === "COOL" ? "text-blue-400" : ""}
+                                 ${modeOption === "HEATCOOL" ? "text-green-400" : ""}
+                                 ${modeOption === "OFF" ? "text-gray-400" : ""}`}
+                      style={{ 
+                        WebkitTapHighlightColor: 'transparent',
+                        minHeight: '48px'
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {modeOption === "HEAT" && <UilFire size={16} />}
+                        {modeOption === "COOL" && <UilSnowflake size={16} />}
+                        {modeOption === "HEATCOOL" && (
+                          <div className="flex space-x-0.5">
+                            <UilFire size={14} className="text-red-400" />
+                            <UilSnowflake size={14} className="text-blue-400" />
+                          </div>
+                        )}
+                        {modeOption === "OFF" && <UilCircle size={16} />}
+                        <span className="font-medium">{modeOption === "HEATCOOL" ? "Auto" : modeOption.charAt(0) + modeOption.slice(1).toLowerCase()}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Enhanced Eco Mode Toggle - iPhone Optimized - MOVED TO LEFT */}
             <button 
               onClick={() => {
-                setModeDropdownOpen(!modeDropdownOpen);
-                triggerHaptic('light');
+                toggleEcoMode();
+                triggerHaptic('medium');
               }}
-              className="thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
+              className={`thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
                          hover:bg-gray-800/50 active:bg-gray-700/60 
                          transition-all duration-200 ease-in-out touch-manipulation
                          border border-gray-700/30 backdrop-blur-sm
-                         min-h-[48px] min-w-[70px] xs:min-w-[80px]"
+                         min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0`}
               style={{ 
                 WebkitTapHighlightColor: 'transparent',
                 transform: 'translateZ(0)',
                 backfaceVisibility: 'hidden'
               }}
             >
-              <span className={`transition-colors duration-200 drop-shadow-sm`} style={{ color: getModeColor() }}>
-                {thermostatData?.mode === "HEAT" && <UilFire size={22} />}
-                {thermostatData?.mode === "COOL" && <UilSnowflake size={22} />}
-                {thermostatData?.mode === "HEATCOOL" && (
-                  <div className="flex space-x-1">
-                    <UilFire size={18} className="text-red-500" />
-                    <UilSnowflake size={18} className="text-blue-500" />
-                  </div>
-                )}
-                {thermostatData?.mode === "OFF" && <UilCircle size={22} />}
-              </span>
-              <span className="text-xs text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium">Mode</span>
+              <UilTrees
+                className={ecoModeActive ? "text-green-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
+                size={18}
+              />
+              <span className="btn-text-responsive text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap truncate">Eco</span>
             </button>
-            {modeDropdownOpen && (
-              <div className="absolute bottom-full mb-2 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl z-20 border border-gray-700/50 w-40 overflow-hidden">
-                {["HEAT", "COOL", "HEATCOOL", "OFF"].map((modeOption) => (
-                  <button
-                    key={modeOption}
-                    onClick={() => {
-                      changeThermostatMode(modeOption);
-                      triggerHaptic('medium');
-                    }}
-                    className={`block w-full text-left px-4 py-3.5 text-sm 
-                               hover:bg-gray-700/60 active:bg-gray-600/60 
-                               transition-all duration-200 ease-in-out touch-manipulation
-                               ${thermostatData?.mode === modeOption ? "bg-gray-700/50" : ""} 
-                               ${modeOption === "HEAT" ? "text-red-400" : ""} 
-                               ${modeOption === "COOL" ? "text-blue-400" : ""}
-                               ${modeOption === "HEATCOOL" ? "text-green-400" : ""}
-                               ${modeOption === "OFF" ? "text-gray-400" : ""}`}
-                    style={{ 
-                      WebkitTapHighlightColor: 'transparent',
-                      minHeight: '48px'
-                    }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {modeOption === "HEAT" && <UilFire size={16} />}
-                      {modeOption === "COOL" && <UilSnowflake size={16} />}
-                      {modeOption === "HEATCOOL" && (
-                        <div className="flex space-x-0.5">
-                          <UilFire size={14} className="text-red-400" />
-                          <UilSnowflake size={14} className="text-blue-400" />
-                        </div>
-                      )}
-                      {modeOption === "OFF" && <UilCircle size={16} />}
-                      <span className="font-medium">{modeOption === "HEATCOOL" ? "Auto" : modeOption.charAt(0) + modeOption.slice(1).toLowerCase()}</span>
-                    </div>
-                  </button>
-                ))}
+          </div>
+          
+          {/* Center: Temperature Controls with HEATCOOL mode selector */}
+          <div className="flex flex-col items-center space-y-1 flex-shrink-0">
+            {/* HEATCOOL Mode Selector */}
+            {thermostatData?.mode === "HEATCOOL" && (
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => {
+                    setHeatCoolMode('heat');
+                    triggerHaptic('light');
+                  }}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                    heatCoolMode === 'heat' 
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                      : 'bg-gray-800/30 text-gray-500 hover:text-red-400 border border-gray-700/30'
+                  }`}
+                >
+                  <UilFire size={12} className="inline mr-1" />
+                  Heat
+                </button>
+                <button
+                  onClick={() => {
+                    setHeatCoolMode('cool');
+                    triggerHaptic('light');
+                  }}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                    heatCoolMode === 'cool' 
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                      : 'bg-gray-800/30 text-gray-500 hover:text-blue-400 border border-gray-700/30'
+                  }`}
+                >
+                  <UilSnowflake size={12} className="inline mr-1" />
+                  Cool
+                </button>
               </div>
             )}
+            
+            {/* Enhanced Temperature Controls with iPhone optimizations */}
+            <div className="flex space-x-2 xs:space-x-3">
+              <button
+                onMouseDown={() => setIsTemperatureChanging(true)}
+                onMouseUp={() => setIsTemperatureChanging(false)}
+                onMouseLeave={() => setIsTemperatureChanging(false)}
+                onTouchStart={() => {
+                  setIsTemperatureChanging(true);
+                  triggerHaptic('light');
+                }}
+                onTouchEnd={() => setIsTemperatureChanging(false)}
+                onClick={() => {
+                  const currentSetpoint = getActiveSetpoint();
+                  if (currentSetpoint !== null) {
+                    setThermostatTemperature(currentSetpoint - 0.5);
+                    triggerHaptic('medium');
+                  }
+                }}
+                className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
+                           hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
+                           active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
+                           text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
+                           transition-all duration-200 ease-in-out
+                           border border-gray-600/40 shadow-lg hover:shadow-xl 
+                           active:scale-95 touch-manipulation 
+                           min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
+                           backdrop-blur-sm"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                  WebkitTransform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  willChange: 'transform, box-shadow'
+                }}
+              >
+                <UilMinusCircle size={22} className="drop-shadow-sm xs:hidden" />
+                <UilMinusCircle size={26} className="drop-shadow-sm hidden xs:block" />
+              </button>
+              <button
+                onMouseDown={() => setIsTemperatureChanging(true)}
+                onMouseUp={() => setIsTemperatureChanging(false)}
+                onMouseLeave={() => setIsTemperatureChanging(false)}
+                onTouchStart={() => {
+                  setIsTemperatureChanging(true);
+                  triggerHaptic('light');
+                }}
+                onTouchEnd={() => setIsTemperatureChanging(false)}
+                onClick={() => {
+                  const currentSetpoint = getActiveSetpoint();
+                  if (currentSetpoint !== null) {
+                    setThermostatTemperature(currentSetpoint + 0.5);
+                    triggerHaptic('medium');
+                  }
+                }}
+                className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
+                           hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
+                           active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
+                           text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
+                           transition-all duration-200 ease-in-out
+                           border border-gray-600/40 shadow-lg hover:shadow-xl 
+                           active:scale-95 touch-manipulation 
+                           min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
+                           backdrop-blur-sm"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                  WebkitTransform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  willChange: 'transform, box-shadow'
+                }}
+              >
+                <UilPlusCircle size={22} className="drop-shadow-sm xs:hidden" />
+                <UilPlusCircle size={26} className="drop-shadow-sm hidden xs:block" />
+              </button>
+            </div>
           </div>
           
-          {/* Enhanced Temperature Controls with iPhone optimizations */}
-          <div className="flex space-x-2 xs:space-x-3 flex-shrink-0">
-            <button
-              onMouseDown={() => setIsTemperatureChanging(true)}
-              onMouseUp={() => setIsTemperatureChanging(false)}
-              onMouseLeave={() => setIsTemperatureChanging(false)}
-              onTouchStart={() => {
-                setIsTemperatureChanging(true);
-                triggerHaptic('light');
-              }}
-              onTouchEnd={() => setIsTemperatureChanging(false)}
-              onClick={() => {
-                if (localSetpoint !== null) {
-                  setThermostatTemperature(localSetpoint - 0.5);
-                  triggerHaptic('medium');
-                }
-              }}
-              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
-                         hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
-                         active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
-                         text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
-                         transition-all duration-200 ease-in-out
-                         border border-gray-600/40 shadow-lg hover:shadow-xl 
-                         active:scale-95 touch-manipulation 
-                         min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
-                         backdrop-blur-sm"
-              style={{ 
-                WebkitTapHighlightColor: 'transparent',
-                transform: 'translateZ(0)',
-                WebkitTransform: 'translateZ(0)',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
-                willChange: 'transform, box-shadow'
-              }}
-            >
-              <UilMinusCircle size={22} className="drop-shadow-sm xs:hidden" />
-              <UilMinusCircle size={26} className="drop-shadow-sm hidden xs:block" />
-            </button>
-            <button
-              onMouseDown={() => setIsTemperatureChanging(true)}
-              onMouseUp={() => setIsTemperatureChanging(false)}
-              onMouseLeave={() => setIsTemperatureChanging(false)}
-              onTouchStart={() => {
-                setIsTemperatureChanging(true);
-                triggerHaptic('light');
-              }}
-              onTouchEnd={() => setIsTemperatureChanging(false)}
-              onClick={() => {
-                if (localSetpoint !== null) {
-                  setThermostatTemperature(localSetpoint + 0.5);
-                  triggerHaptic('medium');
-                }
-              }}
-              className="thermostat-temp-btn bg-gradient-to-br from-gray-800/70 via-gray-700/80 to-gray-800/70 
-                         hover:from-gray-700/90 hover:via-gray-600/90 hover:to-gray-700/90 
-                         active:from-gray-900/90 active:via-gray-800/90 active:to-gray-900/90
-                         text-white rounded-full p-2.5 xs:p-3 focus:outline-none 
-                         transition-all duration-200 ease-in-out
-                         border border-gray-600/40 shadow-lg hover:shadow-xl 
-                         active:scale-95 touch-manipulation 
-                         min-h-[44px] min-w-[44px] xs:min-h-[52px] xs:min-w-[52px] flex items-center justify-center
-                         backdrop-blur-sm"
-              style={{ 
-                WebkitTapHighlightColor: 'transparent',
-                transform: 'translateZ(0)',
-                WebkitTransform: 'translateZ(0)',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
-                willChange: 'transform, box-shadow'
-              }}
-            >
-              <UilPlusCircle size={22} className="drop-shadow-sm xs:hidden" />
-              <UilPlusCircle size={26} className="drop-shadow-sm hidden xs:block" />
-            </button>
-          </div>
-          
-          {/* Enhanced Fan & Eco Controls with iPhone optimizations */}
-          <div className="thermostat-fan-eco-container flex items-center space-x-1 xs:space-x-2 flex-shrink min-w-0">
+          {/* Right: Fan Control */}
+          <div className="flex items-center space-x-1 xs:space-x-2 flex-shrink min-w-0">
             {/* Enhanced Fan Control - iPhone Optimized */}
             <div className="relative">
               <button 
@@ -893,30 +982,6 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                 </div>
               )}
             </div>
-            
-            {/* Enhanced Eco Mode Toggle - iPhone Optimized */}
-            <button 
-              onClick={() => {
-                toggleEcoMode();
-                triggerHaptic('medium');
-              }}
-              className={`thermostat-control-btn group flex items-center space-x-1 xs:space-x-2 px-2 xs:px-3 sm:px-4 py-3 rounded-lg 
-                         hover:bg-gray-800/50 active:bg-gray-700/60 
-                         transition-all duration-200 ease-in-out touch-manipulation
-                         border border-gray-700/30 backdrop-blur-sm
-                         min-h-[48px] min-w-[65px] xs:min-w-[85px] sm:min-w-[100px] flex-shrink-0`}
-              style={{ 
-                WebkitTapHighlightColor: 'transparent',
-                transform: 'translateZ(0)',
-                backfaceVisibility: 'hidden'
-              }}
-            >
-              <UilTrees
-                className={ecoModeActive ? "text-green-400 drop-shadow-sm flex-shrink-0" : "text-gray-500 group-hover:text-gray-300 drop-shadow-sm flex-shrink-0"}
-                size={18}
-              />
-              <span className="btn-text-responsive text-xs xs:text-sm text-gray-400 group-hover:text-gray-200 transition-colors duration-200 font-medium whitespace-nowrap truncate">Eco</span>
-            </button>
           </div>
         </div>
       </div>
