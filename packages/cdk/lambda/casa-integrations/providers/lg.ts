@@ -1,13 +1,74 @@
 import axios from 'axios';
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import { SSMClient, GetParameterCommand, GetParametersCommand } from '@aws-sdk/client-ssm';
 
 const ssmClient = new SSMClient({});
 
-async function getParameter(name: string): Promise<string> {
+// Parameter cache to reduce KMS calls
+const parameterCache = new Map<string, { value: string; timestamp: number }>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
+
+async function getCachedParameter(name: string): Promise<string> {
+  const cached = parameterCache.get(name);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.value;
+  }
+
   const command = new GetParameterCommand({ Name: name, WithDecryption: true });
   const response = await ssmClient.send(command);
   if (!response.Parameter?.Value) throw new Error(`Parameter ${name} not found or empty`);
+  
+  // Cache the parameter
+  parameterCache.set(name, {
+    value: response.Parameter.Value,
+    timestamp: Date.now()
+  });
+  
   return response.Parameter.Value;
+}
+
+// Batch parameter retrieval for better performance
+async function getBatchParameters(names: string[]): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  const uncachedNames: string[] = [];
+  
+  // Check cache first
+  for (const name of names) {
+    const cached = parameterCache.get(name);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      result[name] = cached.value;
+    } else {
+      uncachedNames.push(name);
+    }
+  }
+  
+  // Fetch uncached parameters in batch
+  if (uncachedNames.length > 0) {
+    const command = new GetParametersCommand({
+      Names: uncachedNames,
+      WithDecryption: true,
+    });
+    const response = await ssmClient.send(command);
+    
+    if (response.Parameters) {
+      for (const param of response.Parameters) {
+        if (param.Name && param.Value) {
+          result[param.Name] = param.Value;
+          // Cache the parameter
+          parameterCache.set(param.Name, {
+            value: param.Value,
+            timestamp: Date.now()
+          });
+        }
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Legacy function for backward compatibility
+async function getParameter(name: string): Promise<string> {
+  return getCachedParameter(name);
 }
 
 enum OperationState {
@@ -35,9 +96,13 @@ enum DeviceType {
 }
 
 async function getCredentials(): Promise<{ userId: string; accessToken: string; countryCode: string }> {
-  const userId = await getParameter('/lg/user-id');
-  const accessToken = await getParameter('/lg/access-token');
-  return { userId, accessToken, countryCode: 'CA' };
+  // Use batch parameter retrieval for better performance
+  const params = await getBatchParameters(['/lg/user-id', '/lg/access-token']);
+  return { 
+    userId: params['/lg/user-id'], 
+    accessToken: params['/lg/access-token'], 
+    countryCode: 'CA' 
+  };
 }
 
 function generateMessageId(): string {

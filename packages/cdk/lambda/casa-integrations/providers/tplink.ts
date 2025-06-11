@@ -3,7 +3,16 @@ import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm';
 
 const ssmClient = new SSMClient({});
 
+// Parameter cache to reduce KMS calls
+let credentialsCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
+
 async function getCredentials() {
+  // Check cache first
+  if (credentialsCache && Date.now() - credentialsCache.timestamp < CACHE_TTL) {
+    return credentialsCache.data;
+  }
+
   const command = new GetParametersCommand({
     Names: [
       '/tplink/cloudUsername',
@@ -32,7 +41,12 @@ async function getCredentials() {
     throw new Error('Missing TP-Link credentials in Parameter Store');
   }
 
-  return { CLOUD_USERNAME, CLOUD_PASSWORD, TERMINAL_UUID };
+  const result = { CLOUD_USERNAME, CLOUD_PASSWORD, TERMINAL_UUID };
+  
+  // Cache the credentials
+  credentialsCache = { data: result, timestamp: Date.now() };
+  
+  return result;
 }
 
 async function getToken(

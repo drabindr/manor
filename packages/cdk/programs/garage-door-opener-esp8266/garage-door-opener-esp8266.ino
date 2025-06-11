@@ -53,12 +53,12 @@ const int STACK_CANARY = 0xDEADBEEF; // Stack overflow detection
 
 // Timing constants
 const unsigned long RELAY_PULSE_DURATION = 1000; // 1 second pulse to trigger garage door
-const unsigned long HEARTBEAT_INTERVAL = 30000; // Send heartbeat every 30 seconds when web app active
+const unsigned long HEARTBEAT_INTERVAL = 120000; // Send heartbeat every 2 minutes when web app active (was 30s)
 const unsigned long HEARTBEAT_INTERVAL_INACTIVE = 300000; // Send heartbeat every 5 minutes when inactive (reduced from 10min)
 const unsigned long WEB_APP_TIMEOUT = 60000; // Consider app inactive after 60 seconds
-const unsigned long WEBSOCKET_RECONNECT_INTERVAL = 10000; // Try to reconnect every 10 seconds (reduced from 15s)
-const unsigned long DEVICE_REREGISTRATION_INTERVAL = 3600000; // Re-register every 1 hour (reduced from 2h)
-const unsigned long HEALTH_CHECK_INTERVAL = 900000; // Health check every 15 minutes (reduced from 30m)
+const unsigned long WEBSOCKET_RECONNECT_INTERVAL = 15000; // Try to reconnect every 15 seconds (was 10s)
+const unsigned long DEVICE_REREGISTRATION_INTERVAL = 7200000; // Re-register every 2 hours (was 1 hour)
+const unsigned long HEALTH_CHECK_INTERVAL = 1800000; // Health check every 30 minutes (was 15 minutes)
 const unsigned long COMMAND_FAILURE_REREGISTER_DELAY = 3000; // Re-register 3 seconds after command failure
 
 // STABILITY: Simplified WebSocket resilience variables

@@ -6,6 +6,17 @@ const dynamodb = new AWS.DynamoDB.DocumentClient();
 const ssm = new AWS.SSM();
 const TABLE_NAME = process.env.DEVICE_TOKENS_TABLE || '';
 
+// APNS credentials cache to reduce KMS calls
+let apnsCredentialsCache: {
+  cert: string;
+  key: string;
+  teamId: string;
+  keyId: string;
+  timestamp: number;
+} | null = null;
+
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
+
 interface PushNotification {
   alert?: {
     title?: string;
@@ -46,21 +57,41 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Get APNs credentials from SSM Parameter Store
-    const [certResponse, keyResponse, teamIdResponse, keyIdResponse] = await Promise.all([
-      ssm.getParameter({ Name: '/apns/cert', WithDecryption: true }).promise(),
-      ssm.getParameter({ Name: '/apns/key', WithDecryption: true }).promise(),
-      ssm.getParameter({ Name: '/apns/team-id', WithDecryption: true }).promise(),
-      ssm.getParameter({ Name: '/apns/key-id', WithDecryption: true }).promise()
-    ]);
-    
-    const cert = certResponse.Parameter?.Value;
-    const key = keyResponse.Parameter?.Value;
-    const teamId = teamIdResponse.Parameter?.Value;
-    const keyId = keyIdResponse.Parameter?.Value;
-    
-    if (!cert || !key || !teamId || !keyId) {
-      throw new Error('Failed to retrieve APNs credentials from Parameter Store');
+    // Get APNs credentials from cache or SSM Parameter Store
+    let cert, key, teamId, keyId;
+
+    if (apnsCredentialsCache && (Date.now() - apnsCredentialsCache.timestamp) < CACHE_TTL) {
+      // Use cached credentials
+      cert = apnsCredentialsCache.cert;
+      key = apnsCredentialsCache.key;
+      teamId = apnsCredentialsCache.teamId;
+      keyId = apnsCredentialsCache.keyId;
+    } else {
+      // Fetch credentials from SSM Parameter Store
+      const [certResponse, keyResponse, teamIdResponse, keyIdResponse] = await Promise.all([
+        ssm.getParameter({ Name: '/apns/cert', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/key', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/team-id', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/key-id', WithDecryption: true }).promise()
+      ]);
+      
+      cert = certResponse.Parameter?.Value;
+      key = keyResponse.Parameter?.Value;
+      teamId = teamIdResponse.Parameter?.Value;
+      keyId = keyIdResponse.Parameter?.Value;
+      
+      if (!cert || !key || !teamId || !keyId) {
+        throw new Error('Failed to retrieve APNs credentials from Parameter Store');
+      }
+
+      // Update cache
+      apnsCredentialsCache = {
+        cert,
+        key,
+        teamId,
+        keyId,
+        timestamp: Date.now()
+      };
     }
 
     // Configure APN provider
