@@ -40,7 +40,7 @@ const formatRunningState = (state: string): string => {
 
 // Helper to calculate optimal polling interval based on device states
 const calculatePollingInterval = (lgStatus: Record<string, LGDeviceStatus>): number => {
-  let minInterval = 300000; // Default: 5 minutes for idle devices
+  let minInterval = 600000; // Increased default: 10 minutes for idle devices (was 5 minutes)
   
   for (const status of Object.values(lgStatus)) {
     if (!status) continue;
