@@ -220,7 +220,7 @@ export class CasaGuardCdkStack extends cdk.Stack {
       environment: {
         CONN_TABLE_NAME: connectionsTable.tableName,
         ALARM_STATE_TABLE_NAME: alarmStateTable.tableName,
-        PING_INTERVAL_MINUTES: "5", // Added environment variable for ping interval
+        PING_INTERVAL_MINUTES: "10", // Increased from 5 to 10 minutes to reduce Lambda invocations
       },
       timeout: cdk.Duration.seconds(60), // Increase timeout to handle larger batches of connections
       bundling: {
@@ -229,7 +229,7 @@ export class CasaGuardCdkStack extends cdk.Stack {
     });
 
     new cdk.aws_events.Rule(this, "PingScheduleRule", {
-      schedule: cdk.aws_events.Schedule.rate(cdk.Duration.minutes(5)),
+      schedule: cdk.aws_events.Schedule.rate(cdk.Duration.minutes(10)), // Reduced from 5 to 10 minutes to decrease Lambda invocations
       targets: [new cdk.aws_events_targets.LambdaFunction(pingLambda)],
     });
 

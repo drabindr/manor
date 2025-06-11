@@ -1,9 +1,18 @@
 import axios from 'axios';
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import { SSMClient, GetParameterCommand, GetParametersCommand } from '@aws-sdk/client-ssm';
 
 const ssmClient = new SSMClient({});
 
-async function getParameter(name: string): Promise<string> {
+// Parameter cache to reduce KMS calls
+const parameterCache = new Map<string, { value: string; timestamp: number }>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
+
+async function getCachedParameter(name: string): Promise<string> {
+  const cached = parameterCache.get(name);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.value;
+  }
+
   const command = new GetParameterCommand({
     Name: name,
     WithDecryption: true,
@@ -12,12 +21,65 @@ async function getParameter(name: string): Promise<string> {
   if (!response.Parameter?.Value) {
     throw new Error(`Parameter ${name} not found or empty`);
   }
+  
+  // Cache the parameter
+  parameterCache.set(name, {
+    value: response.Parameter.Value,
+    timestamp: Date.now()
+  });
+  
   return response.Parameter.Value;
 }
 
+// Batch parameter retrieval for better performance
+async function getBatchParameters(names: string[]): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  const uncachedNames: string[] = [];
+  
+  // Check cache first
+  for (const name of names) {
+    const cached = parameterCache.get(name);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      result[name] = cached.value;
+    } else {
+      uncachedNames.push(name);
+    }
+  }
+  
+  // Fetch uncached parameters in batch
+  if (uncachedNames.length > 0) {
+    const command = new GetParametersCommand({
+      Names: uncachedNames,
+      WithDecryption: true,
+    });
+    const response = await ssmClient.send(command);
+    
+    if (response.Parameters) {
+      for (const param of response.Parameters) {
+        if (param.Name && param.Value) {
+          result[param.Name] = param.Value;
+          // Cache the parameter
+          parameterCache.set(param.Name, {
+            value: param.Value,
+            timestamp: Date.now()
+          });
+        }
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Legacy function for backward compatibility
+async function getParameter(name: string): Promise<string> {
+  return getCachedParameter(name);
+}
+
 async function getAccessToken(): Promise<string> {
-  const clientId = await getParameter('/airthings/client-id');
-  const clientSecret = await getParameter('/airthings/client-secret');
+  const params = await getBatchParameters(['/airthings/client-id', '/airthings/client-secret']);
+  const clientId = params['/airthings/client-id'];
+  const clientSecret = params['/airthings/client-secret'];
 
   const tokenUrl = 'https://accounts-api.airthings.com/v1/token';
   const formData = new URLSearchParams();

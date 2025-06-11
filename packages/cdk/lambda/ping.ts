@@ -7,8 +7,8 @@ const region = process.env.AWS_REGION || 'us-east-1';
 const dynamoDBClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
 const connectionsTableName = process.env.CONN_TABLE_NAME || 'GuardConnectionsTable';
 const alarmStateTableName = process.env.ALARM_STATE_TABLE_NAME || 'AlarmState';
-// Get ping interval from environment variable or use default of 5 minutes
-const pingIntervalMinutes = parseInt(process.env.PING_INTERVAL_MINUTES || '5', 10);
+// Get ping interval from environment variable or use default of 10 minutes (was 5 minutes)
+const pingIntervalMinutes = parseInt(process.env.PING_INTERVAL_MINUTES || '10', 10);
 
 /**
  * Sends ping messages to connected clients on a reduced schedule and updates connections that don't respond
