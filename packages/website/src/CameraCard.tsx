@@ -25,8 +25,10 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const renewalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraNameRef = useRef(camera.name);
-  const maxRetries = 5; // Reduced from 400 for faster failure detection
+  const maxFastRetries = 5; // Fast initial retry attempts for quick failure detection
   const [isLoading, setIsLoading] = useState(true);
+  const backgroundRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isBackgroundRetryingRef = useRef(false);
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
@@ -60,6 +62,35 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
     return config;
   };
 
+  // Background retry function for continued attempts after fast retries fail
+  const startBackgroundRetry = useCallback(() => {
+    if (isBackgroundRetryingRef.current) return; // Already retrying in background
+    
+    isBackgroundRetryingRef.current = true;
+    logger.debug('[startBackgroundRetry] Switching to background retry mode');
+    
+    const backgroundRetry = () => {
+      if (!isBackgroundRetryingRef.current) return;
+      
+      logger.debug('[backgroundRetry] Attempting to reload camera stream');
+      getLiveStream(0, true); // Reset retry count, mark as background retry
+      
+      // Schedule next background retry in 45 seconds
+      backgroundRetryTimerRef.current = setTimeout(backgroundRetry, 45000);
+    };
+    
+    // Start first background retry in 30 seconds
+    backgroundRetryTimerRef.current = setTimeout(backgroundRetry, 30000);
+  }, []);
+
+  const stopBackgroundRetry = useCallback(() => {
+    if (backgroundRetryTimerRef.current) {
+      clearTimeout(backgroundRetryTimerRef.current);
+      backgroundRetryTimerRef.current = null;
+    }
+    isBackgroundRetryingRef.current = false;
+  }, []);
+
   // Guard to avoid spamming re-initialization
   const isReinitScheduledRef = useRef(false);
 
@@ -87,6 +118,8 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
           const handleCanPlay = () => {
             performance.cameraMetrics.endCameraLoad(camera.name, true);
             videoElement.removeEventListener('canplay', handleCanPlay);
+            // Stop background retrying since camera is now working
+            stopBackgroundRetry();
           };
           videoElement.addEventListener('canplay', handleCanPlay);
         }
@@ -115,7 +148,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
                 pcRef.current = null;
                 // Force new stream
                 mediaSessionIdRef.current = null;
-                getLiveStream();
+                getLiveStream(0, false); // Reset attempt count, not a background retry
               }
               isReinitScheduledRef.current = false;
             }, 2000); // wait 2s instead of 5s for faster recovery
@@ -173,17 +206,27 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
   );
 
   const getLiveStream = useCallback(
-    async (retryAttempt = 0) => {
-      logger.debug(`[getLiveStream] Attempt ${retryAttempt + 1}/${maxRetries}`);
-      if (retryAttempt >= maxRetries) {
-        logger.error('[getLiveStream] Max retries reached.');
-        setIsLoading(false);
-        // Track failed camera load
-        performance.cameraMetrics.endCameraLoad(camera.name, false);
-        return;
+    async (retryAttempt = 0, isBackgroundRetry = false) => {
+      const currentMaxRetries = isBackgroundRetry ? 1 : maxFastRetries; // Background retries only try once
+      logger.debug(`[getLiveStream] Attempt ${retryAttempt + 1}/${currentMaxRetries}${isBackgroundRetry ? ' (background)' : ''}`);
+      
+      if (retryAttempt >= currentMaxRetries) {
+        if (isBackgroundRetry) {
+          // Background retry failed, just return (next background retry will happen in 45s)
+          logger.debug('[getLiveStream] Background retry failed, will try again later');
+          return;
+        } else {
+          // Fast retries exhausted, switch to background retry mode
+          logger.warn('[getLiveStream] Fast retries exhausted, switching to background retry mode');
+          setIsLoading(false);
+          // Track failed camera load for initial attempts
+          performance.cameraMetrics.endCameraLoad(camera.name, false);
+          startBackgroundRetry();
+          return;
+        }
       }
 
-      // Show loading on first attempt
+      // Show loading on first attempt or when background retry succeeds in re-establishing
       if (retryAttempt === 0) {
         setIsLoading(true);
       }
@@ -215,16 +258,16 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
               // Server error - use exponential backoff but cap at 5 seconds
               logger.warn(`[Extend] 500 error, backoff... Attempt ${retryAttempt + 1}`);
               setTimeout(() => {
-                getLiveStream(retryAttempt + 1);
+                getLiveStream(retryAttempt + 1, isBackgroundRetry);
               }, Math.min(1000 * Math.pow(2, retryAttempt), 5000));
             } else if (response.status === 404 || response.status === 410) {
               logger.warn('[Extend] Session expired. Starting new session.');
               mediaSessionIdRef.current = null;
-              getLiveStream();
+              getLiveStream(0, isBackgroundRetry);
             } else {
               logger.warn(`[Extend] Non-500 error. Attempt ${retryAttempt + 1}`);
               setTimeout(() => {
-                getLiveStream(retryAttempt + 1);
+                getLiveStream(retryAttempt + 1, isBackgroundRetry);
               }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff for other errors
             }
             return;
@@ -245,7 +288,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
           if (!offerSdp) {
             logger.warn(`[Generate] Offer SDP invalid. Attempt ${retryAttempt + 1}`);
             setTimeout(() => {
-              getLiveStream(retryAttempt + 1);
+              getLiveStream(retryAttempt + 1, isBackgroundRetry);
             }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
             return;
           }
@@ -267,7 +310,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
           if (!response.ok) {
             logger.error(`[Generate] Error ${response.status}: ${response.statusText}`);
             setTimeout(() => {
-              getLiveStream(retryAttempt + 1);
+              getLiveStream(retryAttempt + 1, isBackgroundRetry);
             }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
             return;
           }
@@ -290,7 +333,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
           } else {
             logger.error('[Generate] Missing answerSdp or mediaSessionId');
             setTimeout(() => {
-              getLiveStream(retryAttempt + 1);
+              getLiveStream(retryAttempt + 1, isBackgroundRetry);
             }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000)); // Gentler backoff
           }
         }
@@ -298,11 +341,11 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
         logger.error('[getLiveStream] Error:', error);
         // More aggressive retry for network errors, but with reasonable cap
         setTimeout(() => {
-          getLiveStream(retryAttempt + 1);
+          getLiveStream(retryAttempt + 1, isBackgroundRetry);
         }, Math.min(500 * Math.pow(1.5, retryAttempt), 3000));
       }
     },
-    [createOffer, initializePeerConnection, scheduleRenewal]
+    [createOffer, initializePeerConnection, scheduleRenewal, startBackgroundRetry]
   );
 
   useEffect(() => {
@@ -315,11 +358,12 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
       performance.cameraMetrics.startCameraLoad(camera.name);
       
       initializePeerConnection();
-      getLiveStream();
+      getLiveStream(0, false); // Start with initial attempt
     }, loadDelay);
 
     return () => {
       clearTimeout(initTimer);
+      stopBackgroundRetry(); // Clean up background retry timer
       if (renewalTimerRef.current) {
         clearTimeout(renewalTimerRef.current);
         renewalTimerRef.current = null;
@@ -329,7 +373,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera, priori
         pcRef.current = null;
       }
     };
-  }, [getLiveStream, initializePeerConnection, priority]);
+  }, [getLiveStream, initializePeerConnection, priority, stopBackgroundRetry]);
 
   return (
     <div
