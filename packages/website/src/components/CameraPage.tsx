@@ -3,6 +3,7 @@ import { UilVideo, UilListUl, UilApps, UilExpandArrows, UilHistory, UilClock, Ui
 import CameraCard from '../CameraCard';
 import CasaCameraCard from '../CasaCameraCard';
 import { sortCamerasWithTimeContext } from '../utils/cameraUtils';
+import { performance } from '../utils/performance';
 
 export type CameraDevice = {
   name: string;
@@ -131,6 +132,20 @@ const CameraPage: React.FC<CameraPageProps> = ({
       localStorage.setItem('manor-camera-sort', sortPreference);
     }
   }, [sortPreference]);
+
+  // Performance monitoring: Generate summary after cameras have had time to load
+  useEffect(() => {
+    if (cameras.length > 0) {
+      // Generate performance summary after all cameras have had a chance to load
+      // Time based on priority delays: max delay + buffer time
+      const maxLoadTime = (cameras.length - 1) * 800 + 10000; // Priority delay + 10s buffer
+      const summaryTimer = setTimeout(() => {
+        performance.cameraMetrics.getSummary();
+      }, maxLoadTime);
+
+      return () => clearTimeout(summaryTimer);
+    }
+  }, [cameras]);
 
   // Sort cameras based on user preference and time context
   const sortedCameras = useMemo(() => {
@@ -261,7 +276,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
           gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
         }}
       >
-        {sortedCameras.map((camera) => (
+        {sortedCameras.map((camera, index) => (
           <div
             key={camera.name}
             onClick={() => {
@@ -287,7 +302,11 @@ const CameraPage: React.FC<CameraPageProps> = ({
               </div>
             </div>
             <div className="group h-full">
-              <CameraCard camera={camera} ref={(el) => (cameraRefs.current[camera.name] = el)} />
+              <CameraCard 
+                camera={camera} 
+                priority={index} // First camera gets priority 0, second gets 1, etc.
+                ref={(el) => (cameraRefs.current[camera.name] = el)} 
+              />
               {/* Enhanced Fullscreen Button with Better Touch Targets */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                 <button 
