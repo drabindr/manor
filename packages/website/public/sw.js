@@ -1,8 +1,8 @@
-// Service Worker for manor234
-// Provides aggressive caching for improved page load performance
+// Service Worker for manor - Enhanced Performance v3
+// Provides aggressive caching, module preloading, and resource optimization
 
-const CACHE_NAME = 'manor234-v2';
-const CACHE_EXPIRY = 'manor234-expiry';
+const CACHE_NAME = 'manor-v3';
+const CACHE_EXPIRY = 'manor-expiry';
 const STATIC_CACHE_URLS = [
   '/',
   '/index.html',
@@ -11,23 +11,43 @@ const STATIC_CACHE_URLS = [
 
 // Cache expiry times (in milliseconds)
 const CACHE_STRATEGIES = {
-  static: 7 * 24 * 60 * 60 * 1000, // 7 days for static assets
+  static: 30 * 24 * 60 * 60 * 1000, // 30 days for static assets
   api: 5 * 60 * 1000, // 5 minutes for API responses
-  images: 30 * 24 * 60 * 60 * 1000, // 30 days for images
+  images: 90 * 24 * 60 * 60 * 1000, // 90 days for images
+  fonts: 365 * 24 * 60 * 60 * 1000, // 1 year for fonts
+  critical: 7 * 24 * 60 * 60 * 1000, // 7 days for critical resources
 };
 
-// Install event - cache static resources
+// Critical resources to preload
+const CRITICAL_RESOURCES = [
+  '/assets/react-vendor',
+  '/assets/main',
+  '/assets/icons'
+];
+
+// Install event - preload critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v2');
+  console.log('[SW] Installing enhanced service worker v3');
   event.waitUntil(
     Promise.all([
+      // Cache static resources
       caches.open(CACHE_NAME).then((cache) => {
         console.log('[SW] Caching static resources');
         return cache.addAll(STATIC_CACHE_URLS);
       }),
+      // Initialize expiry cache
       caches.open(CACHE_EXPIRY).then((cache) => {
         console.log('[SW] Initializing expiry cache');
         return cache;
+      }),
+      // Preload critical resources in background
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'PRELOAD_CRITICAL',
+            resources: CRITICAL_RESOURCES
+          });
+        });
       })
     ]).then(() => self.skipWaiting())
   );
