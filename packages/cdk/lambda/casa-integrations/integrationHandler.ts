@@ -18,23 +18,19 @@ const GOOGLE_DEVICES_CACHE_TTL_MS = 30000; // 30 seconds TTL
  */
 async function executeWithRetries<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let attempt = 0;
-  let delay = 300; // Reduced initial delay for faster recovery
+  let delay = 500; // initial delay in ms
   while (attempt < maxRetries) {
     try {
       return await fn();
     } catch (error: any) {
       const is429 = error?.response?.status === 429;
       const is503 = error?.response?.status === 503;
-      const is502 = error?.response?.status === 502; // Bad gateway
-      const is504 = error?.response?.status === 504; // Gateway timeout
-      const isNetworkError = !error?.response && error?.code === 'ENOTFOUND';
-      
-      // Retry on rate limits, server errors, and network issues
-      if (is429 || is503 || is502 || is504 || isNetworkError) {
+      // You can add other retryable conditions here if needed
+      if (is429 || is503) {
         attempt++;
-        console.warn(`Retryable error encountered (${error?.response?.status || error?.code}). Attempt ${attempt} of ${maxRetries}. Retrying in ${delay}ms...`);
+        console.warn(`Rate limit or transient error encountered. Attempt ${attempt} of ${maxRetries}. Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        delay = Math.min(delay * 1.8, 5000); // Gentler exponential backoff, capped at 5s
+        delay *= 2; // Exponential backoff
       } else {
         // Non-retriable error, rethrow
         throw error;
