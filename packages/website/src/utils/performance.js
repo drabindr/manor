@@ -87,66 +87,6 @@ export const performance = {
       }
     }
   },
-
-  // Camera-specific performance monitoring
-  cameraMetrics: {
-    loadTimes: new Map(),
-    
-    // Start timing camera load
-    startCameraLoad: (cameraId) => {
-      const startTime = performance.now ? performance.now() : Date.now();
-      performance.cameraMetrics.loadTimes.set(cameraId, { startTime, endTime: null });
-      console.log(`📹 [${cameraId}] Starting camera load at ${startTime.toFixed(2)}ms`);
-    },
-    
-    // End timing camera load and calculate duration
-    endCameraLoad: (cameraId, success = true) => {
-      const endTime = performance.now ? performance.now() : Date.now();
-      const metrics = performance.cameraMetrics.loadTimes.get(cameraId);
-      
-      if (metrics) {
-        metrics.endTime = endTime;
-        const duration = endTime - metrics.startTime;
-        const status = success ? '✅' : '❌';
-        console.log(`📹 [${cameraId}] ${status} Camera load completed in ${duration.toFixed(2)}ms`);
-        
-        // Store for analytics
-        performance.cameraMetrics.loadTimes.set(cameraId, { ...metrics, duration, success });
-        return duration;
-      }
-      return null;
-    },
-    
-    // Get summary of all camera load times
-    getSummary: () => {
-      const times = Array.from(performance.cameraMetrics.loadTimes.values())
-        .filter(m => m.duration != null);
-      
-      if (times.length === 0) return null;
-      
-      const successful = times.filter(t => t.success);
-      const failed = times.filter(t => !t.success);
-      const durations = successful.map(t => t.duration);
-      
-      const summary = {
-        totalCameras: times.length,
-        successful: successful.length,
-        failed: failed.length,
-        avgLoadTime: durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0,
-        minLoadTime: durations.length > 0 ? Math.min(...durations) : 0,
-        maxLoadTime: durations.length > 0 ? Math.max(...durations) : 0
-      };
-      
-      console.log('📊 Camera Load Summary:', {
-        ...summary,
-        avgLoadTime: `${summary.avgLoadTime.toFixed(2)}ms`,
-        minLoadTime: `${summary.minLoadTime.toFixed(2)}ms`,
-        maxLoadTime: `${summary.maxLoadTime.toFixed(2)}ms`
-      });
-      
-      return summary;
-    }
-  },
   
   // Initialize all performance monitoring
   init: () => {
