@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { EventContext, EventProvider } from "./EventContext";
 import { wsService } from "./WebSocketService";
 import { logger } from "./utils/Logger";
+import cameraConnectionService from './services/CameraConnectionService';
 import {
   UilHouseUser,
   UilShieldCheck,
@@ -385,9 +386,15 @@ const CasaGuard: React.FC = () => {
     };
   }, [updateArmModeFromState]);
 
-  // Initial Data Fetching
+  // Initial Data Fetching with Camera Connection Service
   useEffect(() => {
     const fetchAllData = async () => {
+      // Ensure camera connection service is initialized early
+      // This will start establishing connections in parallel with data fetching
+      cameraConnectionService.init().catch(error => {
+        logger.warn('[CasaGuard] Camera connection service initialization failed:', error);
+      });
+      
       await Promise.all([fetchCameras(), fetchThermostatMinimal()]);
       fetchAlarmState(); // This doesn't need to be awaited as it uses the WebSocket
       

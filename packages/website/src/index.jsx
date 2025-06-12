@@ -4,9 +4,20 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import performance from './utils/performance.js';
+import cameraConnectionService from './services/CameraConnectionService';
 
 // Initialize performance monitoring
 performance.init();
+
+// Initialize camera connections early for faster load times
+// Use a try-catch to ensure this doesn't break the app if there are issues
+try {
+  cameraConnectionService.init().catch(error => {
+    console.warn('[CameraInit] Early camera connection initialization failed:', error);
+  });
+} catch (syncError) {
+  console.warn('[CameraInit] Synchronous camera connection initialization failed:', syncError);
+}
 
 // Enhanced service worker registration with module preloading
 if ('serviceWorker' in navigator) {
@@ -31,7 +42,10 @@ function preloadCriticalResources() {
   const criticalResources = [
     '/assets/react-vendor',
     '/assets/aws-auth',
-    '/assets/icons'
+    '/assets/icons',
+    // Add camera-related resources for faster camera loading
+    '/assets/aws-db',
+    '/assets/video'
   ];
   
   criticalResources.forEach(resource => {
@@ -90,5 +104,14 @@ root.render(
 // Hide loader after app is mounted and ready to show content
 // Use a shorter timeout and more intelligent detection
 setTimeout(hideInitialLoader, 200);
+
+// Cleanup camera connections when the page is unloaded
+window.addEventListener('beforeunload', () => {
+  try {
+    cameraConnectionService.cleanup();
+  } catch (error) {
+    console.warn('[CameraCleanup] Error during cleanup:', error);
+  }
+});
 
 reportWebVitals();
