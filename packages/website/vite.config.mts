@@ -6,16 +6,16 @@ export default defineConfig({
     react({
       // Enable React optimization features
       babel: {
-        // Add babel plugins for better optimization
-        plugins: [
-          // Remove unused imports
-          ['transform-remove-console', { exclude: ['error', 'warn'] }]
-        ]
+        plugins: []
       }
     })
   ],
   server: {
     port: 3000,
+  },
+  // Configure esbuild to remove console.log in production
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   build: {
     outDir: 'build',
