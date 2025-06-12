@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import Hls from 'hls.js';
 import { logger } from './utils/Logger';
+import cameraConnectionService from './services/CameraConnectionService';
 
 const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -53,6 +54,13 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
+    }
+
+    // Check if we should use the pre-established runId
+    const preConnection = cameraConnectionService.getCasaCameraConnection();
+    if (preConnection?.runId && preConnection.isConnected) {
+      runId.current = preConnection.runId;
+      logger.info('Using pre-established Casa camera stream runId:', runId.current);
     }
 
     const streamUrl = `https://casa-cameras-data.s3.amazonaws.com/live-stream/${runId.current}/stream.m3u8`;
@@ -170,6 +178,19 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   }
 
   function connectWebSocket(): void {
+    // First, try to use pre-established connection
+    const preConnection = cameraConnectionService.getCasaCameraConnection();
+    
+    if (preConnection?.websocket && preConnection.websocket.readyState === WebSocket.OPEN) {
+      logger.info('Using pre-established WebSocket connection');
+      wsRef.current = preConnection.websocket;
+      runId.current = preConnection.runId;
+      resetRetryCount();
+      // Connection is already established and stream started
+      return;
+    }
+
+    // Fallback to creating new connection
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
 
     const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');

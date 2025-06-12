@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { logger } from './utils/Logger';
 import type { CameraDevice } from './components/CameraPage';
+import cameraConnectionService from './services/CameraConnectionService';
 
 export type CameraCardProps = {
   camera: CameraDevice;
@@ -34,18 +35,41 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   // Guard to avoid spamming re-initialization
   const isReinitScheduledRef = useRef(false);
 
-  const initializePeerConnection = useCallback(() => {
+  const initializePeerConnection = useCallback(async () => {
     if (!pcRef.current) {
       logger.debug('[initializePeerConnection] Creating RTCPeerConnection');
 
-      const peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
-      pcRef.current = peerConnection;
-
-      peerConnection.createDataChannel('dataChannel');
-      peerConnection.addTransceiver('audio', { direction: 'recvonly' });
-      peerConnection.addTransceiver('video', { direction: 'recvonly' });
+      // Try to get pre-established connection first
+      const preConnection = await cameraConnectionService.getOrCreateCameraConnection(camera.name);
+      
+      let peerConnection: RTCPeerConnection;
+      
+      if (preConnection?.connection) {
+        logger.debug('[initializePeerConnection] Using pre-established connection');
+        peerConnection = preConnection.connection;
+        pcRef.current = peerConnection;
+        
+        // If the connection is already connected, we can skip setup
+        if (preConnection.isConnected && preConnection.sessionId) {
+          mediaSessionIdRef.current = preConnection.sessionId;
+          setIsLoading(false);
+          if (preConnection.expiresAt) {
+            scheduleRenewal(preConnection.expiresAt);
+          }
+          return;
+        }
+      } else {
+        // Fallback to creating new connection
+        logger.debug('[initializePeerConnection] Creating new RTCPeerConnection');
+        peerConnection = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        });
+        pcRef.current = peerConnection;
+        
+        peerConnection.createDataChannel('dataChannel');
+        peerConnection.addTransceiver('audio', { direction: 'recvonly' });
+        peerConnection.addTransceiver('video', { direction: 'recvonly' });
+      }
 
       peerConnection.ontrack = (event) => {
         if (videoRef.current) {
@@ -92,7 +116,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         // Some additional handling if needed
       };
     }
-  }, []);
+  }, [camera.name]);
 
   const createOffer = useCallback(async (): Promise<string | null> => {
     if (!pcRef.current) {
@@ -149,9 +173,27 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         setIsLoading(true);
       }
 
-      initializePeerConnection();
+      await initializePeerConnection();
 
       try {
+        // Check if we can use the camera connection service for faster startup
+        if (retryAttempt === 0) {
+          try {
+            await cameraConnectionService.startCameraStream(camera.name);
+            // If successful, the connection should be ready
+            const connectionState = await cameraConnectionService.getOrCreateCameraConnection(camera.name);
+            if (connectionState?.isConnected && connectionState.sessionId && connectionState.expiresAt) {
+              mediaSessionIdRef.current = connectionState.sessionId;
+              scheduleRenewal(connectionState.expiresAt);
+              setIsLoading(false);
+              return;
+            }
+          } catch (error) {
+            logger.warn('[getLiveStream] Camera connection service failed, falling back to direct connection:', error);
+            // Continue with the original flow as fallback - no need to throw
+          }
+        }
+
         let expiresAt: string | undefined;
 
         if (mediaSessionIdRef.current) {
@@ -264,7 +306,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         }, Math.min(200 * Math.pow(2, retryAttempt), 2000));
       }
     },
-    [createOffer, initializePeerConnection, scheduleRenewal]
+    [createOffer, initializePeerConnection, scheduleRenewal, camera.name]
   );
 
   useEffect(() => {
