@@ -15,56 +15,86 @@ import {
 import PullToRefresh from "react-simple-pull-to-refresh";
 import "./components/CasaGuard.css";
 
-// Lazy loaded components
+// Lazy loaded components with optimized loading priorities
 const NotificationsProvider = lazy(() => import('./components/NotificationsProvider'));
-const AppHeader = lazy(() => import('./components/AppHeader'));
+
+// PRIORITY 1: Critical above-the-fold components (immediate)
+const AppHeader = lazy(() => 
+  import('./components/AppHeader').then(module => {
+    // Preload Navigation while AppHeader loads
+    import('./components/Navigation');
+    return module;
+  })
+);
+
+// PRIORITY 2: Navigation and core UI (within 100ms)
 const Navigation = lazy(() => import('./components/Navigation'));
+
+// PRIORITY 3: Main content components (within 500ms)  
+const Thermostat = lazy(() => 
+  import('./Thermostat').then(module => {
+    // Preload DeviceControl while Thermostat loads
+    import('./DeviceControl');
+    return module;
+  })
+);
+const DeviceControl = lazy(() => import('./DeviceControl'));
+
+// PRIORITY 4: Secondary components (after 1s)
+const CameraPage = lazy(() => import('./components/CameraPage'));
+const EventHistory = lazy(() => import('./EventHistory'));
+
+// PRIORITY 5: Modal/overlay components (on-demand only)
 const LoadingOverlay = lazy(() => import('./components/LoadingOverlay'));
 const FullscreenCamera = lazy(() => import('./components/FullscreenCamera'));
 const HistoryOverlay = lazy(() => import('./components/HistoryOverlay'));
-const CameraPage = lazy(() => import('./components/CameraPage'));
-const Thermostat = lazy(() => import('./Thermostat'));
-const DeviceControl = lazy(() => import('./DeviceControl'));
-const EventHistory = lazy(() => import('./EventHistory'));
 
-// Background prefetching for non-critical components
-// These will load in the background after the main component loads
+// Optimized prefetching with priority-based loading
 const prefetchComponents = () => {
-  // Use requestIdleCallback if available, otherwise setTimeout
-  const schedulePreload = (fn: () => void, delay = 100) => {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(fn, { timeout: 5000 });
+  // Use scheduler.postTask if available for better priority control
+  const scheduleByPriority = (fn: () => void, priority: 'user-blocking' | 'user-visible' | 'background' = 'background', delay = 0) => {
+    const execute = () => {
+      if ('scheduler' in window && (window as any).scheduler?.postTask) {
+        (window as any).scheduler.postTask(fn, { priority });
+      } else if ('requestIdleCallback' in window) {
+        requestIdleCallback(fn, { timeout: 5000 });
+      } else {
+        setTimeout(fn, delay);
+      }
+    };
+    
+    if (delay > 0) {
+      setTimeout(execute, delay);
     } else {
-      setTimeout(fn, delay);
+      execute();
     }
   };
 
-  // Immediate prefetch for likely next components
-  schedulePreload(() => {
-    // Prefetch components that are likely to be used soon
+  // PRIORITY 1: Critical components (user-blocking priority)
+  scheduleByPriority(() => {
     import('./components/Navigation');
     import('./components/AppHeader');
-  }, 50);
+  }, 'user-blocking', 0);
 
-  // Secondary prefetch for other components
-  schedulePreload(() => {
+  // PRIORITY 2: Main content (user-visible priority) 
+  scheduleByPriority(() => {
     import('./Thermostat');
-    import('./DeviceControl'); 
-    import('./EventHistory');
-  }, 200);
+    import('./DeviceControl');
+  }, 'user-visible', 100);
 
-  // Tertiary prefetch for less critical components
-  schedulePreload(() => {
+  // PRIORITY 3: Secondary content (background priority)
+  scheduleByPriority(() => {
+    import('./EventHistory');
     import('./components/CameraPage');
+  }, 'background', 500);
+
+  // PRIORITY 4: Utility components (background, low priority)
+  scheduleByPriority(() => {
+    import('./components/LoadingOverlay');
     import('./components/FullscreenCamera');
     import('./components/HistoryOverlay');
-  }, 500);
-
-  // Final prefetch for utility components
-  schedulePreload(() => {
-    import('./components/LoadingOverlay');
     import('./components/NotificationsProvider');
-  }, 1000);
+  }, 'background', 1000);
 };
 
 // Locally load only the types

@@ -8,12 +8,17 @@ import performance from './utils/performance.js';
 // Initialize performance monitoring
 performance.init();
 
-// Register service worker for caching
+// Enhanced service worker registration with module preloading
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[SW] Registration successful:', registration.scope);
+        
+        // Preload critical modules once SW is ready
+        if (registration.active) {
+          preloadCriticalResources();
+        }
       })
       .catch((error) => {
         console.log('[SW] Registration failed:', error);
@@ -21,30 +26,55 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Preload critical resources for faster subsequent loads
+function preloadCriticalResources() {
+  const criticalResources = [
+    '/assets/react-vendor',
+    '/assets/aws-auth',
+    '/assets/icons'
+  ];
+  
+  criticalResources.forEach(resource => {
+    const link = document.createElement('link');
+    link.rel = 'modulepreload';
+    link.href = resource;
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+  });
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-// Hide initial loader once React app starts rendering
+// Enhanced loader hiding with performance optimization
 const hideInitialLoader = () => {
-  const initialLoader = document.querySelector('.initial-loader');
+  const initialLoader = document.getElementById('initial-loader');
   if (initialLoader) {
     // Check if the app content is actually ready
     const rootElement = document.getElementById('root');
     const hasAppContent = rootElement && rootElement.children.length > 0;
     
     if (hasAppContent) {
-      // Add fade out transition
-      initialLoader.style.transition = 'opacity 0.3s ease-out';
-      initialLoader.style.opacity = '0';
-      setTimeout(() => {
-        document.body.classList.add('app-loaded');
-        // Remove the loader completely after fade out
-        if (initialLoader.parentNode) {
-          initialLoader.parentNode.removeChild(initialLoader);
-        }
-      }, 300);
+      // Use requestAnimationFrame for smooth transition
+      requestAnimationFrame(() => {
+        initialLoader.style.transition = 'opacity 0.3s ease-out';
+        initialLoader.style.opacity = '0';
+        
+        setTimeout(() => {
+          document.body.classList.add('app-loaded');
+          // Remove the loader completely after fade out
+          if (initialLoader.parentNode) {
+            initialLoader.parentNode.removeChild(initialLoader);
+          }
+          
+          // Dispatch custom event for performance tracking
+          window.dispatchEvent(new CustomEvent('appLoaded', {
+            detail: { timestamp: performance.now() }
+          }));
+        }, 300);
+      });
     } else {
       // If content isn't ready, try again in a bit
-      setTimeout(hideInitialLoader, 100);
+      setTimeout(hideInitialLoader, 50);
     }
   } else {
     document.body.classList.add('app-loaded');
