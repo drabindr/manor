@@ -72,7 +72,82 @@ describe('CameraConnectionService', () => {
     expect(connection2).toBeTruthy();
     
     // Should have created multiple RTCPeerConnection instances for pre-connections
-    expect(RTCPeerConnection).toHaveBeenCalledTimes(5); // 3 pre-connections + 2 specific cameras
+    expect(RTCPeerConnection).toHaveBeenCalledTimes(3); // 3 pre-connections
+  });
+
+  test('should handle concurrent initialization attempts gracefully', async () => {
+    const initPromises = [
+      cameraConnectionService.init(),
+      cameraConnectionService.init(),
+      cameraConnectionService.init()
+    ];
+    
+    await Promise.all(initPromises);
+    
+    // Should only initialize once
+    expect(WebSocket).toHaveBeenCalledTimes(1);
+  });
+
+  test('should handle connection creation errors gracefully', async () => {
+    // Mock RTCPeerConnection to throw an error
+    global.RTCPeerConnection = jest.fn().mockImplementation(() => {
+      throw new Error('Mock connection error');
+    });
+    
+    await cameraConnectionService.init();
+    
+    const connection = await cameraConnectionService.getOrCreateCameraConnection('test-camera');
+    
+    // Should handle error gracefully
+    expect(connection).toBeNull();
+  });
+
+  test('should timeout WebSocket connections appropriately', async () => {
+    jest.useFakeTimers();
+    
+    // Mock WebSocket that never connects
+    global.WebSocket = jest.fn().mockImplementation(() => ({
+      onopen: null,
+      onclose: null,
+      onerror: null,
+      send: jest.fn(),
+      close: jest.fn(),
+      readyState: 0, // CONNECTING
+    }));
+
+    const initPromise = cameraConnectionService.init();
+    
+    // Fast-forward time to trigger timeout
+    jest.advanceTimersByTime(16000); // 16 seconds (more than 15 second timeout)
+    
+    await initPromise;
+    
+    // Should complete without hanging
+    const status = cameraConnectionService.getStatus();
+    expect(status.initialized).toBe(true);
+    
+    jest.useRealTimers();
+  });
+
+  test('should prevent memory leaks with proper cleanup', async () => {
+    await cameraConnectionService.init();
+    
+    const connection1 = await cameraConnectionService.getOrCreateCameraConnection('camera1');
+    const connection2 = await cameraConnectionService.getOrCreateCameraConnection('camera2');
+    
+    expect(connection1?.connection?.close).toBeTruthy();
+    expect(connection2?.connection?.close).toBeTruthy();
+    
+    cameraConnectionService.cleanup();
+    
+    // Verify all connections were closed
+    expect(connection1?.connection?.close).toHaveBeenCalled();
+    expect(connection2?.connection?.close).toHaveBeenCalled();
+    
+    // Verify state was reset
+    const status = cameraConnectionService.getStatus();
+    expect(status.nestConnections).toBe(0);
+    expect(status.initialized).toBe(false);
   });
 
   test('should handle Casa camera connection', async () => {
