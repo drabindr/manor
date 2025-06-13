@@ -181,7 +181,9 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
     // First, try to use pre-established connection
     const preConnection = cameraConnectionService.getCasaCameraConnection();
     
-    if (preConnection?.websocket && preConnection.websocket.readyState === WebSocket.OPEN) {
+    if (preConnection?.websocket && 
+        preConnection.websocket.readyState === WebSocket.OPEN && 
+        preConnection.isConnected) {
       logger.info('Using pre-established WebSocket connection');
       wsRef.current = preConnection.websocket;
       runId.current = preConnection.runId;

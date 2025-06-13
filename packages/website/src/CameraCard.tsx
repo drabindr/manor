@@ -179,7 +179,15 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         // Check if we can use the camera connection service for faster startup
         if (retryAttempt === 0) {
           try {
-            await cameraConnectionService.startCameraStream(camera.name);
+            // Add timeout to prevent hanging
+            const streamPromise = Promise.race([
+              cameraConnectionService.startCameraStream(camera.name),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Stream start timeout')), 15000)
+              )
+            ]);
+            
+            await streamPromise;
             // If successful, the connection should be ready
             const connectionState = await cameraConnectionService.getOrCreateCameraConnection(camera.name);
             if (connectionState?.isConnected && connectionState.sessionId && connectionState.expiresAt) {

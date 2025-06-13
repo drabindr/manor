@@ -10,9 +10,15 @@ import cameraConnectionService from './services/CameraConnectionService';
 performance.init();
 
 // Initialize camera connections early for faster load times
-// Use a try-catch to ensure this doesn't break the app if there are issues
+// Use multiple layers of error handling to ensure this doesn't break the app
 try {
-  cameraConnectionService.init().catch(error => {
+  // Add a timeout to prevent initialization from hanging
+  Promise.race([
+    cameraConnectionService.init(),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Camera initialization timeout')), 20000)
+    )
+  ]).catch(error => {
     console.warn('[CameraInit] Early camera connection initialization failed:', error);
   });
 } catch (syncError) {

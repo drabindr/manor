@@ -23,6 +23,10 @@ class CameraConnectionService {
   private casaCameraConnection: CasaCameraConnectionState | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+  private cleanupScheduled = false;
+  private readonly maxPreConnections = 3;
+  private readonly connectionTimeout = 15000; // 15 seconds
+  private readonly initMutex = new Set<string>(); // Prevent concurrent init calls
 
   /**
    * Initialize the camera connection service early in the page load cycle
@@ -32,76 +36,132 @@ class CameraConnectionService {
       return this.initPromise || Promise.resolve();
     }
 
+    // Prevent concurrent initialization attempts
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
     this.initPromise = this._performInit();
     return this.initPromise;
   }
 
   private async _performInit(): Promise<void> {
+    const initId = `init-${Date.now()}`;
+    
+    // Check if initialization is already in progress
+    if (this.initMutex.has(initId) || this.initMutex.size > 0) {
+      logger.warn('[CameraConnectionService] Initialization already in progress');
+      return;
+    }
+
+    this.initMutex.add(initId);
+
     try {
       logger.info('[CameraConnectionService] Initializing early camera connections');
       
       // Start Casa camera connection immediately
-      this._preConnectCasaCamera();
+      await this._preConnectCasaCamera();
       
       // Get camera list and start pre-connecting to Nest cameras
-      this._preloadNestCameras();
+      await this._preloadNestCameras();
       
       this.initialized = true;
       logger.info('[CameraConnectionService] Early camera connections initialized');
     } catch (error) {
       logger.error('[CameraConnectionService] Failed to initialize:', error);
+      // Reset state on failure to allow retry
+      this.initialized = false;
+      this.initPromise = null;
+      throw error;
+    } finally {
+      this.initMutex.delete(initId);
     }
   }
 
   /**
    * Pre-establish Casa camera WebSocket connection
    */
-  private _preConnectCasaCamera(): void {
-    const runId = Date.now();
-    this.casaCameraConnection = {
-      isConnecting: true,
-      isConnected: false,
-      runId,
-    };
+  private async _preConnectCasaCamera(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const runId = Date.now();
+      this.casaCameraConnection = {
+        isConnecting: true,
+        isConnected: false,
+        runId,
+      };
 
-    try {
-      const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');
-      
-      ws.onopen = () => {
-        logger.info('[CameraConnectionService] Casa camera WebSocket pre-connected');
+      let connectionTimeout: NodeJS.Timeout | undefined;
+
+      try {
+        const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');
+        
+        // Set connection timeout
+        connectionTimeout = setTimeout(() => {
+          logger.warn('[CameraConnectionService] Casa camera WebSocket connection timeout');
+          ws.close();
+          if (this.casaCameraConnection) {
+            this.casaCameraConnection.isConnecting = false;
+            this.casaCameraConnection.error = 'Connection timeout';
+          }
+          resolve(); // Don't reject on timeout, just resolve to continue
+        }, this.connectionTimeout);
+        
+        ws.onopen = () => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.info('[CameraConnectionService] Casa camera WebSocket pre-connected');
+          if (this.casaCameraConnection) {
+            this.casaCameraConnection.isConnecting = false;
+            this.casaCameraConnection.isConnected = true;
+            this.casaCameraConnection.websocket = ws;
+            
+            // Start the live stream immediately
+            try {
+              ws.send(JSON.stringify({ action: 'start_live_stream', runId }));
+            } catch (sendError) {
+              logger.error('[CameraConnectionService] Failed to send stream start command:', sendError);
+            }
+          }
+          resolve();
+        };
+
+        ws.onclose = () => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.info('[CameraConnectionService] Casa camera WebSocket pre-connection closed');
+          if (this.casaCameraConnection) {
+            this.casaCameraConnection.isConnected = false;
+            this.casaCameraConnection.websocket = undefined;
+          }
+          resolve(); // Don't treat close as error during initialization
+        };
+
+        ws.onerror = (error) => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.error('[CameraConnectionService] Casa camera WebSocket pre-connection error:', error);
+          if (this.casaCameraConnection) {
+            this.casaCameraConnection.isConnecting = false;
+            this.casaCameraConnection.error = 'WebSocket connection failed';
+          }
+          resolve(); // Don't reject on error, just continue with degraded functionality
+        };
+
+      } catch (error) {
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+        }
+        logger.error('[CameraConnectionService] Failed to pre-connect Casa camera:', error);
         if (this.casaCameraConnection) {
           this.casaCameraConnection.isConnecting = false;
-          this.casaCameraConnection.isConnected = true;
-          this.casaCameraConnection.websocket = ws;
-          
-          // Start the live stream immediately
-          ws.send(JSON.stringify({ action: 'start_live_stream', runId }));
+          this.casaCameraConnection.error = error instanceof Error ? error.message : 'Unknown error';
         }
-      };
-
-      ws.onclose = () => {
-        logger.info('[CameraConnectionService] Casa camera WebSocket pre-connection closed');
-        if (this.casaCameraConnection) {
-          this.casaCameraConnection.isConnected = false;
-          this.casaCameraConnection.websocket = undefined;
-        }
-      };
-
-      ws.onerror = (error) => {
-        logger.error('[CameraConnectionService] Casa camera WebSocket pre-connection error:', error);
-        if (this.casaCameraConnection) {
-          this.casaCameraConnection.isConnecting = false;
-          this.casaCameraConnection.error = 'WebSocket connection failed';
-        }
-      };
-
-    } catch (error) {
-      logger.error('[CameraConnectionService] Failed to pre-connect Casa camera:', error);
-      if (this.casaCameraConnection) {
-        this.casaCameraConnection.isConnecting = false;
-        this.casaCameraConnection.error = error instanceof Error ? error.message : 'Unknown error';
+        resolve(); // Don't reject on error, just continue with degraded functionality
       }
-    }
+    });
   }
 
   /**
@@ -114,13 +174,36 @@ class CameraConnectionService {
       // This can be enhanced once we have access to the camera list
       logger.info('[CameraConnectionService] Pre-initializing WebRTC connections');
       
-      // Pre-create a few RTCPeerConnection instances for faster camera loading
-      for (let i = 0; i < 3; i++) {
-        this._createPreConnection(`pre-connection-${i}`);
+      // Pre-create a limited number of RTCPeerConnection instances for faster camera loading
+      const connectionPromises: Promise<void>[] = [];
+      
+      for (let i = 0; i < this.maxPreConnections; i++) {
+        connectionPromises.push(this._createPreConnectionAsyncWrapper(`pre-connection-${i}`));
       }
+      
+      // Wait for all pre-connections to complete (or timeout)
+      await Promise.allSettled(connectionPromises);
+      
+      logger.info(`[CameraConnectionService] Pre-initialized ${this.maxPreConnections} WebRTC connections`);
     } catch (error) {
       logger.error('[CameraConnectionService] Failed to preload Nest cameras:', error);
+      // Don't throw, continue with degraded functionality
     }
+  }
+
+  /**
+   * Async wrapper for creating pre-connections with timeout handling
+   */
+  private async _createPreConnectionAsyncWrapper(connectionId: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      try {
+        this._createPreConnection(connectionId);
+        resolve();
+      } catch (error) {
+        logger.error(`[CameraConnectionService] Failed to create pre-connection ${connectionId}:`, error);
+        resolve(); // Always resolve to not block other connections
+      }
+    });
   }
 
   /**
@@ -137,6 +220,15 @@ class CameraConnectionService {
       connection.addTransceiver('audio', { direction: 'recvonly' });
       connection.addTransceiver('video', { direction: 'recvonly' });
 
+      // Add connection state monitoring for cleanup
+      connection.onconnectionstatechange = () => {
+        if (connection.connectionState === 'failed' || connection.connectionState === 'closed') {
+          logger.debug(`[CameraConnectionService] Pre-connection ${connectionId} state: ${connection.connectionState}`);
+          // Clean up failed connections
+          this.nestCameraConnections.delete(connectionId);
+        }
+      };
+
       const state: CameraConnectionState = {
         isConnecting: false,
         isConnected: false,
@@ -147,6 +239,7 @@ class CameraConnectionService {
       logger.debug(`[CameraConnectionService] Pre-connection ${connectionId} created`);
     } catch (error) {
       logger.error(`[CameraConnectionService] Failed to create pre-connection ${connectionId}:`, error);
+      // Don't re-throw, just log the error
     }
   }
 
@@ -211,6 +304,13 @@ class CameraConnectionService {
 
     state.isConnecting = true;
 
+    // Add timeout for the entire operation
+    const streamTimeout = setTimeout(() => {
+      state.isConnecting = false;
+      state.error = 'Stream start timeout';
+      logger.error(`[CameraConnectionService] Stream start timeout for ${cameraName}`);
+    }, this.connectionTimeout);
+
     try {
       // Create offer using the pre-established connection
       const offer = await state.connection.createOffer({
@@ -224,7 +324,10 @@ class CameraConnectionService {
         throw new Error('Failed to create offer SDP');
       }
 
-      // Make the API call to start the stream
+      // Make the API call to start the stream with timeout
+      const controller = new AbortController();
+      const apiTimeout = setTimeout(() => controller.abort(), 10000); // 10 second API timeout
+
       const response = await fetch(
         'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
         {
@@ -237,8 +340,11 @@ class CameraConnectionService {
               params: { offerSdp: offer.sdp },
             },
           }),
+          signal: controller.signal,
         }
       );
+
+      clearTimeout(apiTimeout);
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -258,6 +364,7 @@ class CameraConnectionService {
         state.expiresAt = expiresAt;
         state.isConnected = true;
         state.isConnecting = false;
+        state.error = undefined; // Clear any previous errors
         
         logger.info(`[CameraConnectionService] Stream started for camera ${cameraName}`);
       } else {
@@ -268,6 +375,8 @@ class CameraConnectionService {
       state.error = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[CameraConnectionService] Failed to start stream for ${cameraName}:`, error);
       throw error;
+    } finally {
+      clearTimeout(streamTimeout);
     }
   }
 
@@ -275,24 +384,63 @@ class CameraConnectionService {
    * Clean up connections when no longer needed
    */
   cleanup(): void {
+    if (this.cleanupScheduled) {
+      logger.debug('[CameraConnectionService] Cleanup already in progress');
+      return;
+    }
+
+    this.cleanupScheduled = true;
     logger.info('[CameraConnectionService] Cleaning up connections');
     
-    // Clean up Nest camera connections
-    for (const [cameraName, state] of this.nestCameraConnections.entries()) {
-      if (state.connection) {
-        state.connection.close();
+    try {
+      // Clean up Nest camera connections
+      for (const [cameraName, state] of this.nestCameraConnections.entries()) {
+        if (state.connection) {
+          try {
+            state.connection.close();
+          } catch (error) {
+            logger.warn(`[CameraConnectionService] Error closing connection for ${cameraName}:`, error);
+          }
+        }
       }
-    }
-    this.nestCameraConnections.clear();
+      this.nestCameraConnections.clear();
 
-    // Clean up Casa camera connection
-    if (this.casaCameraConnection?.websocket) {
-      this.casaCameraConnection.websocket.close();
-    }
-    this.casaCameraConnection = null;
+      // Clean up Casa camera connection
+      if (this.casaCameraConnection?.websocket) {
+        try {
+          this.casaCameraConnection.websocket.close();
+        } catch (error) {
+          logger.warn('[CameraConnectionService] Error closing Casa camera WebSocket:', error);
+        }
+      }
+      this.casaCameraConnection = null;
 
-    this.initialized = false;
-    this.initPromise = null;
+      // Clear initialization state
+      this.initialized = false;
+      this.initPromise = null;
+      this.initMutex.clear();
+    } catch (error) {
+      logger.error('[CameraConnectionService] Error during cleanup:', error);
+    } finally {
+      this.cleanupScheduled = false;
+    }
+  }
+
+  /**
+   * Get service status for debugging
+   */
+  getStatus(): { 
+    initialized: boolean; 
+    nestConnections: number; 
+    casaConnected: boolean;
+    initInProgress: boolean;
+  } {
+    return {
+      initialized: this.initialized,
+      nestConnections: this.nestCameraConnections.size,
+      casaConnected: this.casaCameraConnection?.isConnected ?? false,
+      initInProgress: this.initMutex.size > 0
+    };
   }
 }
 

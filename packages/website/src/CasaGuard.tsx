@@ -391,7 +391,13 @@ const CasaGuard: React.FC = () => {
     const fetchAllData = async () => {
       // Ensure camera connection service is initialized early
       // This will start establishing connections in parallel with data fetching
-      cameraConnectionService.init().catch(error => {
+      // Use timeout to prevent blocking the main data fetch
+      Promise.race([
+        cameraConnectionService.init(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Camera service init timeout')), 10000)
+        )
+      ]).catch(error => {
         logger.warn('[CasaGuard] Camera connection service initialization failed:', error);
       });
       
