@@ -1,22 +1,31 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [
-    react({
-      // Enable React optimization features
-      babel: {
-        plugins: []
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  return {
+    plugins: [
+      react({
+        // Enable React optimization features
+        babel: {
+          plugins: []
+        }
+      })
+    ],
+    server: {
+      port: 3000,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
-    })
-  ],
-  server: {
-    port: 3000,
-  },
-  // Configure esbuild to remove console.log in production
-  esbuild: {
-    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
-  },
+    },
+    // Configure esbuild to remove console.log in production
+    esbuild: {
+      drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+    },
   build: {
     outDir: 'build',
     // Reduce chunk size warning limit since we're optimizing bundles
@@ -90,11 +99,16 @@ export default defineConfig({
     },
   },
   define: {
-    // Explicitly define environment variables for production
-    'process.env.REACT_APP_USER_POOL_CLIENT_ID': JSON.stringify(process.env.REACT_APP_USER_POOL_CLIENT_ID || '15o15dldl3tl474cuje5e24k28'),
-    'process.env.REACT_APP_USER_POOL_ID': JSON.stringify(process.env.REACT_APP_USER_POOL_ID || 'us-east-1_5V0U65Iev'),
-    'process.env.REACT_APP_IDENTITY_POOL_ID': JSON.stringify(process.env.REACT_APP_IDENTITY_POOL_ID || 'us-east-1:91b9826c-15a5-4b44-b89a-dfdc1f2ca102'),
-    'process.env.REACT_APP_AUTH_DOMAIN': JSON.stringify(process.env.REACT_APP_AUTH_DOMAIN || 'casa-guard-auth.auth.us-east-1.amazoncognito.com'),
-    'process.env.REACT_APP_AWS_REGION': JSON.stringify(process.env.REACT_APP_AWS_REGION || 'us-east-1'),
+    // Load environment variables from .env files with proper fallbacks
+    'process.env.REACT_APP_USER_POOL_CLIENT_ID': JSON.stringify(env.REACT_APP_USER_POOL_CLIENT_ID || 'development_client_id_placeholder'),
+    'process.env.REACT_APP_USER_POOL_ID': JSON.stringify(env.REACT_APP_USER_POOL_ID || 'us-east-1_DEVDEVDEV'),
+    'process.env.REACT_APP_IDENTITY_POOL_ID': JSON.stringify(env.REACT_APP_IDENTITY_POOL_ID || 'us-east-1:dev-dev-dev-dev-development'),
+    'process.env.REACT_APP_AUTH_DOMAIN': JSON.stringify(env.REACT_APP_AUTH_DOMAIN || 'dev.auth.mymanor.click'),
+    'process.env.REACT_APP_AWS_REGION': JSON.stringify(env.REACT_APP_AWS_REGION || 'us-east-1'),
+    'process.env.REACT_APP_DEV_AUTH_BYPASS': JSON.stringify(env.REACT_APP_DEV_AUTH_BYPASS || 'true'),
+    'process.env.REACT_APP_DEV_USER_EMAIL': JSON.stringify(env.REACT_APP_DEV_USER_EMAIL || 'dev@manor.test'),
+    'process.env.REACT_APP_DEV_USER_NAME': JSON.stringify(env.REACT_APP_DEV_USER_NAME || 'Development User'),
+    'process.env.REACT_APP_DEV_HOME_ID': JSON.stringify(env.REACT_APP_DEV_HOME_ID || '720frontrd'),
   },
+  };
 });
