@@ -22,7 +22,14 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) => {
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Check for development mode to determine initial loading state
+  const isDevelopmentMode = config.userPoolId.includes('DEVDEVDEV') || 
+                           config.userPoolClientId.includes('development') ||
+                           process.env.REACT_APP_DEV_AUTH_BYPASS === 'true';
+  
+  // In development mode, start with loading = false to avoid spinner
+  const [isLoading, setIsLoading] = useState(!isDevelopmentMode);
 
   useEffect(() => {
     // Set a timeout to prevent indefinite loading
@@ -51,10 +58,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
         handleAuthCallback(service, code);
       } else if (error) {
         console.error('Auth error:', error, errorDescription);
-        console.log('Full URL params:', window.location.search);
-        
-        // For now, let's see what the actual error is instead of intercepting
-        console.log('🍎 Auth error details:', { error, errorDescription, fullUrl: window.location.href });
         
         // Only redirect for non-Apple errors or truly fatal Apple errors
         if (error === 'access_denied') {
