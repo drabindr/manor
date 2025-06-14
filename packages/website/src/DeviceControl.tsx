@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
 import LightSwitch from "./LightSwitch";
 import LGAppliances from "./LGAppliances";
 import GarageDoor from "./GarageDoor";
+import BhyveIrrigation from "./BhyveIrrigation";
 import { 
   UilCircle, 
   UilLightbulb,
@@ -581,6 +582,8 @@ const DeviceControl: React.FC = () => {
           </div>
         )}
         
+
+        
         {/* LG ThinQ Appliances Component - Prioritized during afternoon */}
         {lgAppliancesPrioritized && (
           <div className="col-span-full">
@@ -611,6 +614,16 @@ const DeviceControl: React.FC = () => {
 
           return roomsWithData;
         })()}
+
+        {/* Bhyve Irrigation - Always shown after room cards but before non-prioritized LG appliances */}
+        <div className="col-span-full">
+          <div 
+            className="touch-manipulation"
+            onClick={() => triggerHaptic('light')}
+          >
+            <BhyveIrrigation />
+          </div>
+        </div>
 
         {/* LG ThinQ Appliances - Show at bottom if not prioritized */}
         {!lgAppliancesPrioritized && (

@@ -26,7 +26,8 @@ try {
 }
 
 // Enhanced service worker registration with module preloading
-if ('serviceWorker' in navigator) {
+// Disable in development to prevent cache issues
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
@@ -41,6 +42,8 @@ if ('serviceWorker' in navigator) {
         console.log('[SW] Registration failed:', error);
       });
   });
+} else if (process.env.NODE_ENV === 'development') {
+  console.log('[SW] Service worker disabled in development mode');
 }
 
 // Preload critical resources for faster subsequent loads
