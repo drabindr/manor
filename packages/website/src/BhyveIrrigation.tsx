@@ -704,10 +704,15 @@ const BhyveIrrigation: React.FC = () => {
       
       if (shouldPoll) {
         console.log('[Bhyve] Starting smart polling - widget visible and user active');
+        
+        // Determine polling frequency based on activity
+        const hasActiveWatering = Object.values(status).some(s => s.isWatering);
+        const pollInterval = hasActiveWatering ? 5000 : 30000; // 5s if watering, 30s if idle
+        
         intervalId = setInterval(() => {
           // Don't poll if we recently performed a watering action (avoid timer conflicts)
           const timeSinceAction = Date.now() - lastWateringAction;
-          if (timeSinceAction < 8000) { // 8 seconds pause after watering actions (reduced from 12)
+          if (timeSinceAction < 8000) { // 8 seconds pause after watering actions
             console.log(`[Bhyve] Skipping poll - recent watering action ${Math.round(timeSinceAction/1000)}s ago`);
             return;
           }
@@ -716,7 +721,7 @@ const BhyveIrrigation: React.FC = () => {
             console.log('[Bhyve] Smart polling - refreshing device status');
             loadDevices();
           }
-        }, 10000); // 10 seconds when actively viewing
+        }, pollInterval);
       } else {
         console.log('[Bhyve] Stopping smart polling - widget not visible or user inactive');
       }
