@@ -1,7 +1,7 @@
 {
   "name": "@manor/ios",
   "version": "1.0.0",
-  "description": "Manor iOS application - Veedu/CasaGuard",
+  "description": "Manor iOS application",
   "private": true,
   "main": "index.js",
   "scripts": {
