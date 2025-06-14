@@ -447,7 +447,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = casaguard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = veedu;
+				INFOPLIST_KEY_CFBundleDisplayName = manor;
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
@@ -483,7 +483,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = casaguard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = veedu;
+				INFOPLIST_KEY_CFBundleDisplayName = manor;
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "We need your location to notify you when you are arriving or departing from your home.";
