@@ -25,6 +25,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Set a timeout to prevent indefinite loading
+    const loadingTimeout = setTimeout(() => {
+      console.warn('[Auth] Loading timeout reached, forcing loading to false');
+      setIsLoading(false);
+    }, 10000); // 10 second timeout
+
     // Initialize auth service
     const service = initializeAuth(config);
     setAuthService(service);
@@ -65,6 +71,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     } else {
       setIsLoading(false);
     }
+
+    // Clear the timeout since we've completed initialization
+    clearTimeout(loadingTimeout);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, [config]);
 
   const handleMissingAttributesError = async (service: AuthService, errorDescription: string) => {
@@ -90,15 +104,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
   };
 
   const handleAuthCallback = async (service: AuthService, code: string) => {
+    const callbackTimeout = setTimeout(() => {
+      console.warn('[Auth] Callback timeout reached, forcing loading to false');
+      setIsLoading(false);
+      window.location.href = '/?error=' + encodeURIComponent('Authentication timeout');
+    }, 15000); // 15 second timeout for callback
+
     try {
       setIsLoading(true);
       const user = await service.handleCallback(code);
       setUser(user);
       
+      clearTimeout(callbackTimeout);
       // Force redirect to main app instead of using history.replaceState
       window.location.href = '/';
     } catch (error) {
       console.error('Authentication callback failed:', error);
+      clearTimeout(callbackTimeout);
       // Redirect to login
       window.location.href = '/';
     } finally {

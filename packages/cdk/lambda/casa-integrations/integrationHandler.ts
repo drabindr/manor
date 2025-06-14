@@ -6,6 +6,7 @@ import * as hue from './providers/hue';
 import * as google from './providers/google'; // Import the Google Nest provider
 import * as airthings from './providers/airthings';
 import * as lg from './providers/lg'; // Import the LG ThinQ provider
+import * as bhyve from './providers/bhyve'; // Import the Bhyve irrigation provider
 
 // In-memory cache for Google devices
 // { data: any; timestamp: number }
@@ -79,6 +80,9 @@ export const handler = async (
   const provider = event.pathParameters?.provider;
   const deviceType = event.pathParameters?.deviceType;
   const action = event.pathParameters?.action;
+  
+  console.log('Path parameters:', { provider, deviceType, action });
+  console.log('Event path:', event.path);
 
   // Helper function to create responses with CORS headers
   const createResponse = (
@@ -455,6 +459,98 @@ export const handler = async (
       } else {
         return createResponse(400, {
           error: `Unknown device type '${deviceType}' for LG provider`,
+        });
+      }
+    }
+
+    // Handle Bhyve Irrigation Provider
+    else if (provider.toLowerCase() === 'bhyve') {
+      console.log('Bhyve provider detected. deviceType:', deviceType, 'action:', action);
+      if (deviceType.toLowerCase() === 'devices') {
+        console.log('Devices deviceType matched');
+        if (action.toLowerCase() === 'list') {
+          console.log('List action matched - calling bhyve.listDevices()');
+          // List all Bhyve irrigation devices
+          response = await bhyve.listDevices();
+        } else {
+          console.log('Unknown action for devices:', action);
+          return createResponse(400, {
+            error: `Unknown action '${action}' for devices under Bhyve provider`,
+          });
+        }
+      } else if (deviceType.toLowerCase() === 'zones') {
+        if (action.toLowerCase() === 'start') {
+          // Start watering a zone
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (
+            !requestBody || 
+            !requestBody.device_id || 
+            !requestBody.station || 
+            !requestBody.time
+          ) {
+            return createResponse(400, {
+              error: 'Missing device_id, station, or time in request body',
+            });
+          }
+
+          const { device_id, station, time } = requestBody;
+          response = await bhyve.startWatering(device_id, station, time);
+        } else if (action.toLowerCase() === 'stop') {
+          // Stop watering a zone
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (
+            !requestBody || 
+            !requestBody.device_id || 
+            !requestBody.station
+          ) {
+            return createResponse(400, {
+              error: 'Missing device_id or station in request body',
+            });
+          }
+
+          const { device_id, station } = requestBody;
+          response = await bhyve.stopWatering(device_id, station);
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for zones under Bhyve provider`,
+          });
+        }
+      } else if (deviceType.toLowerCase() === 'rain-delay') {
+        if (action.toLowerCase() === 'cancel') {
+          // Cancel rain delay
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id) {
+            return createResponse(400, {
+              error: 'Missing device_id in request body',
+            });
+          }
+
+          const { device_id } = requestBody;
+          response = await bhyve.cancelRainDelay(device_id);
+        } else if (action.toLowerCase() === 'set') {
+          // Set rain delay
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id || !requestBody.hours) {
+            return createResponse(400, {
+              error: 'Missing device_id or hours in request body',
+            });
+          }
+
+          const { device_id, hours } = requestBody;
+          response = await bhyve.setRainDelay(device_id, hours);
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for rain-delay under Bhyve provider`,
+          });
+        }
+      } else {
+        console.log('Unknown deviceType for Bhyve:', deviceType);
+        return createResponse(400, {
+          error: `Unknown device type '${deviceType}' for Bhyve provider`,
         });
       }
     }

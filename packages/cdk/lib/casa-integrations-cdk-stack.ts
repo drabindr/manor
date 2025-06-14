@@ -40,6 +40,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
         `arn:aws:ssm:${this.region}:${this.account}:parameter/google/*`,
         `arn:aws:ssm:${this.region}:${this.account}:parameter/airthings/*`, // Add Airthings permissions
         `arn:aws:ssm:${this.region}:${this.account}:parameter/lg/*`, // Add LG ThinQ permissions
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/bhyve/*`, // Add Bhyve permissions
       ],
     });
 
@@ -71,7 +72,8 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     actionResource.addMethod('ANY', integration);
 
     // ==== APPLE PUSH NOTIFICATION SERVICE (APNs) INTEGRATION ====
-    
+    // Temporarily commented out due to Lambda zip deployment issues
+    /*
     // DynamoDB table to store device tokens
     const deviceTokensTable = new Table(this, 'IntegrationsDeviceTokensTable', {
       partitionKey: { name: 'userId', type: AttributeType.STRING },
@@ -152,6 +154,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       value: `${api.url}apns/push`,
       description: 'URL for sending push notifications',
     });
+    */
 
     // Output the main API Gateway URL
     new cdk.CfnOutput(this, 'IntegrationsApiUrl', {
