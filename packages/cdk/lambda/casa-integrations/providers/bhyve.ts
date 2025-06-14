@@ -277,6 +277,10 @@ function transformDevice(rawDevice: any): BhyveDevice {
   };
 }
 
+// Add response caching to reduce external API calls
+let deviceListCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL_MS = 15000; // 15 seconds cache
+
 /**
  * List all Bhyve irrigation devices and their current status
  */
@@ -284,12 +288,32 @@ export async function listDevices(): Promise<BhyveData> {
   console.log('[Bhyve] Listing irrigation devices');
   
   try {
+    // Check cache first
+    const now = Date.now();
+    if (deviceListCache && (now - deviceListCache.timestamp) < CACHE_TTL_MS) {
+      console.log('[Bhyve] Returning cached device data');
+      return deviceListCache.data;
+    }
+    
     const rawDevices = await makeAuthenticatedRequest('/devices');
     const devices = (rawDevices || []).map(transformDevice);
+    const result = { devices };
     
-    return { devices };
+    // Update cache
+    deviceListCache = {
+      data: result,
+      timestamp: now
+    };
+    
+    console.log('[Bhyve] Cached fresh device data');
+    return result;
   } catch (error) {
     console.error('[Bhyve] Error listing devices:', error);
+    // Return cached data if available, even if stale
+    if (deviceListCache) {
+      console.log('[Bhyve] Returning stale cached data due to error');
+      return deviceListCache.data;
+    }
     throw error;
   }
 }
