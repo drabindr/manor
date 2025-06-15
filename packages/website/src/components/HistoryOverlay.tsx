@@ -88,7 +88,7 @@ const HistoryOverlay: React.FC<HistoryOverlayProps> = ({
     const fetchDates = async () => {
       try {
         setIsDateReady(false);
-        const res = await fetch('http://192.168.86.81:80/listAvailableDates');
+        const res = await fetch('https://192.168.86.81:443/listAvailableDates');
         if (!res.ok) throw new Error(res.statusText);
         const dates = await res.json() as string[];
         dates.sort((a, b) => a.localeCompare(b));
