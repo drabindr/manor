@@ -17,6 +17,7 @@ class WebSocketService {
   private maxReconnectAttempts: number = 20;
   private reconnectDelay: number = 1000;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private connectionAttemptsPaused: boolean = false;
   private pingInterval: NodeJS.Timeout | null = null;
   private online: boolean = false;
   private homeId: string = "720frontrd";
@@ -53,10 +54,11 @@ class WebSocketService {
 
   // Command queue for when connection is down
   private commandQueue: Array<{
-    command: Command;
     commandId: string;
+    command: Command;
     homeId: string;
     timestamp: string;
+    params?: any;
   }> = [];
 
   constructor(url: string, homeId?: string) {
@@ -87,7 +89,15 @@ class WebSocketService {
 
   // Connect to WebSocket server with connection lock
   public connect(): void {
-    if (this.socket?.readyState === WebSocket.OPEN || this.connecting || this.permanentlyFailed) return;
+    // Don't connect if attempts are paused
+    if (this.connectionAttemptsPaused) {
+      logger.debug("Connection attempts are paused, not connecting");
+      return;
+    }
+
+    if (this.socket?.readyState === WebSocket.OPEN || this.connecting || this.permanentlyFailed) {
+      return;
+    }
 
     try {
       this.connecting = true;
@@ -108,12 +118,15 @@ class WebSocketService {
       logger.error("Failed to connect to WebSocket server:", error);
       this.connecting = false;
       
-      const baseDelay = this.serverErrorCount > 2 ? 5000 : this.reconnectDelay;
-      const delay = Math.min(60000, baseDelay * Math.pow(1.5, this.reconnectAttempts));
-      this.reconnectTimeout = setTimeout(() => {
-        this.reconnectAttempts++;
-        this.connect();
-      }, delay);
+      // Don't schedule reconnect if connection attempts are paused
+      if (!this.connectionAttemptsPaused) {
+        const baseDelay = this.serverErrorCount > 2 ? 5000 : this.reconnectDelay;
+        const delay = Math.min(60000, baseDelay * Math.pow(1.5, this.reconnectAttempts));
+        this.reconnectTimeout = setTimeout(() => {
+          this.reconnectAttempts++;
+          this.connect();
+        }, delay);
+      }
     }
   }
 
@@ -150,6 +163,14 @@ class WebSocketService {
       }
       this.socket = null;
     }
+
+    // Reset connection state
+    this.connecting = false;
+    this.online = false;
+    this.permanentlyFailed = false;
+
+    // Clear pending commands on disconnect
+    this.pendingCommands.clear();
 
     // Note: Queued commands remain in the queue to be sent on reconnect
     if (this.commandQueue.length > 0) {
@@ -498,8 +519,14 @@ class WebSocketService {
   private handleClose(event: CloseEvent): void {
     this.online = false;
     this.eventTarget.dispatchEvent(
-      new CustomEvent("event", { detail: { type: "disconnected" } })
+      new CustomEvent("event", { detail: { type: "disconnected", code: event.code, reason: event.reason } })
     );
+
+    // Don't reconnect on normal closure, if permanently failed, or if connection attempts are paused
+    if (event.code === 1000 || this.permanentlyFailed || this.connectionAttemptsPaused) {
+      logger.info("Normal closure, permanently failed, or connection attempts paused - not reconnecting");
+      return;
+    }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       logger.error("Maximum reconnection attempts reached");
@@ -627,29 +654,30 @@ class WebSocketService {
     return null;
   }
 
-  // Pause connection when page is hidden
+  // Pause WebSocket activity when page is hidden
   private pauseConnection(): void {
-    if (this.pingInterval) {
-      clearInterval(this.pingInterval);
-      this.pingInterval = null;
-    }
+    this.pauseConnectionAttempts();
     if (this.connectionHealthCheckInterval) {
       clearInterval(this.connectionHealthCheckInterval);
       this.connectionHealthCheckInterval = null;
     }
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
   }
 
-  // Resume connection when page becomes visible
+  // Resume WebSocket activity when page becomes visible
   private resumeConnection(): void {
-    if (this.socket?.readyState !== WebSocket.OPEN) {
+    this.resumeConnectionAttempts();
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.startConnectionHealthCheck();
+      // Restart ping interval if socket is open
+      if (this.pingInterval) clearInterval(this.pingInterval);
+      this.pingInterval = setInterval(() => this.sendPing(), 30000);
+    } else if (!this.connecting && !this.permanentlyFailed) {
       this.connect();
     }
-    this.startConnectionHealthCheck();
-    this.startPing();
   }
 
   // Event listeners
@@ -661,10 +689,6 @@ class WebSocketService {
     this.eventTarget.removeEventListener(eventName, listener as EventListener);
   }
 
-  public isOnline(): boolean {
-    return this.online;
-  }
-
   // Reset reconnection state (e.g., from UI action)
   public resetReconnection(): void {
     this.reconnectAttempts = 0;
@@ -672,6 +696,77 @@ class WebSocketService {
     this.serverErrorCount = 0;
     this.serverErrorBackoffTime = 5000;
     this.connect();
+  }
+
+  // Test helpers - expose private properties for testing
+  public getUrl(): string { return this.url; }
+  public getHomeId(): string { return this.homeId; }
+  public isOnline(): boolean { return this.online; }
+  public isConnecting(): boolean { return this.connecting; }
+  public getReconnectAttempts(): number { return this.reconnectAttempts; }
+  public isPermanentlyFailed(): boolean { return this.permanentlyFailed; }
+  public getReconnectTimeout(): NodeJS.Timeout | null { return this.reconnectTimeout; }
+  public getReconnectDelay(): number { return this.reconnectDelay; }
+  public getEventTarget(): EventTarget { return this.eventTarget; }
+  public isConnectionAttemptsPaused(): boolean { return this.connectionAttemptsPaused; }
+  public getSocket(): WebSocket | null { return this.socket; }
+  public getSocketReadyState(): number | null { return this.socket?.readyState || null; }
+
+  // Test setters - allow tests to modify private state
+  public setConnecting(value: boolean): void { this.connecting = value; }
+  public setPermanentlyFailed(value: boolean): void { this.permanentlyFailed = value; }
+  public setReconnectAttempts(value: number): void { this.reconnectAttempts = value; }
+  public setEventTarget(value: EventTarget): void { this.eventTarget = value; }
+
+  // Additional test helpers for accessing private properties
+  public getLastMessageReceived(): number { return this.lastMessageReceived; }
+  public getPendingCommands(): Map<string, any> { return this.pendingCommands; }
+  public getStateData(): any { return this.stateData; }
+  public setLastMessageReceived(value: number): void { this.lastMessageReceived = value; }
+  public setPendingCommands(value: Map<string, any>): void { this.pendingCommands = value; }
+  public setStateData(value: any): void { this.stateData = value; }
+  public getCommandQueue(): Array<any> { return this.commandQueue; }
+  public setCommandQueue(value: Array<any>): void { this.commandQueue = value; }
+  public getSystemStateRequestInProgress(): boolean { return this.systemStateRequestInProgress; }
+  public setSystemStateRequestInProgress(value: boolean): void { this.systemStateRequestInProgress = value; }
+  public getPingInterval(): NodeJS.Timeout | null { return this.pingInterval; }
+  public getServerErrorCount(): number { return this.serverErrorCount; }
+  public setServerErrorCount(value: number): void { this.serverErrorCount = value; }
+  
+  // Additional test helpers for event management and error handling
+  public removeEventListener(eventName: string, listener: EventListener): void {
+    this.eventTarget.removeEventListener(eventName, listener);
+  }
+  
+  public dispatchEvent(eventName: string, data: any): void {
+    this.eventTarget.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+  }
+  
+  public getConnectionHealthCheckInterval(): NodeJS.Timeout | null { return this.connectionHealthCheckInterval; }
+  public getLastServerError(): number { return this.lastServerError; }
+  public getServerErrorBackoffTime(): number { return this.serverErrorBackoffTime; }
+  
+  // Test method to trigger server error handling
+  public triggerServerError(): void {
+    this.serverErrorCount++;
+    this.lastServerError = Date.now();
+    this.serverErrorBackoffTime = Math.min(this.maxServerErrorBackoffTime, this.serverErrorBackoffTime * 2);
+  }
+
+  // Pause connection attempts (useful for testing)
+  public pauseConnectionAttempts(): void {
+    this.connectionAttemptsPaused = true;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    logger.debug("Connection attempts paused");
+  }
+
+  // Resume connection attempts
+  public resumeConnectionAttempts(): void {
+    this.connectionAttemptsPaused = false;
+    logger.debug("Connection attempts resumed");
   }
 }
 

@@ -173,8 +173,9 @@ const AdminPanel: React.FC = () => {
             </h2>
             <form onSubmit={handleCreateHome} className="space-y-4">
               <div>
-                <label className="block text-gray-300 mb-1">Home Name</label>
+                <label htmlFor="home-name" className="block text-gray-300 mb-1">Home Name</label>
                 <input
+                  id="home-name"
                   type="text"
                   value={homeName}
                   onChange={(e) => setHomeName(e.target.value)}
@@ -198,10 +199,11 @@ const AdminPanel: React.FC = () => {
                       { label: "Project ID", key: "projectId" },
                     ].map((field) => (
                       <div key={field.key}>
-                        <label className="block text-gray-400 mb-1">
+                        <label htmlFor={`google-${field.key}`} className="block text-gray-400 mb-1">
                           {field.label}
                         </label>
                         <input
+                          id={`google-${field.key}`}
                           type="text"
                           value={(integrations.google as any)[field.key]}
                           onChange={(e) =>
@@ -223,10 +225,11 @@ const AdminPanel: React.FC = () => {
                     TP-Link Integration
                   </legend>
                   <div className="mb-2">
-                    <label className="block text-gray-400 mb-1">
+                    <label htmlFor="tplink-username" className="block text-gray-400 mb-1">
                       Cloud Username
                     </label>
                     <input
+                      id="tplink-username"
                       type="text"
                       value={integrations.tplink.cloudUsername}
                       onChange={(e) =>
@@ -240,10 +243,11 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div className="mb-2">
-                    <label className="block text-gray-400 mb-1">
+                    <label htmlFor="tplink-password" className="block text-gray-400 mb-1">
                       Cloud Password
                     </label>
                     <input
+                      id="tplink-password"
                       type="password"
                       value={integrations.tplink.cloudPassword}
                       onChange={(e) =>
@@ -257,10 +261,11 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div className="mb-2">
-                    <label className="block text-gray-400 mb-1">
+                    <label htmlFor="tplink-deviceid" className="block text-gray-400 mb-1">
                       Device ID
                     </label>
                     <input
+                      id="tplink-deviceid"
                       type="text"
                       value={integrations.tplink.deviceID}
                       onChange={(e) =>
@@ -270,10 +275,11 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-400 mb-1">
+                    <label htmlFor="tplink-terminaluuid" className="block text-gray-400 mb-1">
                       Terminal UUID
                     </label>
                     <input
+                      id="tplink-terminaluuid"
                       type="text"
                       value={integrations.tplink.terminalUUID}
                       onChange={(e) =>
