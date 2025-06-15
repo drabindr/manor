@@ -820,6 +820,92 @@ code {
   white-space: nowrap;
 }
 
+/* Device Widget Consistency */
+.device-widget {
+  background: linear-gradient(135deg, rgba(55, 65, 81, 0.9), rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9));
+  backdrop-filter: var(--blur-strength);
+  -webkit-backdrop-filter: var(--blur-strength);
+  border: 1px solid rgba(75, 85, 99, 0.4);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: all var(--duration-normal) var(--animation-smooth);
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform, box-shadow;
+}
+
+.device-widget:hover {
+  border-color: rgba(107, 114, 128, 0.5);
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px) translateZ(0);
+}
+
+.device-widget:active {
+  transform: translateY(0) scale(0.998) translateZ(0);
+  transition-duration: var(--duration-fast);
+}
+
+.device-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  pointer-events: none;
+}
+
+.device-widget-priority {
+  border-color: rgba(251, 191, 36, 0.4);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(251, 191, 36, 0.1);
+}
+
+.device-widget-priority:hover {
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: var(--shadow-medium), 0 0 0 1px rgba(251, 191, 36, 0.2);
+}
+
+/* Smaller variant for zone cards and sub-widgets */
+.device-widget-small {
+    background: linear-gradient(135deg, rgba(55, 65, 81, 0.85), rgba(31, 41, 55, 0.9), rgba(17, 24, 39, 0.85));
+    backdrop-filter: var(--blur-subtle);
+    -webkit-backdrop-filter: var(--blur-subtle);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow-soft);
+    transition: all var(--duration-normal) var(--animation-smooth);
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, box-shadow;
+}
+  
+.device-widget-small:hover {
+    border-color: rgba(107, 114, 128, 0.4);
+    box-shadow: var(--shadow-card);
+    transform: scale(1.02) translateZ(0);
+}
+  
+.device-widget-small:active {
+    transform: scale(0.98) translateZ(0);
+    transition-duration: var(--duration-fast);
+}
+  
+.device-widget-small-active {
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: var(--shadow-soft), 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
 /* Enhanced iPhone-Specific Media Queries with Container Query Support */
 @media screen and (max-width: 320px) {
   /* iPhone SE/Mini - Ultra compact layout */
@@ -921,4 +1007,14 @@ code {
     display: inline !important;
   }
 }
+
+/* Subtle animation for refreshing state */
+.device-widget-refreshing {
+    animation: subtle-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes subtle-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.95; }
+  }
 

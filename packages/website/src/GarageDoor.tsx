@@ -360,15 +360,7 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
   // }
 
   return (
-    <div 
-      className="relative p-5 bg-gradient-to-br from-gray-800/90 via-gray-850/95 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border border-gray-700/40 transition-all duration-300 hover:border-gray-600/50 hover:shadow-2xl active:scale-[0.99]"
-      style={{
-        transform: 'translateZ(0)', // Hardware acceleration for iPhone
-        WebkitTransform: 'translateZ(0)',
-        backfaceVisibility: 'hidden',
-        WebkitBackfaceVisibility: 'hidden'
-      }}
-    >
+    <div className="device-widget p-5">
       {/* Enhanced offline overlay for iPhone */}
       {!isConnected && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-md rounded-xl flex items-center justify-center z-20">
