@@ -136,18 +136,7 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
   }, [isWatering, timeRemaining, zone.station]);
 
   return (
-    <div className={`relative p-2 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden border transition-all duration-300 hover:border-gray-600/50 touch-manipulation transform hover:scale-[1.02] active:scale-[0.98] ${
-      isWatering
-        ? 'border-blue-600/50 shadow-blue-900/20'
-        : 'border-gray-700/50'
-    }`}
-    style={{
-      transform: "translateZ(0)",
-      WebkitTransform: "translateZ(0)",
-      backfaceVisibility: "hidden",
-      WebkitBackfaceVisibility: "hidden",
-      willChange: "transform, box-shadow"
-    }}>
+    <div className={`device-widget-small ${isWatering ? 'device-widget-small-active' : ''} p-2`}>
       {/* Zone Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-1.5 min-w-0 flex-1">
@@ -787,7 +776,7 @@ const BhyveIrrigation: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full p-6 bg-gradient-to-b from-blue-900/20 to-blue-800/20 border border-blue-800/40 rounded-xl mt-2">
+      <div className="device-widget p-6 my-2">
         <div className="animate-pulse flex flex-col items-center justify-center h-32">
           <div className="text-4xl mb-3">💧</div>
           <p className="text-blue-300 font-medium text-lg mb-2">Loading irrigation system</p>
@@ -799,7 +788,7 @@ const BhyveIrrigation: React.FC = () => {
 
   if (error) {
     return (
-      <div className="w-full p-6 bg-gradient-to-b from-red-900/20 to-red-800/20 border border-red-800/40 rounded-xl mt-2">
+      <div className="device-widget p-6 my-2 border-red-800/40">
         <div className="flex flex-col items-center justify-center h-32">
           <div className="text-4xl mb-3">⚠️</div>
           <p className="text-red-300 font-medium text-lg mb-2">Irrigation Error</p>
@@ -817,7 +806,7 @@ const BhyveIrrigation: React.FC = () => {
 
   if (devices.length === 0) {
     return (
-      <div className="w-full p-6 bg-gradient-to-b from-gray-900/20 to-gray-800/20 border border-gray-800/40 rounded-xl mt-2">
+      <div className="device-widget p-6 my-2">
         <div className="flex flex-col items-center justify-center h-32">
           <div className="text-4xl mb-3">💧</div>
           <p className="text-gray-300 font-medium text-lg mb-2">No Irrigation Devices</p>
@@ -838,14 +827,7 @@ const BhyveIrrigation: React.FC = () => {
         return (
           <div
             key={device.id}
-            className={`relative p-2.5 sm:p-3 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-300 hover:border-gray-600/50 touch-manipulation transform hover:scale-[1.01] active:scale-[0.99] w-full max-w-full my-2`}
-            style={{
-              transform: "translateZ(0)",
-              WebkitTransform: "translateZ(0)",
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              willChange: "transform, box-shadow"
-            }}
+            className={`device-widget ${timePriority === 'high' ? 'device-widget-priority' : ''} p-2.5 sm:p-3 w-full max-w-full my-2`}
           >
             {/* Enhanced glass effect overlay */}
             <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>

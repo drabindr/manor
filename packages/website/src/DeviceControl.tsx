@@ -137,11 +137,13 @@ const getTimeBasedPrompt = () => {
   const hour = new Date().getHours();
   
   if (hour >= 6 && hour < 11) {
-    return "☀️ Good morning! Start your day with coffee and lights.";
-  } else if (hour >= 11 && hour < 17) {
+    return "☀️ Good morning! Optimal time for watering and coffee.";
+  } else if (hour >= 11 && hour < 14) {
+    return "☀️ Midday watering time. Manage irrigation and appliances.";
+  } else if (hour >= 17 && hour < 20) {
+    return "🌅 Evening watering time. Set outdoor lights and irrigation.";
+  } else if (hour >= 14 && hour < 17) {
     return "🏠 Afternoon focus. Manage appliances and essential devices.";
-  } else if (hour >= 17 && hour < 22) {
-    return "🌅 Evening time. Set the mood with outdoor and ambient lights.";
   } else {
     return "🌙 Good night. Manage bedroom and security lighting.";
   }
@@ -159,6 +161,14 @@ const shouldLGAppliancesBePrioritized = () => {
   // During afternoon (11 AM - 5 PM) when it's likely not dark outside,
   // LG appliances like washing machines are more contextually relevant than lights
   return hour >= 11 && hour < 17;
+};
+
+// Check if irrigation should be prioritized (optimal watering times)
+const shouldIrrigationBePrioritized = () => {
+  const hour = new Date().getHours();
+  // Prioritize irrigation during optimal watering times:
+  // Morning (6-11 AM), around noon (11 AM - 2 PM), and evening (5-8 PM)
+  return (hour >= 6 && hour < 11) || (hour >= 11 && hour < 14) || (hour >= 17 && hour < 20);
 };
 
 // OPTIMIZATION: Memoized individual light switch component to prevent unnecessary re-renders
@@ -192,6 +202,8 @@ const DeviceControl: React.FC = () => {
   const [lightsError, setLightsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   
   // Enhanced iPhone haptic feedback helper
   const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
@@ -253,6 +265,9 @@ const DeviceControl: React.FC = () => {
   // Check if LG appliances should be prioritized
   const lgAppliancesPrioritized = shouldLGAppliancesBePrioritized();
   
+  // Check if irrigation should be prioritized
+  const irrigationPrioritized = shouldIrrigationBePrioritized();
+  
   // Get time-based priorities and room order
   const timeBasedPriorities = getTimeBasedPriorityDevices();
   const roomOrder = getTimeBasedRoomOrder();
@@ -272,17 +287,7 @@ const DeviceControl: React.FC = () => {
   const renderRoomCard = (room: { name: string; lights: LightDevice[]; deviceCount: number; activeCount: number; hasEssentialDevices: boolean; isSuggested: boolean; inactiveCount: number }) => {
     return (
       <div
-        className={`relative p-2.5 sm:p-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border transition-all duration-300 hover:border-gray-600/50 touch-manipulation transform hover:scale-[1.01] active:scale-[0.99] ${
-          room.hasEssentialDevices ? 'border-yellow-600/50 shadow-yellow-900/20' : room.isSuggested ? 'border-blue-600/50 shadow-blue-900/20' : 'border-gray-700/50'
-        }`}
-        style={{
-          // Enhanced hardware acceleration for iPhone
-          transform: "translateZ(0)",
-          WebkitTransform: "translateZ(0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-          willChange: "transform, box-shadow"
-        }}
+        className={`device-widget ${room.hasEssentialDevices ? 'device-widget-priority' : ''} p-2.5 sm:p-4`}
       >
         {/* Priority indicator for essential devices */}
         {room.hasEssentialDevices && (
@@ -293,9 +298,6 @@ const DeviceControl: React.FC = () => {
         {room.isSuggested && !room.hasEssentialDevices && (
           <div className="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
         )}
-        
-        {/* Enhanced glass effect overlay */}
-        <div className="absolute top-0 left-0 right-0 h-10 sm:h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>
         
         {/* Room Title with emoji icons - Enhanced for iPhone */}
         <div className="flex justify-between items-center mb-2.5 sm:mb-4">
@@ -415,6 +417,7 @@ const DeviceControl: React.FC = () => {
 
       setLights(combinedLights);
       setLightsError(null);
+      setLastRefreshTime(Date.now());
     } catch (error) {
       console.error("Error fetching lights:", error);
       setLights([]);
@@ -424,9 +427,95 @@ const DeviceControl: React.FC = () => {
     }
   }
 
+  // Background refresh function that doesn't block UI
+  const backgroundRefresh = useCallback(async () => {
+    // Don't refresh if we just refreshed recently (prevent spam)
+    const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+    if (timeSinceLastRefresh < 5000) { // 5 second cooldown
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      const tplinkResponse = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
+      );
+
+      if (tplinkResponse.status === 401) {
+        // Don't redirect during background refresh, just fail silently
+        setLightsError("Authentication required");
+        return;
+      }
+
+      const tplinkData = await tplinkResponse.json();
+
+      const hueResponse = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
+      );
+
+      if (hueResponse.status === 401) {
+        setLightsError("Authentication required");
+        return;
+      }
+
+      const hueData = await hueResponse.json();
+
+      const combinedLights = [
+        ...(Array.isArray(tplinkData) ? tplinkData : [])
+          .filter((light) => light.status === 1 && !light.error) // Only include online devices without errors
+          .map((light) => ({
+            ...light,
+            provider: "tplink",
+          })),
+        ...Object.keys(hueData).map((lightId) => ({
+          alias: hueData[lightId].name,
+          deviceId: lightId,
+          relay_state: hueData[lightId].state.on ? 1 : 0,
+          provider: "hue",
+        })),
+      ];
+
+      setLights(combinedLights);
+      setLightsError(null);
+      setLastRefreshTime(Date.now());
+    } catch (error) {
+      console.error("Background refresh error:", error);
+      // Don't update UI error state during background refresh
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [lastRefreshTime]);
+
   useEffect(() => {
     fetchLights();
   }, []);
+
+  // Page visibility detection for background refresh
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isLoading) {
+        // Page became visible - trigger background refresh
+        console.log('[DeviceControl] Page became visible, triggering background refresh');
+        backgroundRefresh();
+      }
+    };
+
+    const handleFocus = () => {
+      if (!isLoading) {
+        // App gained focus - trigger background refresh  
+        console.log('[DeviceControl] App gained focus, triggering background refresh');
+        backgroundRefresh();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [backgroundRefresh, isLoading]);
 
   // OPTIMIZATION: Memoized light grouping for better performance
   const getLightsByGroup = useCallback((groupName: string): LightDevice[] => {
@@ -493,7 +582,7 @@ const DeviceControl: React.FC = () => {
 
   if (lightsError) {
     return (
-      <div className="p-6 mx-4 bg-gradient-to-br from-red-900/40 to-red-950/40 text-white rounded-xl border border-red-800/50 backdrop-blur-sm shadow-xl mt-2">
+      <div className="device-widget p-6 mx-4 mt-2 border-red-800/50">
         <div className="flex items-center justify-center space-x-3">
           <UilBolt className="h-7 w-7 text-red-400" />
           <span className="text-red-100">{lightsError}</span>
@@ -517,7 +606,7 @@ const DeviceControl: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full p-8 flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-black border border-gray-800/40 rounded-xl mx-4 mt-2 h-96">
+      <div className="device-widget p-8 mx-4 mt-2 h-96">
         <div className="animate-pulse flex flex-col items-center justify-center h-full">
           <div className="relative mb-6">
             <UilLightbulb size={56} className="text-gray-600" />
@@ -548,6 +637,12 @@ const DeviceControl: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2 text-xs">
+          {isRefreshing && (
+            <div className="text-blue-400 bg-blue-900/50 px-2 py-1 rounded-full border border-blue-700/30 flex items-center space-x-1 backdrop-blur-sm shadow-sm">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span className="hidden sm:inline">Updating...</span>
+            </div>
+          )}
           <div className="text-gray-400 bg-gray-800/70 px-2.5 py-1.5 rounded-full border border-gray-700/30 backdrop-blur-sm shadow-sm">
             <span className="hidden sm:inline">Total: </span>{lights.length}
           </div>
@@ -565,7 +660,7 @@ const DeviceControl: React.FC = () => {
       
       {/* Enhanced DEVICE CONTROLS with better iPhone optimizations */}
       <div 
-        className="grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3" 
+        className={`grid gap-2.5 sm:gap-4 px-2 sm:px-4 pb-3 ${isRefreshing ? 'device-widget-refreshing' : ''}`} 
         style={{
           gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(160px, 1fr))' : 'repeat(auto-fit, minmax(200px, 1fr))'
         }}
@@ -585,13 +680,25 @@ const DeviceControl: React.FC = () => {
 
         
         {/* LG ThinQ Appliances Component - Prioritized during afternoon */}
-        {lgAppliancesPrioritized && (
+        {lgAppliancesPrioritized && !irrigationPrioritized && (
           <div className="col-span-full">
             <div 
               className="touch-manipulation"
               onClick={() => triggerHaptic('light')}
             >
               <LGAppliances />
+            </div>
+          </div>
+        )}
+
+        {/* Bhyve Irrigation - Prioritized during optimal watering times */}
+        {irrigationPrioritized && (
+          <div className="col-span-full">
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('light')}
+            >
+              <BhyveIrrigation />
             </div>
           </div>
         )}
@@ -615,17 +722,19 @@ const DeviceControl: React.FC = () => {
           return roomsWithData;
         })()}
 
-        {/* Bhyve Irrigation - Always shown after room cards but before non-prioritized LG appliances */}
-        <div className="col-span-full">
-          <div 
-            className="touch-manipulation"
-            onClick={() => triggerHaptic('light')}
-          >
-            <BhyveIrrigation />
+        {/* Bhyve Irrigation - Show after room cards if not prioritized */}
+        {!irrigationPrioritized && (
+          <div className="col-span-full">
+            <div 
+              className="touch-manipulation"
+              onClick={() => triggerHaptic('light')}
+            >
+              <BhyveIrrigation />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* LG ThinQ Appliances - Show at bottom if not prioritized */}
+        {/* LG ThinQ Appliances - Show after irrigation if not prioritized */}
         {!lgAppliancesPrioritized && (
           <div className="col-span-full">
             <div 
