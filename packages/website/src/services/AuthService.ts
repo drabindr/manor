@@ -28,7 +28,7 @@ export interface AuthTokens {
 
 export class AuthService {
   private config: AuthConfig;
-  private cognitoClient: CognitoIdentityProviderClient | null = null;
+  private cognitoClient: CognitoIdentityProviderClient;
   private user: User | null = null;
   private tokens: AuthTokens | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
@@ -36,19 +36,9 @@ export class AuthService {
   private isRefreshing: boolean = false;
   private refreshRetryCount: number = 0;
   private maxRefreshRetries: number = 3;
-  private isDevelopmentMode: boolean = false;
 
   constructor(config: AuthConfig) {
     this.config = config;
-    
-    // Check if we're in development mode with auth bypass
-    this.isDevelopmentMode = this.checkDevelopmentMode();
-    
-    if (this.isDevelopmentMode) {
-      this.setupDevelopmentAuth();
-      return;
-    }
-    
     this.cognitoClient = new CognitoIdentityProviderClient({
       region: config.region,
     });
@@ -61,53 +51,9 @@ export class AuthService {
       this.scheduleTokenRefresh();
     }
   }
-  
-  private checkDevelopmentMode(): boolean {
-    // Check for development auth bypass flag
-    const devBypass = process.env.REACT_APP_DEV_AUTH_BYPASS === 'true';
-    
-    // Also check if we have dummy Cognito config (indicates development)
-    const isDummyConfig = this.config.userPoolId.includes('DEVDEVDEV') || 
-                         this.config.userPoolClientId.includes('development');
-    
-    // Check if we're on localhost
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname.includes('localhost');
-    
-    // Return true if any of these conditions are met
-    return devBypass || isDummyConfig || isLocalhost;
-  }
-  
-  private setupDevelopmentAuth(): void {
-    // Create a mock authenticated user for development
-    this.user = {
-      sub: 'dev-user-123',
-      email: process.env.REACT_APP_DEV_USER_EMAIL || 'dev@manor.test',
-      givenName: process.env.REACT_APP_DEV_USER_NAME?.split(' ')[0] || 'Development',
-      familyName: process.env.REACT_APP_DEV_USER_NAME?.split(' ').slice(1).join(' ') || 'User',
-      role: 'admin',
-      homeId: process.env.REACT_APP_DEV_HOME_ID || '720frontrd',
-    };
-    
-    // Create mock tokens that won't expire
-    this.tokens = {
-      accessToken: 'dev-access-token',
-      idToken: 'dev-id-token',
-      refreshToken: 'dev-refresh-token',
-      expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year from now
-    };
-    
-    // Save to localStorage for consistency
-    this.saveAuthState();
-  }
 
   // Initialize Sign in with Apple
   async signInWithApple(): Promise<void> {
-    if (this.isDevelopmentMode) {
-      return;
-    }
-    
     const appleAuthUrl = this.buildAppleAuthUrl();
     window.location.href = appleAuthUrl;
   }
@@ -126,10 +72,6 @@ export class AuthService {
 
   // Handle OAuth callback
   async handleCallback(code: string): Promise<User> {
-    if (this.isDevelopmentMode) {
-      return this.user!;
-    }
-    
     try {
       // Exchange code for tokens via Cognito
       const tokenResponse = await fetch(`https://${this.config.authDomain}/oauth2/token`, {
@@ -269,15 +211,6 @@ export class AuthService {
 
   // Get AWS credentials for making authenticated API calls
   async getAWSCredentials() {
-    if (this.isDevelopmentMode) {
-      // Return mock credentials for development
-      return {
-        accessKeyId: 'dev-access-key',
-        secretAccessKey: 'dev-secret-key',
-        sessionToken: 'dev-session-token',
-      };
-    }
-    
     if (!this.tokens) {
       throw new Error('User not authenticated');
     }
@@ -295,11 +228,6 @@ export class AuthService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    if (this.isDevelopmentMode) {
-      const result = !!this.user;
-      return result;
-    }
-    
     if (!this.user || !this.tokens) {
       return false;
     }
@@ -336,10 +264,6 @@ export class AuthService {
 
   // Get access token for API calls
   getAccessToken(): string | null {
-    if (this.isDevelopmentMode) {
-      return this.tokens?.accessToken || 'dev-access-token';
-    }
-    
     if (!this.tokens) {
       console.warn('No tokens available');
       return null;
@@ -369,19 +293,18 @@ export class AuthService {
 
   // Refresh tokens
   async refreshTokens(): Promise<void> {
-    if (this.isDevelopmentMode) {
-      return;
-    }
-    
     if (!this.tokens?.refreshToken) {
       throw new Error('No refresh token available');
     }
 
     if (this.isRefreshing) {
+      console.log('🔄 Token refresh already in progress, skipping...');
       return;
     }
 
     this.isRefreshing = true;
+    console.log('🔄 Attempting token refresh...');
+    console.log('Refresh token (first 20 chars):', this.tokens.refreshToken.substring(0, 20) + '...');
 
     try {
       const tokenResponse = await fetch(`https://${this.config.authDomain}/oauth2/token`, {
@@ -395,6 +318,8 @@ export class AuthService {
           refresh_token: this.tokens.refreshToken,
         }),
       });
+
+      console.log('Token refresh response status:', tokenResponse.status);
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
@@ -437,6 +362,8 @@ export class AuthService {
       }
 
       const tokenData = await tokenResponse.json();
+      console.log('✅ Token refresh successful');
+      console.log('New token expires in:', tokenData.expires_in, 'seconds');
       
       // Reset retry counter on success
       this.refreshRetryCount = 0;
@@ -716,13 +643,10 @@ export class AuthService {
 let authService: AuthService | null = null;
 
 export const initializeAuth = (config: AuthConfig): AuthService => {
-  console.log('🔧 initializeAuth called with config:', config);
   authService = new AuthService(config);
-  console.log('🔧 AuthService created:', authService);
   // Expose to window for debugging
   if (typeof window !== 'undefined') {
     (window as any).authService = authService;
-    console.log('🔧 AuthService exposed to window');
   }
   return authService;
 };
