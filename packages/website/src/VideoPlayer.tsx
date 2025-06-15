@@ -14,7 +14,7 @@ import { FaCalendarAlt, FaArrowLeft, FaVolumeUp, FaVolumeMute, FaStepBackward, F
 import { logger } from './utils/Logger';
 
 // --- Configuration ---
-const API_BASE_URL = 'http://192.168.86.81'; // Adjust if needed
+const API_BASE_URL = 'https://192.168.86.81'; // HTTPS on port 443
 // Time-zone compensation offset to correct 19-hour difference between UI display and actual video time
 // NOTE: This offset creates an edge case at exactly 19:00 (1140 minutes) where the math wraps around
 // to midnight (0), causing the video to stall. Special handling is applied in the slider and clip index functions.
