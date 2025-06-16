@@ -130,10 +130,11 @@ export const handler = async (
       }
       await google.handleOAuth2Callback(code);
       // Redirect back to your web page after successful authorization
+      const domainName = process.env.DOMAIN_NAME || '720frontrd.mymanor.click';
       return {
         statusCode: 302,
         headers: {
-          Location: 'http://casa-guard-webapp.s3-website-us-east-1.amazonaws.com/',
+          Location: `https://${domainName}/`,
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',

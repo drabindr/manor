@@ -11,9 +11,16 @@ import { Table, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { applyAutoScaling } from './helpers';
 
+interface CasaIntegrationsCdkStackProps extends cdk.StackProps {
+  domainName?: string;
+}
+
 export class CasaIntegrationsCdkStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: CasaIntegrationsCdkStackProps) {
     super(scope, id, props);
+
+    // Default to the current domain if not provided
+    const domainName = props?.domainName || '720frontrd.mymanor.click';
 
     // Create the Lambda function
     const integrationLambda = new NodejsFunction(this, 'IntegrationLambda', {
@@ -24,6 +31,9 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
         platform: 'linux',
         minify: false, // Disable minification to help with debugging
         sourceMap: false, // Disable source maps to simplify output
+      },
+      environment: {
+        DOMAIN_NAME: domainName,
       },
       timeout: cdk.Duration.seconds(10),
     });

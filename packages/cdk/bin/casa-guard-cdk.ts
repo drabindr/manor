@@ -46,7 +46,9 @@ const websiteStack = new ManorWebsiteStack(app, 'ManorWebsiteStack', {
 // Other stacks
 new CasaGuardCdkStack(app, 'CasaGuardCdkStack', {});
 new CasaCamerasCdkStack(app, 'CasaCamerasCdkStack', {});
-new CasaIntegrationsCdkStack(app, 'CasaIntegrationsStack', {});
+new CasaIntegrationsCdkStack(app, 'CasaIntegrationsStack', {
+  domainName: '720frontrd.mymanor.click',
+});
 new CasaCamerasDashboardsStack(app, 'CasaCamerasDashboardsStack', {});
 new CasaAdminCdkStack(app, 'CasaAdminCdkStack', {});
 
