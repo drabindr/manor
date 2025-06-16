@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { UilVideo, UilListUl, UilApps, UilExpandArrows, UilHistory, UilClock, UilSorting } from "@iconscout/react-unicons";
+import { UilVideo, UilHistory, UilClock } from "@iconscout/react-unicons";
 import CameraCard from '../CameraCard';
 import CasaCameraCard from '../CasaCameraCard';
 import { sortCamerasWithTimeContext } from '../utils/cameraUtils';
@@ -157,8 +157,8 @@ const CameraPage: React.FC<CameraPageProps> = ({
   const getSortIcon = () => {
     switch (sortPreference) {
       case 'time-based': return <UilClock className="text-blue-400" size={20} />;
-      case 'alphabetical': return <UilSorting className="text-blue-400" size={20} />;
-      case 'custom': return <UilApps className="text-blue-400" size={20} />;
+      case 'alphabetical': return <UilClock className="text-blue-400" size={20} />;
+      case 'custom': return <UilVideo className="text-blue-400" size={20} />;
       default: return <UilClock className="text-blue-400" size={20} />;
     }
   };
@@ -233,9 +233,9 @@ const CameraPage: React.FC<CameraPageProps> = ({
             aria-label={`Switch to ${cameraViewMode === "grid" ? "list" : "grid"} view`}
           >
             {cameraViewMode === "grid" ? (
-              <UilListUl className="text-blue-400" size={isMobile ? 18 : 20} />
+              <UilVideo className="text-blue-400" size={isMobile ? 18 : 20} />
             ) : (
-              <UilApps className="text-blue-400" size={isMobile ? 18 : 20} />
+              <UilVideo className="text-blue-400" size={isMobile ? 18 : 20} />
             )}
           </button>
           {/* Enhanced Columns Button with Better iPhone Touch Targets */}
@@ -289,19 +289,20 @@ const CameraPage: React.FC<CameraPageProps> = ({
             <div className="group h-full">
               <CameraCard camera={camera} ref={(el) => (cameraRefs.current[camera.name] = el)} />
               {/* Enhanced Fullscreen Button with Better Touch Targets */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpandCamera(camera.name);
-                    triggerHaptic('medium');
-                  }}
-                  className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
-                  aria-label="Open camera in fullscreen"
-                >
-                  <UilExpandArrows size={isMobile ? 16 : 18} />
-                  <span className="font-medium button-text hidden sm:inline">Fullscreen</span>
-                </button>
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpandCamera(camera.name);
+                  triggerHaptic('medium');
+                }}
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[44px] sm:min-w-[100px] min-h-[44px]"
+                aria-label="Open camera in fullscreen"
+              >
+                <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                <span className="font-medium button-text hidden sm:inline ml-2 sm:ml-0">Fullscreen</span>
+              </button>
               </div>
             </div>
           </div>
@@ -334,18 +335,20 @@ const CameraPage: React.FC<CameraPageProps> = ({
           <div className="group h-full">
             <CasaCameraCard ref={casaCameraRef} />
             {/* Enhanced Casa Camera Control Buttons */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 space-x-2 sm:space-x-3">
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 camera-button-container">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onExpandCamera("CasaCam");
                   triggerHaptic('medium');
                 }}
-                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[44px] sm:min-w-[100px] min-h-[44px]"
                 aria-label="Open Casa Camera in fullscreen"
               >
-                <UilExpandArrows size={isMobile ? 16 : 18} />
-                <span className="font-medium button-text hidden sm:inline">Fullscreen</span>
+                <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                <span className="font-medium button-text hidden sm:inline ml-2 sm:ml-0">Fullscreen</span>
               </button>
               <button
                 onClick={(e) => {
@@ -361,11 +364,11 @@ const CameraPage: React.FC<CameraPageProps> = ({
                     }
                   }
                 }}
-                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-1.5 sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[100px] min-h-[44px]"
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[44px] sm:min-w-[100px] min-h-[44px]"
                 aria-label="View Casa Camera history"
               >
                 <UilHistory size={isMobile ? 16 : 18} />
-                <span className="font-medium button-text hidden sm:inline">History</span>
+                <span className="font-medium button-text hidden sm:inline ml-2 sm:ml-0">History</span>
               </button>
             </div>
           </div>
