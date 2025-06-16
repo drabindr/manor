@@ -637,14 +637,100 @@ html, body {
   overflow: visible !important;
 }
 
-/* Responsive camera buttons */
-@media (max-width: 540px) {
+/* Enhanced responsive camera overlay buttons */
+.camera-button {
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Default: full button with text */
+  min-width: 100px;
+  gap: 8px;
+}
+
+/* Ensure proper button container spacing on camera overlays */
+.camera-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .camera-button-container {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .camera-button-container {
+    gap: 4px;
+  }
+}
+
+/* Tablet and small laptop screens */
+@media (max-width: 768px) and (min-width: 641px) {
   .camera-button {
+    min-width: 80px;
     padding-left: 10px !important;
     padding-right: 10px !important;
+  }
+}
+
+/* Mobile screens - collapse to icon-only */
+@media (max-width: 640px) {
+  .camera-button {
+    /* When on small screens, adjust padding and make button circular/square */
+    padding: 12px !important;
+    min-width: 44px !important;
+    width: 44px !important;
+    justify-content: center !important;
+    gap: 0 !important;
   }
   
   .button-text {
     display: none !important;
+  }
+  
+  /* Ensure proper spacing between camera overlay buttons on mobile */
+  .camera-button + .camera-button {
+    margin-left: 8px;
+  }
+}
+
+/* Very small screens - compact buttons */
+@media (max-width: 480px) {
+  .camera-button {
+    padding: 10px !important;
+    min-width: 40px !important;
+    width: 40px !important;
+    min-height: 40px !important;
+  }
+  
+  /* Reduce spacing on very small screens */
+  .camera-button + .camera-button {
+    margin-left: 6px;
+  }
+}
+
+/* Extra small screens - ultra compact */
+@media (max-width: 360px) {
+  .camera-button {
+    padding: 8px !important;
+    min-width: 36px !important;
+    width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
+/* Override any conflicting Tailwind responsive classes */
+@media (max-width: 640px) {
+  .camera-button.sm\:min-w-\[100px\] {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+  
+  .camera-button.sm\:space-x-2 > * + * {
+    margin-left: 0 !important;
   }
 }
