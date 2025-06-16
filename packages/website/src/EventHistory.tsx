@@ -27,7 +27,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
-import UserHomeStatus from "./components/UserHomeStatus";
+import UserHomeStatusBoard from "./components/UserHomeStatusBoard";
 
 // Loading skeleton component
 const EventSkeleton = React.memo(() => (
@@ -430,43 +430,15 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     // Render loading indicator for User Home Status section
     const renderUserHomeStatusContent = () => {
-      if (isLoadingStatuses) {
-        return (
-          <div className="col-span-full flex flex-col items-center justify-center py-6 text-gray-400">
-            <UilSpinner className="animate-spin mb-2" size={24} />
-            <p className="text-sm">Loading user statuses...</p>
-          </div>
-        );
-      }
-
-      if (statusError) {
-        return (
-          <div className="col-span-full flex items-center justify-center py-6 text-red-400">
-            <p className="text-sm">{statusError}</p>
-          </div>
-        );
-      }
-
-      if (userHomeStatuses.length === 0) {
-        return (
-          <div className="col-span-full flex items-center justify-center py-6 text-gray-400">
-            <p className="text-sm">
-              No user status information available for this home
-            </p>
-          </div>
-        );
-      }
-
-      return userHomeStatuses.map((status) => (
-        <UserHomeStatus
-          key={status.userId}
-          status={status.state as "home" | "away" | null}
-          userId={status.userId}
-          displayName={status.displayName}
+      return (
+        <UserHomeStatusBoard
+          userHomeStatuses={userHomeStatuses}
           homeId={homeId}
+          isLoading={isLoadingStatuses}
+          error={statusError}
           onDisplayNameUpdate={handleDisplayNameUpdate}
         />
-      ));
+      );
     };
 
     return (
@@ -508,29 +480,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
           </div>
         </div>
 
-        {/* USER HOME STATUS CARD */}
-        <div className="mx-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border border-gray-700/50 transition-all duration-200">
-          {/* Card Title */}
-          <div className="flex justify-between items-center p-3 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50">
-            <div className="flex items-center space-x-2">
-              <div className="bg-gray-800/70 p-1.5 rounded-lg border border-gray-700/40 shadow-inner">
-                <UilUsersAlt size={16} className="text-blue-400" />
-              </div>
-              <span className="text-gray-300 text-sm font-medium">
-                User Home Status
-              </span>
-            </div>
-            {isLoadingStatuses && (
-              <div className="text-gray-400 text-xs px-2 py-0.5 bg-gray-800/50 rounded-md border border-gray-700/30">
-                Loading...
-              </div>
-            )}
-          </div>
-
-          {/* User Home Status Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-3">
-            {renderUserHomeStatusContent()}
-          </div>
+        {/* USER HOME STATUS */}
+        <div className="mx-4 mb-4">
+          {renderUserHomeStatusContent()}
         </div>
 
         {/* EVENT HISTORY CARD */}
