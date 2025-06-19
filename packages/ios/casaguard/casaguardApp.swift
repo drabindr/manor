@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UserNotifications
+import BackgroundTasks
 import os.log
 
 @main
@@ -24,6 +25,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ = EndpointManager.shared
         _ = APNSManager.shared
         _ = HomeLocationManager.shared
+        
+        // OPTIMIZATION: Enable background app refresh for better data freshness
+        if #available(iOS 13.0, *) {
+            registerBackgroundTasks()
+        }
         
         requestNotificationPermission { granted in
             if granted {
@@ -201,6 +207,147 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         }
         
         return false
+    }
+    
+    // MARK: - Background App Refresh Optimization
+    @available(iOS 13.0, *)
+    private func registerBackgroundTasks() {
+        // Register background task for refreshing critical data
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.manor.refresh", using: nil) { task in
+            self.handleBackgroundRefresh(task: task as! BGAppRefreshTask)
+        }
+        
+        os_log("Background tasks registered", log: self.log, type: .info)
+    }
+    
+    @available(iOS 13.0, *)
+    private func handleBackgroundRefresh(task: BGAppRefreshTask) {
+        os_log("Starting background refresh", log: self.log, type: .info)
+        
+        // Schedule the next background refresh
+        scheduleBackgroundRefresh()
+        
+        task.expirationHandler = {
+            task.setTaskCompleted(success: false)
+        }
+        
+        // Perform background data refresh
+        refreshCriticalData { success in
+            task.setTaskCompleted(success: success)
+        }
+    }
+    
+    @available(iOS 13.0, *)
+    private func scheduleBackgroundRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: "com.manor.refresh")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60) // 15 minutes
+        
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            os_log("Background refresh scheduled", log: self.log, type: .info)
+        } catch {
+            os_log("Failed to schedule background refresh: %{public}@", log: self.log, type: .error, error.localizedDescription)
+        }
+    }
+    
+    private func refreshCriticalData(completion: @escaping (Bool) -> Void) {
+        // Pre-fetch critical data that will improve app load time when user returns
+        let group = DispatchGroup()
+        var hasErrors = false
+        
+        // Refresh alarm state
+        group.enter()
+        refreshAlarmState { success in
+            if !success { hasErrors = true }
+            group.leave()
+        }
+        
+        // Refresh device states
+        group.enter()
+        refreshDeviceStates { success in
+            if !success { hasErrors = true }
+            group.leave()
+        }
+        
+        // Refresh camera status
+        group.enter()
+        refreshCameraStatus { success in
+            if !success { hasErrors = true }
+            group.leave()
+        }
+        
+        group.notify(queue: .main) {
+            completion(!hasErrors)
+            os_log("Background refresh completed with %{public}@ errors", log: self.log, type: .info, hasErrors ? "some" : "no")
+        }
+    }
+    
+    private func refreshAlarmState(completion: @escaping (Bool) -> Void) {
+        // Make a lightweight request to check alarm state
+        guard let url = URL(string: "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/system/state") else {
+            completion(false)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            completion(error == nil && data != nil)
+        }.resume()
+    }
+    
+    private func refreshDeviceStates(completion: @escaping (Bool) -> Void) {
+        // Check device states to populate cache
+        let group = DispatchGroup()
+        var success = true
+        
+        // TP-Link devices
+        group.enter()
+        if let url = URL(string: "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/devices") {
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if error != nil { success = false }
+                group.leave()
+            }.resume()
+        } else {
+            group.leave()
+        }
+        
+        // Hue devices
+        group.enter()
+        if let url = URL(string: "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/hue/lights") {
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if error != nil { success = false }
+                group.leave()
+            }.resume()
+        } else {
+            group.leave()
+        }
+        
+        group.notify(queue: .main) {
+            completion(success)
+        }
+    }
+    
+    private func refreshCameraStatus(completion: @escaping (Bool) -> Void) {
+        // Check camera availability
+        guard let url = URL(string: "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/devices/list") else {
+            completion(false)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            completion(error == nil && data != nil)
+        }.resume()
+    }
+    
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        // Schedule background refresh when app enters background
+        if #available(iOS 13.0, *) {
+            scheduleBackgroundRefresh()
+        }
+    }
+    
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        // App is returning to foreground - trigger a quick refresh
+        NotificationCenter.default.post(name: Notification.Name("RefreshWebView"), object: nil)
     }
     
     // Handle universal links
