@@ -1,9 +1,8 @@
-// Service Worker for manor - Enhanced Performance v4
-// Provides aggressive caching, module preloading, API response caching, and resource optimization
+// Service Worker for manor - Enhanced Performance v3
+// Provides aggressive caching, module preloading, and resource optimization
 
-const CACHE_NAME = 'manor-v4';
+const CACHE_NAME = 'manor-v3';
 const CACHE_EXPIRY = 'manor-expiry';
-const API_CACHE_NAME = 'manor-api-v4';
 const STATIC_CACHE_URLS = [
   '/',
   '/index.html',
@@ -13,8 +12,7 @@ const STATIC_CACHE_URLS = [
 // Cache expiry times (in milliseconds)
 const CACHE_STRATEGIES = {
   static: 30 * 24 * 60 * 60 * 1000, // 30 days for static assets
-  api: 2 * 60 * 1000, // 2 minutes for API responses (fast refresh for real-time data)
-  apiLong: 10 * 60 * 1000, // 10 minutes for less frequent API data
+  api: 5 * 60 * 1000, // 5 minutes for API responses
   images: 90 * 24 * 60 * 60 * 1000, // 90 days for images
   fonts: 365 * 24 * 60 * 60 * 1000, // 1 year for fonts
   critical: 7 * 24 * 60 * 60 * 1000, // 7 days for critical resources
@@ -24,23 +22,12 @@ const CACHE_STRATEGIES = {
 const CRITICAL_RESOURCES = [
   '/assets/react-vendor',
   '/assets/main',
-  '/assets/icons',
-  '/assets/aws-auth',
-  '/assets/aws-db',
-  '/assets/video'
-];
-
-// API endpoints that should be cached (for faster perceived performance)
-const CACHEABLE_API_PATTERNS = [
-  'google/devices/list',
-  'google/thermostat/get',
-  'tplink/lights/list',
-  'hue/lights/list'
+  '/assets/icons'
 ];
 
 // Install event - preload critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing enhanced service worker v4');
+  console.log('[SW] Installing enhanced service worker v3');
   event.waitUntil(
     Promise.all([
       // Cache static resources
@@ -51,11 +38,6 @@ self.addEventListener('install', (event) => {
       // Initialize expiry cache
       caches.open(CACHE_EXPIRY).then((cache) => {
         console.log('[SW] Initializing expiry cache');
-        return cache;
-      }),
-      // Initialize API cache
-      caches.open(API_CACHE_NAME).then((cache) => {
-        console.log('[SW] Initializing API cache');
         return cache;
       }),
       // Preload critical resources in background
@@ -73,12 +55,12 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4');
+  console.log('[SW] Activating service worker v2');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== CACHE_EXPIRY && cacheName !== API_CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== CACHE_EXPIRY) {
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -117,21 +99,6 @@ async function setCacheExpiry(url, cacheType) {
   }
 }
 
-// Helper function to check if a URL should be cached
-function shouldCacheApiRequest(url) {
-  return CACHEABLE_API_PATTERNS.some(pattern => url.includes(pattern));
-}
-
-// Helper function to get cache type for API requests
-function getApiCacheType(url) {
-  // Device lists change less frequently, cache longer
-  if (url.includes('devices/list')) {
-    return 'apiLong';
-  }
-  // Real-time data like thermostat, cache shorter
-  return 'api';
-}
-
 // Fetch event - implement smart caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -141,61 +108,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // OPTIMIZATION: Cache API responses for faster perceived performance
-  if (request.url.includes('.amazonaws.com') && shouldCacheApiRequest(request.url)) {
-    const cacheType = getApiCacheType(request.url);
-    
-    event.respondWith(
-      caches.open(API_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        
-        // Check if cached response is still fresh
-        if (cachedResponse && !(await isCacheExpired(request, cacheType))) {
-          console.log('[SW] Serving API from cache:', request.url);
-          
-          // Return cached response immediately, then update in background
-          fetch(request).then(async (networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              await cache.put(request, networkResponse.clone());
-              await setCacheExpiry(request.url, cacheType);
-              console.log('[SW] Updated API cache in background:', request.url);
-            }
-          }).catch(error => {
-            console.log('[SW] Background API update failed:', error);
-          });
-          
-          return cachedResponse;
-        }
-        
-        // Fetch from network and cache the response
-        try {
-          console.log('[SW] Fetching API from network:', request.url);
-          const networkResponse = await fetch(request);
-          
-          if (networkResponse && networkResponse.status === 200) {
-            await cache.put(request, networkResponse.clone());
-            await setCacheExpiry(request.url, cacheType);
-            console.log('[SW] Cached fresh API response:', request.url);
-          }
-          
-          return networkResponse;
-        } catch (error) {
-          // If network fails and we have a cached version (even expired), use it
-          if (cachedResponse) {
-            console.log('[SW] Network failed, using stale API cache:', request.url);
-            return cachedResponse;
-          }
-          throw error;
-        }
-      })
-    );
-    return;
-  }
-  
-  // Skip other API requests and WebSocket connections
+  // Skip API requests and WebSocket connections
   if (request.url.includes('/api/') || 
       request.url.includes('websocket') ||
-      (request.url.includes('.amazonaws.com') && !shouldCacheApiRequest(request.url))) {
+      request.url.includes('.amazonaws.com')) {
     return;
   }
   
@@ -286,26 +202,13 @@ self.addEventListener('sync', (event) => {
 async function cleanExpiredCache() {
   try {
     const cache = await caches.open(CACHE_NAME);
-    const apiCache = await caches.open(API_CACHE_NAME);
     const expiryCache = await caches.open(CACHE_EXPIRY);
+    const requests = await cache.keys();
     
-    // Clean static cache
-    const staticRequests = await cache.keys();
-    for (const request of staticRequests) {
+    for (const request of requests) {
       if (await isCacheExpired(request, 'static')) {
-        console.log('[SW] Removing expired static cache entry:', request.url);
+        console.log('[SW] Removing expired cache entry:', request.url);
         await cache.delete(request);
-        await expiryCache.delete(request.url + '_expiry');
-      }
-    }
-    
-    // Clean API cache
-    const apiRequests = await apiCache.keys();
-    for (const request of apiRequests) {
-      const cacheType = getApiCacheType(request.url);
-      if (await isCacheExpired(request, cacheType)) {
-        console.log('[SW] Removing expired API cache entry:', request.url);
-        await apiCache.delete(request);
         await expiryCache.delete(request.url + '_expiry');
       }
     }
