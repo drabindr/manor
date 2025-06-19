@@ -15,10 +15,6 @@ import { logger } from './utils/Logger';
 
 // --- Configuration ---
 const API_BASE_URL = 'https://192.168.86.81'; // HTTPS on port 443
-// Time-zone compensation offset to correct 19-hour difference between UI display and actual video time
-// NOTE: This offset creates an edge case at exactly 19:00 (1140 minutes) where the math wraps around
-// to midnight (0), causing the video to stall. Special handling is applied in the slider and clip index functions.
-const BACKEND_COMPENSATION_OFFSET_HOURS = 19;
 // Pickering, Ontario coordinates
 const PICKERING_LAT = 43.8191724;
 const PICKERING_LONG = -79.0896744;
@@ -43,7 +39,7 @@ const fetchSunriseSunsetData = async (date: string): Promise<{sunrise: number, s
     const sunriseMinutes = sunriseDate.getHours() * 60 + sunriseDate.getMinutes();
     const sunsetMinutes = sunsetDate.getHours() * 60 + sunsetDate.getMinutes();
     
-    logger.debug(`Sunrise/sunset data: Sunrise at ${formatTimeDisplay(sunriseMinutes, false)}, Sunset at ${formatTimeDisplay(sunsetMinutes, false)}`);
+    logger.debug(`Sunrise/sunset data: Sunrise at ${formatTimeDisplay(sunriseMinutes)}, Sunset at ${formatTimeDisplay(sunsetMinutes)}`);
     
     return { sunrise: sunriseMinutes, sunset: sunsetMinutes };
   } catch (error) {
@@ -52,21 +48,15 @@ const fetchSunriseSunsetData = async (date: string): Promise<{sunrise: number, s
   }
 };
 
-const formatTimeDisplay = (totalMinutes: number, applyOffset: boolean = true): string => {
+const formatTimeDisplay = (totalMinutes: number): string => {
   // Displays time based on local minutes (0-1439)
   if (isNaN(totalMinutes) || totalMinutes < 0 || totalMinutes >= 1440) {
     return '--:--';
   }
   
-  // Apply offset for display if needed
-  let adjustedMinutes = totalMinutes;
-  if (applyOffset) {
-    // Add 19 hours (BACKEND_COMPENSATION_OFFSET_HOURS) in minutes
-    adjustedMinutes = (totalMinutes + BACKEND_COMPENSATION_OFFSET_HOURS * 60) % 1440;
-  }
-  
-  const hours = Math.floor(adjustedMinutes / 60);
-  const mins = adjustedMinutes % 60;
+  const displayMinutes = totalMinutes;
+  const hours = Math.floor(displayMinutes / 60);
+  const mins = displayMinutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
@@ -89,6 +79,19 @@ const displayDate = (dateStr: string): string => {
   }
 };
 
+const buildUtcVideoUrl = (localMinutes: number, localDateStr: string): string => {
+    const [year, month, day] = localDateStr.split('-').map(Number);
+    const localTime = new Date(year, month - 1, day, Math.floor(localMinutes / 60), localMinutes % 60);
+
+    const urlDate = localTime.toISOString().slice(0, 10);
+    const hourStr = String(localTime.getUTCHours()).padStart(2, '0');
+    const minuteStr = String(localTime.getUTCMinutes()).padStart(2, '0');
+
+    const url = `${API_BASE_URL}/getRawVideo?date=${urlDate}&hour=${hourStr}&minute=${minuteStr}`;
+    logger.debug(`buildUtcVideoUrl: local=${localDateStr} ${formatTimeDisplay(localMinutes)} -> UTC URL=${url}`);
+    return url;
+};
+
 // --- React Component ---
 interface VideoPlayerProps {
   initialDate?: string;
@@ -104,7 +107,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
 
   // --- State ---
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | undefined>(undefined);
-  const [sliderValue, setSliderValue] = useState<number>(0); // Local time in total minutes (0-1439)
+  const [sliderValue, setSliderValue] = useState<number>(0);
   const [availableTimes, setAvailableTimes] = useState<number[]>([]); // Sorted list of available local times (minutes)
   const [isLoading, setIsLoading] = useState<boolean>(true); // Loading state for timeline data
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(false); // Loading state for the current video file
@@ -112,10 +115,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
   const [isMuted, setIsMuted] = useState<boolean>(true);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(initialDate || dateParam || '');
+  const [refreshKey, setRefreshKey] = useState<number>(0); // For forcing re-fetch
   // New state for sunrise/sunset markers
   const [sunData, setSunData] = useState<{sunrise: number, sunset: number} | null>(null);
   // Derive a usable date string for backend from selectedDate or fallback
   const currentDate = selectedDate || getCurrentDate(initialDate || dateParam);
+
 
   // Fetch list of recording dates
   const fetchAvailableDates = useCallback(async () => {
@@ -159,85 +164,83 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
   useEffect(() => { fetchAvailableDates(); }, [fetchAvailableDates]);
 
   // Fetch times whenever selectedDate changes
-  const fetchAvailableTimes = useCallback(async () => {
-    if (!selectedDate) return;
-    logger.debug('Starting fetchAvailableTimes for', selectedDate);
-    setIsLoading(true);
-    setError(null);
-    setAvailableTimes([]);
-    setCurrentVideoUrl(undefined);
-
-    try {
-      const listUrl = `${API_BASE_URL}/listAvailableTimes?date=${currentDate}`;
-      logger.debug(`Fetching available times from: ${listUrl}`);
-      const response = await fetch(listUrl);
-      logger.debug(`Fetch response status: ${response.status}`);
-      if (!response.ok) throw new Error(`Failed to fetch available times: ${response.statusText} (Status: ${response.status})`);
-
-      const times: number[] = await response.json(); // Assume these are local minutes (0-1439)
-      logger.debug(`Received local times array (length ${times.length})`);
-      times.sort((a, b) => a - b);
-      logger.debug(`Sorted local times array`);
-      logger.debug('Available times (minutes array):', times);
-      logger.debug('Available times (formatted):', times.map(m => formatTimeDisplay(m)));
-      setAvailableTimes(times);
-
-      if (times.length > 0) {
-        logger.debug('Found available times. Loading most relevant clip...');
-        
-        // Calculate what raw time would correspond to current local time
-        const now = new Date();
-        const currentLocalMinutes = now.getHours() * 60 + now.getMinutes();
-        const targetRawTime = (currentLocalMinutes - BACKEND_COMPENSATION_OFFSET_HOURS * 60 + 1440) % 1440;
-        
-        // Find the closest available time to the target, preferring earlier times if exact match not found
-        let bestTimeMatch = times[times.length - 1]; // Default to latest as fallback
-        let closestDistance = Math.abs(bestTimeMatch - targetRawTime);
-        
-        for (const time of times) {
-          const distance = Math.abs(time - targetRawTime);
-          if (distance < closestDistance || (distance === closestDistance && time <= targetRawTime)) {
-            bestTimeMatch = time;
-            closestDistance = distance;
-          }
-        }
-        
-        logger.debug(`Current local time: ${formatTimeDisplay(currentLocalMinutes, false)} (${currentLocalMinutes} min)`);
-        logger.debug(`Target raw time: ${formatTimeDisplay(targetRawTime, false)} (${targetRawTime} min)`);
-        logger.debug(`Best match: ${formatTimeDisplay(bestTimeMatch, false)} (${bestTimeMatch} min), distance: ${closestDistance}`);
-        
-        const firstTimeLocalMinutes = bestTimeMatch;
-        // Adjust the slider value to include the offset for correct positioning
-        const adjustedSliderValue = (firstTimeLocalMinutes + BACKEND_COMPENSATION_OFFSET_HOURS * 60) % 1440;
-        setSliderValue(adjustedSliderValue); // Set slider to the adjusted time for correct display
-        logger.debug(`Slider value set to adjusted minute: ${adjustedSliderValue} (original: ${firstTimeLocalMinutes})`);
-
-        // Calculate URL params by adding compensation offset to local time
-        const hourStr = String(Math.floor(firstTimeLocalMinutes / 60)).padStart(2, '0');
-        const minuteStr = String(firstTimeLocalMinutes % 60).padStart(2, '0');
-        const firstVideoUrl = `${API_BASE_URL}/getRawVideo?date=${currentDate}&hour=${hourStr}&minute=${minuteStr}`;
-
-        logger.debug(`Initial load: Constructing URL with compensated parameters.`);
-        logger.debug(`Constructed first video URL: ${firstVideoUrl}`);
-        setCurrentVideoUrl(firstVideoUrl); // Set the initial video URL
-        logger.debug(`Initial video URL state updated.`);
-      } else {
-        logger.debug('No available times found for this date.');
-        setError("No videos available for this date.");
-      }
-    } catch (err) {
-      logger.error('Error fetching available times:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching video data.');
-      setAvailableTimes([]);
-    } finally {
-      logger.debug('Setting isLoading (timeline data) to false.');
-      setIsLoading(false);
-    }
-  }, [selectedDate]);
-
+  // Fetch times whenever selectedDate changes
   useEffect(() => {
+    const fetchAvailableTimes = async () => {
+      if (!selectedDate) return;
+      
+      // Calculate current date for this fetch
+      const currentDate = selectedDate || getCurrentDate(initialDate || dateParam);
+      
+      logger.debug('Starting fetchAvailableTimes for', selectedDate);
+      setIsLoading(true);
+      setError(null);
+      setAvailableTimes([]);
+      setCurrentVideoUrl(undefined);
+
+      try {
+        const listUrl = `${API_BASE_URL}/listAvailableTimes?date=${currentDate}`;
+        logger.debug(`Fetching available times from: ${listUrl}`);
+        const response = await fetch(listUrl);
+        if (!response.ok) throw new Error(`Failed to fetch available times: ${response.statusText}`);
+
+        // Backend returns an array of available minute-of-day numbers in local time
+        const times: number[] = await response.json();
+        logger.debug(`Received times array (length ${times.length})`);
+        times.sort((a, b) => a - b);
+        logger.debug(`Sorted local times:`, times.map(m => formatTimeDisplay(m)));
+        setAvailableTimes(times);
+
+        if (times.length > 0) {
+          logger.debug('Found available times. Loading most relevant clip...');
+          
+          // Calculate current local time
+          const now = new Date();
+          const currentLocalMinutes = now.getHours() * 60 + now.getMinutes();
+          
+          // Find the closest available local time to the current time
+          let bestTimeMatch = times[times.length - 1];
+          let closestDistance = Math.abs(bestTimeMatch - currentLocalMinutes);
+          
+          for (const time of times) {
+            const distance = Math.abs(time - currentLocalMinutes);
+            if (distance < closestDistance || (distance === closestDistance && time <= currentLocalMinutes)) {
+              bestTimeMatch = time;
+              closestDistance = distance;
+            }
+          }
+          
+          logger.debug(`Current local time: ${formatTimeDisplay(currentLocalMinutes)} (${currentLocalMinutes} min)`);
+          logger.debug(`Best match: ${formatTimeDisplay(bestTimeMatch)} (${bestTimeMatch} min), distance: ${closestDistance}`);
+          
+          const firstTimeLocalMinutes = bestTimeMatch;
+          
+          setSliderValue(firstTimeLocalMinutes); // Set slider to the appropriate time
+          // Construct initial video URL using the UTC helper
+          const firstVideoUrl = buildUtcVideoUrl(firstTimeLocalMinutes, currentDate);
+          setCurrentVideoUrl(firstVideoUrl);
+          logger.debug(`Initial video URL state updated to: ${firstVideoUrl}`);
+        } else {
+          logger.debug('No available times found for this date.');
+          setError("No videos available for this date.");
+        }
+      } catch (err) {
+        logger.error('Error fetching available times:', err);
+        setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching video data.');
+        setAvailableTimes([]);
+      } finally {
+        logger.debug('Setting isLoading (timeline data) to false.');
+        setIsLoading(false);
+      }
+    };
+
     fetchAvailableTimes();
-  }, [fetchAvailableTimes]);
+  }, [selectedDate, refreshKey]);
+
+  // Retry function for error state
+  const retryFetchAvailableTimes = () => {
+    setRefreshKey(prev => prev + 1); // Increment to force re-fetch
+  };
 
   // --- Player Event Handling (Attempt Autoplay, Loading, Errors) ---
    useEffect(() => {
@@ -336,32 +339,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
   // --- UI Event Handlers ---
   const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     let value = parseInt(event.target.value, 10);
-    // Calculate the local time corresponding to the slider's display time
-    const adjustedValue = ((value + 1440 - BACKEND_COMPENSATION_OFFSET_HOURS * 60) % 1440);
-    setSliderValue(value); // Update slider display position
+    setSliderValue(value); // Temporarily show drag position while scrubbing
 
-    // Log the values to help with debugging
-    logger.debug(`Slider changed: DisplayValue=${value} (${formatTimeDisplay(value)}), CorrespondingLocalTime=${adjustedValue} (${formatTimeDisplay(adjustedValue, false)})`);
+    // Find the closest available time that is less than or equal to the slider's value
+    let closestTimeLocalMinutes = availableTimes.slice().reverse().find(time => time <= value);
 
-    // Find the latest available clip that starts at or before the calculated local time
-    const targetValue = adjustedValue; // Use the calculated local time directly
-    const closestTimeLocalMinutes = availableTimes.slice().reverse().find(time => time <= targetValue);
+    // If the user scrubs before the very first clip, snap to the first clip
+    if (closestTimeLocalMinutes === undefined && availableTimes.length > 0) {
+      closestTimeLocalMinutes = availableTimes[0];
+    }
 
     if (closestTimeLocalMinutes !== undefined) {
-        const hourStr = String(Math.floor(closestTimeLocalMinutes / 60)).padStart(2, '0');
-        const minuteStr = String(closestTimeLocalMinutes % 60).padStart(2, '0');
-        const newUrl = `${API_BASE_URL}/getRawVideo?date=${currentDate}&hour=${hourStr}&minute=${minuteStr}`;
+      // Snap slider to the actual start time of the clip
+      setSliderValue(closestTimeLocalMinutes);
 
-        logger.debug(`Slider seeking: Found closest available local time: ${closestTimeLocalMinutes} (${formatTimeDisplay(closestTimeLocalMinutes, false)}). URL params: H=${hourStr}, M=${minuteStr}`);
+      // Build the new URL using the selected local time and the UTC helper
+      const newUrl = buildUtcVideoUrl(closestTimeLocalMinutes, currentDate);
+      logger.debug(`Slider seeking: Found closest time: ${closestTimeLocalMinutes}. New URL: ${newUrl}`);
 
-        if (newUrl !== currentVideoUrl) {
-          logger.debug(`Slider seeking: Updating video URL to: ${newUrl}`);
-          setCurrentVideoUrl(newUrl);
-          setIsVideoLoading(true); // Indicate loading will start
-        }
-    } else {
-        logger.warn(`Slider seeking: No available clip found at or before local time ${targetValue} (${formatTimeDisplay(targetValue, false)})`);
-        // Optional: Clear video URL or show a message? For now, do nothing, player keeps last frame.
+      if (newUrl !== currentVideoUrl) {
+        logger.debug(`Slider seeking: Updating video URL.`);
+        setCurrentVideoUrl(newUrl);
+        setIsVideoLoading(true);
+      }
     }
   };
 
@@ -379,13 +379,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
   };
 
   const findCurrentClipIndex = () => {
-    if (!availableTimes.length) return -1; // Return -1 if no times are available
+    if (!availableTimes.length) return -1;
 
-    // Calculate the local time corresponding to the current slider display time
-    const adjustedLocalTime = (sliderValue + 1440 - BACKEND_COMPENSATION_OFFSET_HOURS * 60) % 1440;
-    logger.debug(`findCurrentClipIndex: SliderValue=${sliderValue} (${formatTimeDisplay(sliderValue)}), CorrespondingLocalTime=${adjustedLocalTime} (${formatTimeDisplay(adjustedLocalTime, false)})`);
+    const adjustedLocalTime = sliderValue;
+    logger.debug(`findCurrentClipIndex: SliderValue=${sliderValue} (${formatTimeDisplay(sliderValue)})`);
 
-    // Find the latest available time that starts at or before the calculated local time
+    // Find the latest available time that starts at or before the current slider time
     const closestAvailableTime = availableTimes.slice().reverse().find(t => t <= adjustedLocalTime);
 
     if (closestAvailableTime !== undefined) {
@@ -394,30 +393,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
         return index;
     } else {
         logger.debug(`findCurrentClipIndex: No available time found at or before ${adjustedLocalTime}. Returning -1.`);
-        return -1; // Should ideally not happen if availableTimes is not empty and sliderValue is valid
+        return -1;
     }
   };
 
   const jumpToVideo = (index: number) => {
     if (index < 0 || index >= availableTimes.length) return;
     const t = availableTimes[index];
-    const hourStr = String(Math.floor(t / 60)).padStart(2, '0');
-    const minuteStr = String(t % 60).padStart(2, '0');
-    const newUrl = `${API_BASE_URL}/getRawVideo?date=${currentDate}&hour=${hourStr}&minute=${minuteStr}`;
     
-    // Handle the 19:00 hour edge case (1140 minutes after offset adjustment)
-    const rawAdjustedTime = (t + BACKEND_COMPENSATION_OFFSET_HOURS * 60);
-    const adjustedSlider = rawAdjustedTime % 1440;
+    // Build the new URL using the UTC helper
+    const newUrl = buildUtcVideoUrl(t, currentDate);
+    logger.debug(`Jump to video: time=${t}, url=${newUrl}`);
     
-    // Log for debugging
-    logger.debug(`Jump to video: time=${t}, hour=${hourStr}, minute=${minuteStr}, adjustedSlider=${adjustedSlider}`);
-    
-    setSliderValue(adjustedSlider);
+    setSliderValue(t); // Move the slider to the new time
     if (newUrl !== currentVideoUrl) {
       setCurrentVideoUrl(newUrl);
       if (!isMuted) setIsMuted(true);
     } else if (playerRef.current) {
-      playerRef.current.currentTime = 0;
+      playerRef.current.currentTime = 0; // Replay if it's the same clip
     }
   };
 
@@ -437,12 +430,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
   const renderTimeMarkers = () => {
     const currentClipIndex = findCurrentClipIndex();
     return availableTimes.map((time, index) => {
-      // Calculate adjusted time and handle the 19:00 hour edge case
-      const rawAdjusted = time + BACKEND_COMPENSATION_OFFSET_HOURS * 60;
-      const adjusted = rawAdjusted % 1440;
-      
-      // Fix position calculation by using 1440 (full day in minutes) instead of 1439
-      const left = `${(adjusted / 1440) * 100}%`;
+      const positionValue = time;
+      const left = `${(positionValue / 1440) * 100}%`;
       const isActive = index === currentClipIndex;
       
       return (
@@ -478,7 +467,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
           <div 
             className="absolute top-0 bottom-0 w-px bg-orange-400 z-10"
             style={{ left: `${(sunData.sunrise / 1440) * 100}%` }}
-            title={`Sunrise (${formatTimeDisplay(sunData.sunrise, false)})`}
+            title={`Sunrise (${formatTimeDisplay(sunData.sunrise)})`}
           >
             <div className="absolute -top-6 -translate-x-1/2 text-xs text-orange-300">
               <FaSun size={14} className="text-orange-300" />
@@ -491,7 +480,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
           <div 
             className="absolute top-0 bottom-0 w-px bg-red-400 z-10"
             style={{ left: `${(sunData.sunset / 1440) * 100}%` }}
-            title={`Sunset (${formatTimeDisplay(sunData.sunset, false)})`}
+            title={`Sunset (${formatTimeDisplay(sunData.sunset)})`}
           >
             <div className="absolute -top-6 -translate-x-1/2 text-xs text-red-300">
               <FaSun size={14} className="text-red-300" />
@@ -568,7 +557,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 p-6 text-center z-20">
                  <p className="error-message mb-5 text-base text-red-300">{error}</p>
                  <button
-                    onClick={fetchAvailableTimes}
+                    onClick={retryFetchAvailableTimes}
                     className="flex items-center px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-md text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800"
                   >
                      <FaRedo className="mr-2 h-4 w-4" /> Retry
@@ -671,7 +660,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ initialDate, isLandscape = fa
                        </button>
                    </div>
                    <div className="font-mono text-base md:text-lg font-semibold text-gray-100 tabular-nums">
-                       {formatTimeDisplay(sliderValue, false)}
+                       {formatTimeDisplay(sliderValue)}
                    </div>
                    <div className="flex justify-end">
                        <button
