@@ -250,6 +250,16 @@ struct ContentView: View {
         guard let webView = webViewRef else { return }
         
         let resumeScript = """
+            // Check if iOS resume infrastructure is ready
+            if (typeof window.iosAppResumeReady === 'undefined') {
+                console.log('[iOS] Resume infrastructure not ready, retrying in 1s');
+                setTimeout(function() {
+                    // Retry the resume script
+                    window.location.reload();
+                }, 1000);
+                return;
+            }
+            
             // Notify all widgets that app has resumed
             console.log('[iOS] App resumed - triggering widget refresh');
             
@@ -277,6 +287,12 @@ struct ContentView: View {
             webView.evaluateJavaScript(resumeScript) { result, error in
                 if let error = error {
                     print("Error executing resume script: \(error)")
+                    // Retry once more after additional delay if failed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        webView.evaluateJavaScript(resumeScript) { _, _ in
+                            print("Resume script retry completed")
+                        }
+                    }
                 } else {
                     print("App resume script executed successfully")
                 }
@@ -418,6 +434,10 @@ struct WebView: UIViewRepresentable {
                 nav.style.display = 'flex';
             }
         }, { passive: true });
+        
+        // Set up iOS app resume handling infrastructure
+        window.iosAppResumeReady = true;
+        console.log('[iOS] App resume infrastructure initialized');
         """
         
         let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
