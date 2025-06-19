@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import OptimizedImage from "./components/OptimizedImage";
+import { useWidgetResumeRefresh } from './AppResumeHandler';
 import {
   UilMinusCircle,
   UilPlusCircle,
@@ -318,6 +319,16 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
     }
     fetchAll();
   }, [onLoaded]);
+
+  /**
+   * Combined refresh function for app resume
+   */
+  const refreshThermostatData = async () => {
+    await Promise.all([fetchThermostatData(), fetchAirthings()]);
+  };
+
+  // Register widget for app resume refresh
+  useWidgetResumeRefresh('thermostat', refreshThermostatData);
 
   /**
    * Keep local setpoint in sync with fetched data

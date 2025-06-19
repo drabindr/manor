@@ -193,7 +193,8 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ApplicationDidBecomeActive"))) { _ in
-            refreshWebView += 1
+            // Trigger comprehensive resume experience improvements
+            handleAppResume()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("RefreshWebView"))) { _ in
             refreshWebView += 1
@@ -232,6 +233,68 @@ struct ContentView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                 withAnimation {
                     showSignInStatus = false
+                }
+            }
+        }
+    }
+    
+    // MARK: - App Resume Handler
+    private func handleAppResume() {
+        // 1. Trigger WebView refresh
+        refreshWebView += 1
+        
+        // 2. Preload critical endpoints for faster response
+        EndpointManager.shared.preloadCriticalEndpoints()
+        
+        // 3. Send resume signal to JavaScript for immediate widget refresh
+        guard let webView = webViewRef else { return }
+        
+        let resumeScript = """
+            // Check if iOS resume infrastructure is ready
+            if (typeof window.iosAppResumeReady === 'undefined') {
+                console.log('[iOS] Resume infrastructure not ready, retrying in 1s');
+                setTimeout(function() {
+                    // Retry the resume script
+                    window.location.reload();
+                }, 1000);
+                return;
+            }
+            
+            // Notify all widgets that app has resumed
+            console.log('[iOS] App resumed - triggering widget refresh');
+            
+            // Dispatch custom resume event
+            window.dispatchEvent(new CustomEvent('appResume', { 
+                detail: { 
+                    timestamp: Date.now(),
+                    trigger: 'ios_app_resume'
+                }
+            }));
+            
+            // Call global resume handler if available
+            if (window.handleAppResume && typeof window.handleAppResume === 'function') {
+                window.handleAppResume();
+            }
+            
+            // Force refresh any visible widgets immediately
+            if (window.refreshAllWidgets && typeof window.refreshAllWidgets === 'function') {
+                window.refreshAllWidgets();
+            }
+        """
+        
+        // Execute the script with a small delay to ensure WebView is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            webView.evaluateJavaScript(resumeScript) { result, error in
+                if let error = error {
+                    print("Error executing resume script: \(error)")
+                    // Retry once more after additional delay if failed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        webView.evaluateJavaScript(resumeScript) { _, _ in
+                            print("Resume script retry completed")
+                        }
+                    }
+                } else {
+                    print("App resume script executed successfully")
                 }
             }
         }
@@ -371,6 +434,10 @@ struct WebView: UIViewRepresentable {
                 nav.style.display = 'flex';
             }
         }, { passive: true });
+        
+        // Set up iOS app resume handling infrastructure
+        window.iosAppResumeReady = true;
+        console.log('[iOS] App resume infrastructure initialized');
         """
         
         let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
