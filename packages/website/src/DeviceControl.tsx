@@ -3,7 +3,6 @@ import LightSwitch from "./LightSwitch";
 import LGAppliances from "./LGAppliances";
 import GarageDoor from "./GarageDoor";
 import BhyveIrrigation from "./BhyveIrrigation";
-import backgroundDataService from "./services/BackgroundDataService";
 import { 
   UilCircle, 
   UilLightbulb,
@@ -377,46 +376,6 @@ const DeviceControl: React.FC = () => {
   async function fetchLights() {
     setIsLoading(true);
     try {
-      // OPTIMIZATION: Try to get cached device states first for faster perceived performance
-      const cachedDeviceStates = backgroundDataService.getCachedDeviceStates();
-      if (cachedDeviceStates && cachedDeviceStates.tplink && cachedDeviceStates.hue) {
-        console.log('[DeviceControl] Using cached device states for faster load');
-        
-        const tplinkData = cachedDeviceStates.tplink;
-        const hueData = cachedDeviceStates.hue;
-        
-        const combinedLights = [
-          ...(Array.isArray(tplinkData) ? tplinkData : [])
-            .filter((light) => light.status === 1 && !light.error) // Only include online devices without errors
-            .map((light) => ({
-              ...light,
-              provider: "tplink",
-            })),
-          ...Object.keys(hueData).map((lightId) => ({
-            alias: hueData[lightId].name,
-            deviceId: lightId,
-            relay_state: hueData[lightId].state.on ? 1 : 0,
-            provider: "hue",
-          })),
-        ];
-
-        setLights(combinedLights);
-        setLightsError(null);
-        setLastRefreshTime(Date.now());
-        setIsLoading(false);
-        
-        // Optionally refresh in background if cache is getting old
-        const cacheStatus = backgroundDataService.getCacheStatus();
-        const deviceStatesAge = cacheStatus.cache.deviceStates?.age || 0;
-        if (deviceStatesAge > 15000) { // If cache is older than 15 seconds, refresh in background
-          backgroundDataService.refresh('deviceStates').catch(error => {
-            console.warn('[DeviceControl] Background device states refresh failed:', error);
-          });
-        }
-        return;
-      }
-      
-      // Fallback to direct fetch if no cached data available
       const tplinkResponse = await fetch(
         "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
       );

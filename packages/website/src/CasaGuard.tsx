@@ -4,7 +4,6 @@ import { EventContext, EventProvider } from "./EventContext";
 import { wsService } from "./WebSocketService";
 import { logger } from "./utils/Logger";
 import cameraConnectionService from './services/CameraConnectionService';
-import backgroundDataService from './services/BackgroundDataService';
 import {
   UilHouseUser,
   UilShieldCheck,
@@ -250,30 +249,10 @@ const CasaGuard: React.FC = () => {
     }
   }, []);
 
-  // Data Fetching with Background Data Service optimization
+  // Data Fetching
   const fetchCameras = useCallback(async () => {
     try {
       setRefreshing(true);
-      
-      // Try to get cached data first for faster perceived performance
-      const cachedCameras = backgroundDataService.getCachedCameras();
-      if (cachedCameras) {
-        logger.debug('[CasaGuard] Using cached camera data for faster load');
-        setCameras(cachedCameras);
-        setRefreshing(false);
-        
-        // Optionally refresh in background if cache is getting old
-        const cacheStatus = backgroundDataService.getCacheStatus();
-        const cameraAge = cacheStatus.cache.cameras?.age || 0;
-        if (cameraAge > 15000) { // If cache is older than 15 seconds, refresh in background
-          backgroundDataService.refresh('cameras').catch(error => {
-            logger.warn('[CasaGuard] Background camera refresh failed:', error);
-          });
-        }
-        return;
-      }
-      
-      // Fallback to direct fetch if no cached data available
       const response = await fetch(
         "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/devices/list"
       );
@@ -304,27 +283,6 @@ const CasaGuard: React.FC = () => {
   const fetchThermostatMinimal = useCallback(async () => {
     try {
       setRefreshing(true);
-      
-      // Try to get cached data first for faster perceived performance
-      const cachedThermostat = backgroundDataService.getCachedThermostat();
-      if (cachedThermostat) {
-        logger.debug('[CasaGuard] Using cached thermostat data for faster load');
-        setThermoData(cachedThermostat);
-        setIsThermostatLoaded(true);
-        setRefreshing(false);
-        
-        // Optionally refresh in background if cache is getting old
-        const cacheStatus = backgroundDataService.getCacheStatus();
-        const thermostatAge = cacheStatus.cache.thermostat?.age || 0;
-        if (thermostatAge > 15000) { // If cache is older than 15 seconds, refresh in background
-          backgroundDataService.refresh('thermostat').catch(error => {
-            logger.warn('[CasaGuard] Background thermostat refresh failed:', error);
-          });
-        }
-        return;
-      }
-      
-      // Fallback to direct fetch if no cached data available
       const response = await fetch(
         "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
         {
@@ -352,21 +310,11 @@ const CasaGuard: React.FC = () => {
     }
   }, []);
 
-  // Fetch alarm state using WebSocket service with background data optimization
+  // Fetch alarm state using WebSocket service
   const fetchAlarmState = useCallback(() => {
     try {
       setRefreshing(true);
-      
-      // Try to get cached alarm state first
-      const cachedAlarmState = backgroundDataService.getCachedAlarmState();
-      if (cachedAlarmState) {
-        logger.debug('[CasaGuard] Using cached alarm state for faster load');
-        updateArmModeFromState(cachedAlarmState);
-        setRefreshing(false);
-        return;
-      }
-      
-      // Fallback to WebSocket service
+      // Get current alarm state from WebSocket service
       const currentMode = wsService.getCurrentMode();
       
       if (currentMode) {

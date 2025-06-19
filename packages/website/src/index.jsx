@@ -5,25 +5,9 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import performance from './utils/performance.js';
 import cameraConnectionService from './services/CameraConnectionService';
-import backgroundDataService from './services/BackgroundDataService';
 
 // Initialize performance monitoring
 performance.init();
-
-// OPTIMIZATION: Start background data pre-fetching immediately for faster perceived load times
-// This happens in parallel with camera connections and component loading
-try {
-  Promise.race([
-    backgroundDataService.init(),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Background data service timeout')), 15000)
-    )
-  ]).catch(error => {
-    console.warn('[BackgroundData] Background data pre-fetching failed:', error);
-  });
-} catch (syncError) {
-  console.warn('[BackgroundData] Synchronous background data service initialization failed:', syncError);
-}
 
 // Initialize camera connections early for faster load times
 // Use multiple layers of error handling to ensure this doesn't break the app
