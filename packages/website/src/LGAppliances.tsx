@@ -3,6 +3,7 @@ import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell } from "@ico
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
 import OptimizedImage from "./components/OptimizedImage";
+import { useWidgetResumeRefresh } from './AppResumeHandler';
 
 // Helper to check if a state is a running state
 const isRunningState = (state: string): boolean => {
@@ -794,6 +795,9 @@ const LGAppliances: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  // Register widget for app resume refresh
+  useWidgetResumeRefresh('lg-appliances', () => fetchLGDevices());
 
   // Power toggle with drain functionality for washers
   const handlePowerToggle = async (dev: LGDevice) => {

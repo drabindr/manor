@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useWidgetResumeRefresh } from './AppResumeHandler';
 
 // Enhanced haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -417,6 +418,9 @@ const BhyveIrrigation: React.FC = () => {
       setIsLoading(false);
     }
   }, [makeRequest]);
+
+  // Register widget for app resume refresh
+  useWidgetResumeRefresh('bhyve-irrigation', loadDevices);
 
   // Enhanced status tracking with immediate updates for better user feedback
   const updateImmediateStatus = useCallback((deviceId: string, action: 'start' | 'stop', station?: number, duration?: number) => {

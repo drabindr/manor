@@ -25,6 +25,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ = APNSManager.shared
         _ = HomeLocationManager.shared
         
+        // Enable background app refresh for better resume experience
+        application.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
+        
         requestNotificationPermission { granted in
             if granted {
                 self.registerForPushNotifications(application)
@@ -222,5 +225,26 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         }
         
         return false
+    }
+    
+    // MARK: - Background App Refresh for Better Resume Experience
+    func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        // Preload critical endpoints when app refreshes in background
+        EndpointManager.shared.preloadCriticalEndpoints()
+        
+        // This helps ensure faster widget refresh when app resumes
+        os_log("Background fetch performed - preloaded critical endpoints", log: self.log, type: .info)
+        completionHandler(.newData)
+    }
+    
+    // Handle app becoming active (foreground)
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Post notification that the app became active
+        NotificationCenter.default.post(name: Notification.Name("ApplicationDidBecomeActive"), object: nil)
+        
+        // Preload critical endpoints for immediate widget refresh
+        EndpointManager.shared.preloadCriticalEndpoints()
+        
+        os_log("App became active - triggering resume optimizations", log: self.log, type: .info)
     }
 }

@@ -8,6 +8,7 @@ import React, {
   useImperativeHandle,
   useRef,
 } from "react";
+import { useWidgetResumeRefresh } from './AppResumeHandler';
 import { logger } from "./utils/Logger";
 import {
   UilKeyholeCircle,
@@ -234,6 +235,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
         }, 500); // 500ms debounce delay
       });
     }, [refreshData]);
+
+    // Register widget for app resume refresh
+    useWidgetResumeRefresh('event-history', refreshData);
 
     // Clean up timeout on unmount
     useEffect(() => {

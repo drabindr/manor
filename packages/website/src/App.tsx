@@ -7,6 +7,7 @@ import { PlayerProvider } from './PlayerContext';
 import LiveStream from './LiveStream';
 import VideoPlayer from './VideoPlayer';
 import AdminPanel from './AdminPanel';
+import { useAppResumeHandler } from './AppResumeHandler';
 
 // Auth configuration - these values will come from your CDK deployment
 const authConfig = {
@@ -18,6 +19,9 @@ const authConfig = {
 };
 
 function App() {
+  // Initialize app resume handling
+  useAppResumeHandler();
+
   return (
     <AuthProvider config={authConfig}>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
