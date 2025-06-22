@@ -51,6 +51,14 @@ interface BhyveDevice {
     }>;
   };
   zones: BhyveZone[];
+  activeSequence?: {
+    isActive: boolean;
+    currentZone?: number;
+    timeRemaining?: number;
+    totalZones: number;
+    currentIndex: number;
+    sequence: Array<{ station: number; duration: number }>;
+  };
 }
 
 interface WateringStatus {
@@ -285,9 +293,9 @@ const BhyveIrrigation: React.FC = () => {
     const lowerName = zoneName.toLowerCase();
     
     if (lowerName.includes('flower') || lowerName.includes('bed') || lowerName.includes('pot')) {
-      return { durations: [1, 3, 5, 8], ideal: 3 }; // Flower beds need shorter durations
+      return { durations: [1, 3, 5], ideal: 1 }; // Flower beds need shorter durations
     } else if (lowerName.includes('front') || lowerName.includes('back') || lowerName.includes('yard') || lowerName.includes('lawn')) {
-      return { durations: [10, 15, 30, 45], ideal: 15 }; // Lawn areas need longer durations
+      return { durations: [1, 5, 10], ideal: 1 }; // Lawn areas need moderate durations
     } else if (lowerName.includes('tree') || lowerName.includes('shrub')) {
       return { durations: [20, 30, 60, 90], ideal: 30 }; // Trees need deep watering
     } else {
@@ -769,6 +777,80 @@ const BhyveIrrigation: React.FC = () => {
     }
   };
 
+  // Flowers preset - runs flower bed zones for 1 sec, then backyard zones for 1 sec sequentially
+  const runFlowersPreset = useCallback(async (deviceId: string) => {
+    const requestKey = `${deviceId}-flowers-preset`;
+    
+    if (activeRequests.has(requestKey)) return;
+    
+    try {
+      setActiveRequests(prev => new Set(prev).add(requestKey));
+      triggerHaptic('medium');
+      
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return;
+      
+      // Find flower bed and backyard zones
+      const flowerZones = device.zones.filter(zone => 
+        zone.name.toLowerCase().includes('flower') || 
+        zone.name.toLowerCase().includes('bed')
+      );
+      const backyardZones = device.zones.filter(zone => 
+        (zone.name.toLowerCase().includes('back') && zone.name.toLowerCase().includes('yard')) ||
+        zone.name.toLowerCase().trim() === 'backyard'
+      );
+      
+      // Build sequential watering schedule
+      const wateringQueue: Array<{ station: number; duration: number }> = [];
+      
+      // Add flower zones (1 second each)
+      flowerZones.forEach(zone => {
+        wateringQueue.push({
+          station: zone.station,
+          duration: 1 // 1 second for testing
+        });
+      });
+      
+      // Add backyard zones (1 second each) 
+      backyardZones.forEach(zone => {
+        wateringQueue.push({
+          station: zone.station,
+          duration: 1 // 1 second for testing
+        });
+      });
+      
+      if (wateringQueue.length === 0) {
+        console.warn('[Bhyve] No flower bed or backyard zones found for preset');
+        return;
+      }
+      
+      console.log('[Bhyve] Starting flowers preset with queue:', wateringQueue);
+      
+      // Send the entire sequence to the server for scheduling
+      await makeRequest('bhyve/zones/start-sequence', 'POST', {
+        device_id: deviceId,
+        sequence: wateringQueue
+      });
+      
+      console.log('[Bhyve] Flowers preset sequence scheduled successfully');
+      
+      // Immediate status update for first zone in sequence
+      if (wateringQueue.length > 0) {
+        updateImmediateStatus(deviceId, 'start', wateringQueue[0].station, wateringQueue[0].duration * 60);
+      }
+      
+    } catch (error) {
+      console.error('Failed to start flowers preset:', error);
+      triggerHaptic('heavy');
+    } finally {
+      setActiveRequests(prev => {
+        const next = new Set(prev);
+        next.delete(requestKey);
+        return next;
+      });
+    }
+  }, [makeRequest, activeRequests, devices, updateImmediateStatus]);
+
   // Don't render anything until we've at least tried to initialize
   if (!hasInitialized) {
     return null;
@@ -845,20 +927,58 @@ const BhyveIrrigation: React.FC = () => {
               </div>
             </div>
 
-            {/* Activity Status - Compact status with active counter */}
+            {/* Activity Status - Compact status with active counter and sequence info */}
             <div className="flex items-center justify-between mb-2.5 p-1.5 bg-gray-900/20 rounded-lg border border-gray-700/30">
               <div className="flex items-center space-x-2 text-xs text-gray-300">
                 <span>💧 {device.zones.filter(z => deviceStatus?.isWatering && deviceStatus.currentStation === z.station).length} active</span>
                 {deviceStatus?.timeRemaining && deviceStatus.isWatering && (
                   <span>⏱️ {formatTimeRemaining(deviceStatus.timeRemaining)}</span>
                 )}
+                {device.activeSequence?.isActive && (
+                  <span className="text-pink-300">🌸 Flowers {device.activeSequence.currentIndex + 1}/{device.activeSequence.totalZones}</span>
+                )}
               </div>
-              {rainDelay > 0 && (
+              {rainDelay > 0 ? (
                 <div className="text-yellow-300 text-xs">
                   Rain delayed {rainDelay}h
                 </div>
-              )}
+              ) : device.activeSequence?.isActive ? (
+                <div className="text-pink-300 text-xs animate-pulse">
+                  Preset Running
+                </div>
+              ) : null}
             </div>
+
+            {/* Sequence Progress Indicator */}
+            {device.activeSequence?.isActive && (
+              <div className="mb-2.5 p-2 bg-pink-900/20 rounded-lg border border-pink-700/30">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-pink-300 text-xs font-medium">🌸 Flowers Preset</span>
+                  <span className="text-pink-400 text-xs">
+                    {device.activeSequence.timeRemaining ? formatTimeRemaining(device.activeSequence.timeRemaining) : ''}
+                  </span>
+                </div>
+                <div className="flex space-x-1 mb-1">
+                  {device.activeSequence.sequence.map((zone, index) => {
+                    const isCurrent = index === device.activeSequence!.currentIndex;
+                    const isCompleted = index < device.activeSequence!.currentIndex;
+                    return (
+                      <div
+                        key={index}
+                        className={`flex-1 h-1.5 rounded-full ${
+                          isCurrent ? 'bg-pink-400 animate-pulse' :
+                          isCompleted ? 'bg-pink-600' : 'bg-gray-700'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-xs text-pink-400">
+                  <span>Zone {device.activeSequence.currentZone || device.activeSequence.sequence[0]?.station}</span>
+                  <span>{device.activeSequence.currentIndex + 1} of {device.activeSequence.totalZones}</span>
+                </div>
+              </div>
+            )}
 
             {/* Rain Delay Controls - More compact, with feedback */}
             {rainDelay === 0 ? (
@@ -879,31 +999,56 @@ const BhyveIrrigation: React.FC = () => {
               </button>
             )}
 
+            {/* Flowers Preset Button */}
+            <button
+              onClick={() => runFlowersPreset(device.id)}
+              disabled={activeRequests.has(`${device.id}-flowers-preset`) || isDeviceWatering || device.activeSequence?.isActive}
+              className="w-full mb-2.5 px-2.5 py-1.5 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-800 text-white text-xs rounded-lg transition-colors touch-manipulation flex items-center justify-center"
+            >
+              {activeRequests.has(`${device.id}-flowers-preset`) ? (
+                <span className="loader mr-2 w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              ) : (
+                '🌸'
+              )} {device.activeSequence?.isActive ? 'Preset Running...' : 'Flowers Preset (Sequential 1sec each)'}
+            </button>
+
             {/* Zones Grid - 2 per row with tighter spacing */}
             <div className="grid grid-cols-2 gap-1.5">
               {device.zones.map((zone) => {
                 const isZoneWatering = deviceStatus?.isWatering && deviceStatus.currentStation === zone.station;
+                const isSequenceZone = device.activeSequence?.sequence.some(s => s.station === zone.station);
+                const isCurrentSequenceZone = device.activeSequence?.currentZone === zone.station;
                 const { durations, ideal } = getZoneDurations(zone.name);
                 const zoneIcon = getZoneIcon(zone.name, isZoneWatering);
                 // Pass time remaining only if this specific zone is watering
-                const zoneTimeRemaining = isZoneWatering ? deviceStatus?.timeRemaining : undefined;
+                const zoneTimeRemaining = isZoneWatering ? deviceStatus?.timeRemaining : 
+                  (isCurrentSequenceZone ? device.activeSequence?.timeRemaining : undefined);
 
                 return (
-                  <ZoneCard
+                  <div
                     key={zone.station}
-                    zone={zone}
-                    deviceId={device.id}
-                    isWatering={isZoneWatering}
-                    timeRemaining={zoneTimeRemaining}
-                    durations={durations}
-                    idealDuration={ideal}
-                    icon={zoneIcon}
-                    isDeviceWatering={isDeviceWatering}
-                    activeRequests={activeRequests}
-                    startWatering={startWatering}
-                    stopWatering={stopZoneWatering}
-                    formatTimeRemaining={formatTimeRemaining}
-                  />
+                    className={`relative ${isSequenceZone && device.activeSequence?.isActive ? 'ring-1 ring-pink-500/50' : ''}`}
+                  >
+                    {isSequenceZone && device.activeSequence?.isActive && (
+                      <div className="absolute -top-1 -right-1 z-10 bg-pink-600 text-white text-xs px-1 rounded-full">
+                        🌸
+                      </div>
+                    )}
+                    <ZoneCard
+                      zone={zone}
+                      deviceId={device.id}
+                      isWatering={isZoneWatering}
+                      timeRemaining={zoneTimeRemaining}
+                      durations={durations}
+                      idealDuration={ideal}
+                      icon={zoneIcon}
+                      isDeviceWatering={isDeviceWatering || (device.activeSequence?.isActive || false)}
+                      activeRequests={activeRequests}
+                      startWatering={startWatering}
+                      stopWatering={stopZoneWatering}
+                      formatTimeRemaining={formatTimeRemaining}
+                    />
+                  </div>
                 );
               })}
             </div>

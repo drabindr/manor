@@ -11,15 +11,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "npm run build && cdk deploy --require-approval never ManorWebsiteStack",
-    "deploy:domain": "npm run build && cdk deploy --require-approval never CasaDomainStack",
-    "deploy:auth": "npm run build && cdk deploy --require-approval never CasaAuthStack", 
-    "deploy:website": "cd ../website && npm run build:production && cd ../cdk && npm run build && cdk deploy --require-approval never ManorWebsiteStack",
-    "deploy:website:ci": "npm run build:ci && cdk deploy --require-approval never ManorWebsiteStack",
-    "deploy:website-content": "./scripts/deploy-website-only.sh",
-    "deploy:all": "npm run build && cdk deploy --require-approval never --all",
-    "deploy:infrastructure": "npm run build && cdk deploy --require-approval never CasaDomainStack CasaAuthStack CasaGuardCdkStack CasaCamerasCdkStack CasaIntegrationsCdkStack CasaCamerasDashboardsStack CasaAdminCdkStack",
-    "deploy:infrastructure-only": "SKIP_PREBUILD=true SKIP_WEBSITE_DEPLOYMENT=true npm run build && SKIP_WEBSITE_DEPLOYMENT=true cdk deploy --require-approval never --all",
+    "deploy": "npm run build && npx cdk deploy --require-approval never --progress events ManorWebsiteStack",
     "clean": "find . -type f -not -path \"./node_modules/*\" -not -path \"./dist/*\" \\( -name \"*.js\" -o -name \"*.d.ts\" \\) -delete"
   },
   "devDependencies": {

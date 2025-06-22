@@ -252,19 +252,29 @@ async function makeAuthenticatedRequest(endpoint: string, options: any = {}): Pr
 }
 
 function transformDevice(rawDevice: any): BhyveDevice {
-  const zones: BhyveZone[] = rawDevice.zones?.map((zone: any) => ({
-    station: zone.station,
-    name: zone.name || `Zone ${zone.station}`,
-    smart_watering_enabled: zone.smart_watering_enabled || false,
-    sprinkler_type: zone.sprinkler_type || 'unknown',
-    is_watering: rawDevice.status?.watering_status?.current_station === zone.station && 
-                  rawDevice.status?.watering_status?.status === 'watering_in_progress',
-    watering_time: 0,
-    remaining_time: rawDevice.status?.watering_status?.current_station === zone.station ? 
-                   rawDevice.status?.watering_status?.current_time_remaining_sec : undefined
-  })) || [];
+  const currentSequenceZone = getCurrentSequenceZone(rawDevice.id);
+  const isSequenceRunning = isSequenceActive(rawDevice.id);
+  
+  const zones: BhyveZone[] = rawDevice.zones?.map((zone: any) => {
+    // Check if this zone is currently watering (either individual or part of sequence)
+    const isIndividualWatering = rawDevice.status?.watering_status?.current_station === zone.station && 
+                               rawDevice.status?.watering_status?.status === 'watering_in_progress';
+    const isSequenceWatering = currentSequenceZone?.station === zone.station;
+    
+    return {
+      station: zone.station,
+      name: zone.name || `Zone ${zone.station}`,
+      smart_watering_enabled: zone.smart_watering_enabled || false,
+      sprinkler_type: zone.sprinkler_type || 'unknown',
+      is_watering: isIndividualWatering || isSequenceWatering,
+      watering_time: 0,
+      remaining_time: isIndividualWatering ? 
+        rawDevice.status?.watering_status?.current_time_remaining_sec : 
+        (isSequenceWatering && currentSequenceZone ? currentSequenceZone.timeRemaining : undefined)
+    };
+  }) || [];
 
-  return {
+  const device: BhyveDevice = {
     id: rawDevice.id,
     name: rawDevice.name || 'Unknown Device',
     mac_address: rawDevice.mac_address,
@@ -275,6 +285,23 @@ function transformDevice(rawDevice: any): BhyveDevice {
       new Date(Date.now() + rawDevice.status.rain_delay.delay * 3600000).toISOString() : undefined,
     status: rawDevice.status
   };
+
+  // Add sequence information if active
+  if (isSequenceRunning) {
+    const sequenceState = getSequenceState(rawDevice.id);
+    if (sequenceState) {
+      (device as any).activeSequence = {
+        isActive: true,
+        currentZone: currentSequenceZone?.station,
+        timeRemaining: currentSequenceZone?.timeRemaining,
+        totalZones: sequenceState.sequence.length,
+        currentIndex: sequenceState.currentIndex,
+        sequence: sequenceState.sequence.map(z => ({ station: z.station, duration: z.duration }))
+      };
+    }
+  }
+
+  return device;
 }
 
 // Add response caching to reduce external API calls
@@ -418,6 +445,155 @@ export async function setRainDelay(deviceId: string, hours: number): Promise<any
     console.error('[Bhyve] Error setting rain delay:', error);
     throw error;
   }
+}
+
+/**
+ * Start a sequential watering program for multiple zones
+ */
+export async function startWateringSequence(deviceId: string, sequence: Array<{ station: number; duration: number }>): Promise<any> {
+  console.log(`[Bhyve] Starting watering sequence for device ${deviceId}:`, sequence);
+  
+  try {
+    const auth = await authenticate();
+    
+    // Initialize WebSocket client if not already connected
+    if (!wsClient) {
+      wsClient = new BhyveWebSocketClient();
+      await wsClient.connect(auth.token, deviceId);
+    }
+
+    // For now, we'll start the first zone immediately and schedule the rest
+    // In a production system, you'd want to implement proper scheduling
+    if (sequence.length === 0) {
+      throw new Error('Empty watering sequence provided');
+    }
+
+    // Calculate total duration
+    const totalDuration = sequence.reduce((sum, zone) => sum + zone.duration, 0);
+    
+    // Store sequence state
+    activeSequences.set(deviceId, {
+      deviceId,
+      sequence,
+      currentIndex: 0,
+      startTime: Date.now(),
+      totalDuration
+    });
+
+    // Start the first zone immediately
+    const firstZone = sequence[0];
+    await wsClient.startWatering(firstZone.station, firstZone.duration);
+    
+    // For remaining zones, we'll implement a simple timeout-based approach
+    // In production, you might want to use AWS Step Functions or EventBridge for more robust scheduling
+    if (sequence.length > 1) {
+      let currentDelay = firstZone.duration * 60 * 1000; // Convert to milliseconds
+      
+      for (let i = 1; i < sequence.length; i++) {
+        const zone = sequence[i];
+        setTimeout(async () => {
+          try {
+            console.log(`[Bhyve] Starting delayed zone ${zone.station} after ${currentDelay}ms`);
+            
+            // Update sequence state
+            const state = activeSequences.get(deviceId);
+            if (state) {
+              state.currentIndex = i;
+              activeSequences.set(deviceId, state);
+            }
+            
+            await wsClient?.startWatering(zone.station, zone.duration);
+          } catch (error) {
+            console.error(`[Bhyve] Error starting delayed zone ${zone.station}:`, error);
+          }
+        }, currentDelay);
+        
+        currentDelay += zone.duration * 60 * 1000; // Add this zone's duration for next delay
+      }
+      
+      // Clean up sequence state after completion
+      setTimeout(() => {
+        activeSequences.delete(deviceId);
+        console.log(`[Bhyve] Sequence completed for device ${deviceId}`);
+      }, currentDelay);
+    } else {
+      // Single zone sequence, clean up after completion
+      setTimeout(() => {
+        activeSequences.delete(deviceId);
+        console.log(`[Bhyve] Single zone sequence completed for device ${deviceId}`);
+      }, firstZone.duration * 60 * 1000);
+    }
+    
+    return {
+      success: true,
+      message: `Started watering sequence with ${sequence.length} zones`,
+      sequence: sequence,
+      totalDuration: totalDuration
+    };
+  } catch (error) {
+    console.error('[Bhyve] Error starting watering sequence:', error);
+    throw error;
+  }
+}
+
+// State management for tracking active watering sequences
+interface WateringSequenceState {
+  deviceId: string;
+  sequence: Array<{ station: number; duration: number }>;
+  currentIndex: number;
+  startTime: number;
+  totalDuration: number;
+}
+
+// In-memory state storage (in production, you'd use DynamoDB or similar)
+let activeSequences: Map<string, WateringSequenceState> = new Map();
+
+/**
+ * Get the current watering sequence state for a device
+ */
+export function getSequenceState(deviceId: string): WateringSequenceState | null {
+  return activeSequences.get(deviceId) || null;
+}
+
+/**
+ * Calculate if a sequence is currently active
+ */
+export function isSequenceActive(deviceId: string): boolean {
+  const state = activeSequences.get(deviceId);
+  if (!state) return false;
+  
+  const elapsed = Date.now() - state.startTime;
+  return elapsed < state.totalDuration * 60 * 1000; // Convert minutes to milliseconds
+}
+
+/**
+ * Get the currently active zone in a sequence
+ */
+export function getCurrentSequenceZone(deviceId: string): { station: number; timeRemaining: number } | null {
+  const state = activeSequences.get(deviceId);
+  if (!state || !isSequenceActive(deviceId)) {
+    return null;
+  }
+  
+  const elapsed = Date.now() - state.startTime;
+  let accumulatedTime = 0;
+  
+  for (let i = 0; i < state.sequence.length; i++) {
+    const zone = state.sequence[i];
+    const zoneDurationMs = zone.duration * 60 * 1000;
+    
+    if (elapsed >= accumulatedTime && elapsed < accumulatedTime + zoneDurationMs) {
+      const timeRemaining = Math.max(0, zoneDurationMs - (elapsed - accumulatedTime));
+      return {
+        station: zone.station,
+        timeRemaining: Math.ceil(timeRemaining / 1000) // Convert to seconds
+      };
+    }
+    
+    accumulatedTime += zoneDurationMs;
+  }
+  
+  return null;
 }
 
 // Cleanup function for Lambda container reuse

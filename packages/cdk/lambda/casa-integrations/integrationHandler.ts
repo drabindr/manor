@@ -497,6 +497,35 @@ export const handler = async (
 
           const { device_id, station, time } = requestBody;
           response = await bhyve.startWatering(device_id, station, time);
+        } else if (action.toLowerCase() === 'start-sequence') {
+          // Start a sequential watering program
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (
+            !requestBody || 
+            !requestBody.device_id || 
+            !requestBody.sequence ||
+            !Array.isArray(requestBody.sequence)
+          ) {
+            return createResponse(400, {
+              error: 'Missing device_id or sequence (array) in request body',
+            });
+          }
+
+          const { device_id, sequence } = requestBody;
+          
+          // Validate sequence format
+          const isValidSequence = sequence.every((item: any) => 
+            typeof item.station === 'number' && typeof item.duration === 'number'
+          );
+          
+          if (!isValidSequence) {
+            return createResponse(400, {
+              error: 'Invalid sequence format. Each item must have station (number) and duration (number)',
+            });
+          }
+
+          response = await bhyve.startWateringSequence(device_id, sequence);
         } else if (action.toLowerCase() === 'stop') {
           // Stop watering a zone
           const requestBody = event.body ? JSON.parse(event.body) : null;
