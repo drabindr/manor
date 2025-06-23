@@ -1,7 +1,9 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { DynamoDB } from "aws-sdk";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
-const dynamoDb = new DynamoDB.DocumentClient();
+const dynamoDbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(dynamoDbClient);
 const USER_HOME_STATES_TABLE = process.env.USER_HOME_STATES_TABLE || "";
 
 // Define default headers to include CORS
@@ -38,12 +40,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       ":state": state,
       ":timestamp": new Date().toISOString(),
     },
-    ReturnValues: "UPDATED_NEW",
+    ReturnValues: "UPDATED_NEW" as const,
   };
 
   try {
     console.log("Updating user home state with params:", params);
-    await dynamoDb.update(params).promise();
+    await dynamoDb.send(new UpdateCommand(params));
     return {
       statusCode: 200,
       headers: defaultHeaders,
@@ -78,12 +80,12 @@ export const saveDisplayNameHandler: APIGatewayProxyHandler = async (event) => {
     UpdateExpression: "set #displayName = :displayName",
     ExpressionAttributeNames: { "#displayName": "displayName" },
     ExpressionAttributeValues: { ":displayName": displayName },
-    ReturnValues: "UPDATED_NEW",
+    ReturnValues: "UPDATED_NEW" as const,
   };
 
   try {
     console.log("Saving display name with params:", params);
-    await dynamoDb.update(params).promise();
+    await dynamoDb.send(new UpdateCommand(params));
     return {
       statusCode: 200,
       headers: defaultHeaders,
