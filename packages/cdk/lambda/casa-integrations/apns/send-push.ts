@@ -225,5 +225,5 @@ async function getDeviceTokens(userId: string): Promise<string[]> {
     }
   }));
   
-  return (result.Items || []).map((item: any) => item.deviceToken);
+  return (result.Items || []).map((item: DeviceTokenItem) => item.deviceToken);
 }
