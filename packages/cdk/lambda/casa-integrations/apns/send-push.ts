@@ -1,12 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
-import * as apn from '@parse/node-apn';
+import * as AWS from 'aws-sdk';
+import * as apn from 'node-apn';
 
-const dynamoDbClient = new DynamoDBClient({});
-const dynamodb = DynamoDBDocumentClient.from(dynamoDbClient);
-const ssm = new SSMClient({});
+const dynamodb = new AWS.DynamoDB.DocumentClient();
+const ssm = new AWS.SSM();
 const TABLE_NAME = process.env.DEVICE_TOKENS_TABLE || '';
 
 // APNS credentials cache to reduce KMS calls
@@ -72,10 +69,10 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     } else {
       // Fetch credentials from SSM Parameter Store
       const [certResponse, keyResponse, teamIdResponse, keyIdResponse] = await Promise.all([
-        ssm.send(new GetParameterCommand({ Name: '/apns/cert', WithDecryption: true })),
-        ssm.send(new GetParameterCommand({ Name: '/apns/key', WithDecryption: true })),
-        ssm.send(new GetParameterCommand({ Name: '/apns/team-id', WithDecryption: true })),
-        ssm.send(new GetParameterCommand({ Name: '/apns/key-id', WithDecryption: true }))
+        ssm.getParameter({ Name: '/apns/cert', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/key', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/team-id', WithDecryption: true }).promise(),
+        ssm.getParameter({ Name: '/apns/key-id', WithDecryption: true }).promise()
       ]);
       
       cert = certResponse.Parameter?.Value;
@@ -217,13 +214,13 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 }
 
 async function getDeviceTokens(userId: string): Promise<string[]> {
-  const result = await dynamodb.send(new QueryCommand({
+  const result = await dynamodb.query({
     TableName: TABLE_NAME,
     KeyConditionExpression: 'userId = :userId',
     ExpressionAttributeValues: {
       ':userId': userId
     }
-  }));
+  }).promise();
   
-  return (result.Items || []).map((item: DeviceTokenItem) => item.deviceToken);
+  return (result.Items || []).map(item => item.deviceToken);
 }
