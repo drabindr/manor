@@ -110,3 +110,22 @@ logs
 dist/
 build/
 out/
+
+# Vite cache
+.vite/
+
+# Compiled TypeScript outputs (when .ts versions exist)
+# These should not be committed when the source .ts files exist
+src/**/*.js
+src/**/*.d.ts
+lib/**/*.js
+lib/**/*.d.ts
+
+# Test and debug scripts (temporary)
+test-*-fix.js
+debug-*.js
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.temp

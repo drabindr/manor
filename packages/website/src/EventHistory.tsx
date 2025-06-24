@@ -23,10 +23,6 @@ import {
   UilSpinner,
 } from "@iconscout/react-unicons";
 import { EventContext } from "./EventContext";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
-import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import UserHomeStatusBoard from "./components/UserHomeStatusBoard";
 
 // Loading skeleton component
@@ -77,22 +73,63 @@ export type EventHistoryRef = {
 
 const REGION = "us-east-1";
 const IDENTITY_POOL_ID = "us-east-1:35b377d0-baae-4ee6-b329-3d17e24fd55c";
-const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
-const credentials = fromCognitoIdentityPool({
-  client: cognitoIdentityClient,
-  identityPoolId: IDENTITY_POOL_ID,
-});
-const dynamoDBClient = DynamoDBDocumentClient.from(
-  new DynamoDBClient({
-    region: REGION,
-    credentials,
-  })
-);
+
+// Dynamic AWS client initialization to avoid circular dependencies
+let dynamoDBClientPromise: Promise<any> | null = null;
+
+async function getDynamoDBClient() {
+  if (!dynamoDBClientPromise) {
+    dynamoDBClientPromise = (async () => {
+      try {
+        // Load modules sequentially with delays to avoid circular dependency race conditions
+        console.log('Loading DynamoDB client (EventHistory)...');
+        
+        // Load core DynamoDB modules first
+        const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const { DynamoDBDocumentClient } = await import('@aws-sdk/lib-dynamodb');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Load Cognito modules with longer delays
+        const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        console.log('Creating AWS credentials (EventHistory)...');
+        const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
+        const credentials = fromCognitoIdentityPool({
+          client: cognitoIdentityClient,
+          identityPoolId: IDENTITY_POOL_ID,
+        });
+
+        console.log('Creating DynamoDB client (EventHistory)...');
+        const client = DynamoDBDocumentClient.from(
+          new DynamoDBClient({
+            region: REGION,
+            credentials,
+          })
+        );
+        
+        console.log('DynamoDB client ready (EventHistory)');
+        return client;
+      } catch (error) {
+        console.error('Failed to initialize DynamoDB client (EventHistory):', error);
+        // Reset promise so it can be retried
+        dynamoDBClientPromise = null;
+        throw error;
+      }
+    })();
+  }
+  return dynamoDBClientPromise;
+}
 
 type UserHomeStatusType = {
   userId: string;
   homeId: string;
-  state: string;
+  state: 'home' | 'away' | null;
   displayName?: string;
 };
 
@@ -127,13 +164,19 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
     const [eventsPerPage] = useState(50); // Show 50 events per page
     
     // Debouncing ref to prevent excessive refresh calls
-    const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const refreshTimeoutRef = useRef<number | null>(null);
 
     const fetchUserHomeStatuses = useCallback(async () => {
       setIsLoadingStatuses(true);
       setStatusError(null);
       try {
         logger.debug(`Fetching user home statuses for home: ${homeId}...`);
+        
+        // Get the dynamically initialized DynamoDB client
+        const dynamoDBClient = await getDynamoDBClient();
+        
+        // Import ScanCommand dynamically as well
+        const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
         
         // Make sure to explicitly request all attributes including displayName
         const command = new ScanCommand({
@@ -170,7 +213,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
           }
           
           // Compare each status to see if any have changed
-          const hasChanges = statusesWithNames.some((newStatus, index) => {
+          const hasChanges = statusesWithNames.some((newStatus: UserHomeStatusType, index: number) => {
             const prevStatus = prevStatuses.find(p => p.userId === newStatus.userId);
             if (!prevStatus) return true; // New user
             
@@ -404,8 +447,9 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     // Count total events
     const totalEvents = useMemo(() => {
-      return Object.values(eventsByDay).reduce(
-        (sum, dayEvents) => sum + dayEvents.length,
+      const days = Object.keys(eventsByDay);
+      return days.reduce(
+        (sum: number, day: string) => sum + eventsByDay[day].length,
         0
       );
     }, [eventsByDay]);
