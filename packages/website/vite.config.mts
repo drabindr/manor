@@ -55,15 +55,51 @@ export default defineConfig({
             return 'react-vendor';
           }
           
-          // AWS SDK chunks - split further for better caching
-          if (id.includes('@aws-sdk/client-cognito') || id.includes('@aws-sdk/credential-provider-cognito')) {
-            return 'aws-auth';
+          // Separate AuthService from AWS SDK to prevent circular dependencies
+          if (id.includes('services/AuthService')) {
+            return 'auth-service';
+          }
+          
+          // Keep React contexts separate from services to avoid createContext conflicts
+          if (id.includes('contexts/AuthContext')) {
+            return 'auth-context';
+          }
+          
+          // Force AWS credentials service into its own chunk - must be completely isolated
+          if (id.includes('AWSCredentialsService') || id.includes('services/AWSCredentialsService')) {
+            return 'aws-credentials-service';
+          }
+          
+          // Further split AWS SDK to prevent circular dependencies
+          if (id.includes('@aws-sdk/client-cognito-identity-provider')) {
+            return 'aws-cognito-provider';
+          }
+          // Split these two problematic modules into separate chunks with delay
+          if (id.includes('@aws-sdk/client-cognito-identity') && !id.includes('provider')) {
+            return 'aws-cognito-identity-client';
+          }
+          if (id.includes('@aws-sdk/credential-provider-cognito-identity')) {
+            return 'aws-cognito-credentials-provider';
           }
           if (id.includes('@aws-sdk/client-s3') || id.includes('@aws-sdk/s3-request-presigner')) {
             return 'aws-storage';
           }
           if (id.includes('@aws-sdk/client-dynamodb') || id.includes('@aws-sdk/lib-dynamodb')) {
             return 'aws-db';
+          }
+          
+          // Separate core AWS SDK modules that might have circular dependencies
+          if (id.includes('@aws-sdk/core')) {
+            return 'aws-core';
+          }
+          if (id.includes('@smithy/smithy-client') || id.includes('@smithy/middleware-stack')) {
+            return 'smithy-client';
+          }
+          if (id.includes('@smithy/protocol-http') || id.includes('@smithy/signature-v4')) {
+            return 'smithy-protocol';
+          }
+          if (id.includes('@smithy/')) {
+            return 'smithy-core';
           }
           
           // Icon libraries - frequently used, cache separately

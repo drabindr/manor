@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
-import * as apn from 'node-apn';
+import * as apn from '@parse/node-apn';
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const ssm = new AWS.SSM();

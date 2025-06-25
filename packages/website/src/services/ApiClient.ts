@@ -16,6 +16,11 @@ class AuthenticatedHttpClient {
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const authService = getAuthService();
+    if (!authService) {
+      // Auth service not yet initialized, return basic headers
+      return { 'Content-Type': 'application/json' };
+    }
+    
     const token = authService.getAccessToken();
     
     return {
@@ -59,6 +64,9 @@ class AuthenticatedHttpClient {
           // Token might be expired, try to refresh
           try {
             const authService = getAuthService();
+            if (!authService) {
+              throw new Error('Auth service not available');
+            }
             await authService.refreshTokens();
             
             // Retry the request with new token
@@ -81,7 +89,9 @@ class AuthenticatedHttpClient {
           } catch (refreshError) {
             // Refresh failed, redirect to login
             const authService = getAuthService();
-            authService.signOut();
+            if (authService) {
+              authService.signOut();
+            }
             throw new Error('Authentication expired. Please sign in again.');
           }
         }

@@ -2,27 +2,10 @@
 
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { logger } from './utils/Logger';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
-import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
 
 // AWS Configuration
 const REGION = 'us-east-1';
 const IDENTITY_POOL_ID = 'us-east-1:35b377d0-baae-4ee6-b329-3d17e24fd55c';
-
-const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
-const credentials = fromCognitoIdentityPool({
-  client: cognitoIdentityClient,
-  identityPoolId: IDENTITY_POOL_ID,
-});
-
-const dynamoDBClient = DynamoDBDocumentClient.from(
-  new DynamoDBClient({
-    region: REGION,
-    credentials,
-  })
-);
 
 type Event = {
   id: number;
@@ -59,6 +42,22 @@ export const EventProvider: React.FC<EventProviderProps> = ({ children }) => {
     try {
       logger.debug(`Fetching events for home: ${homeId}...`);
       
+      // Simple dynamic imports
+      const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+      const { DynamoDBDocumentClient, QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+      const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
+      const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
+      
+      // Create simple unauthenticated client
+      const credentials = fromCognitoIdentityPool({
+        client: new CognitoIdentityClient({ region: REGION }),
+        identityPoolId: IDENTITY_POOL_ID,
+      });
+
+      const dynamoDBClient = DynamoDBDocumentClient.from(
+        new DynamoDBClient({ region: REGION, credentials })
+      );
+      
       // Use Query instead of Scan to filter by homeId using the GSI
       const command = new QueryCommand({
         TableName: 'EventLogs',
@@ -85,6 +84,8 @@ export const EventProvider: React.FC<EventProviderProps> = ({ children }) => {
       setEvents(fetchedEvents);
     } catch (error) {
       logger.error('Error fetching events from DynamoDB:', error);
+      // Set empty events array when DynamoDB is unavailable
+      setEvents([]);
     }
   }, [homeId]);
 

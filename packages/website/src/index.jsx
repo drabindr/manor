@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import performance from './utils/performance.js';
+import performance from './utils/performance';
 import cameraConnectionService from './services/CameraConnectionService';
 
 // Initialize performance monitoring

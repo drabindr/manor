@@ -1,7 +1,3 @@
-import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
-import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
-import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
-
 export interface AuthConfig {
   userPoolId: string;
   userPoolClientId: string;
@@ -28,10 +24,9 @@ export interface AuthTokens {
 
 export class AuthService {
   private config: AuthConfig;
-  private cognitoClient: CognitoIdentityProviderClient;
   private user: User | null = null;
   private tokens: AuthTokens | null = null;
-  private refreshTimer: NodeJS.Timeout | null = null;
+  private refreshTimer: number | null = null;
   private isFirstRefresh: boolean = true;
   private isRefreshing: boolean = false;
   private refreshRetryCount: number = 0;
@@ -39,9 +34,6 @@ export class AuthService {
 
   constructor(config: AuthConfig) {
     this.config = config;
-    this.cognitoClient = new CognitoIdentityProviderClient({
-      region: config.region,
-    });
     
     // Load existing auth state from localStorage
     this.loadAuthState();
@@ -215,15 +207,16 @@ export class AuthService {
       throw new Error('User not authenticated');
     }
 
-    const credentials = fromCognitoIdentityPool({
-      client: new CognitoIdentityClient({ region: this.config.region }),
-      identityPoolId: this.config.identityPoolId,
-      logins: {
-        [`cognito-idp.${this.config.region}.amazonaws.com/${this.config.userPoolId}`]: this.tokens.idToken,
-      },
-    });
-
-    return credentials;
+    // Lazy load AWS credentials only when actually needed
+    // This avoids circular dependency issues on app startup
+    try {
+      const { AWSCredentialsService } = await import('./AWSCredentialsService');
+      const credentialsService = AWSCredentialsService.getInstance();
+      return credentialsService.getCredentials(this.config, this.tokens);
+    } catch (error) {
+      console.warn('AWS credentials not available:', error);
+      throw new Error('AWS credentials service temporarily unavailable');
+    }
   }
 
   // Check if user is authenticated
@@ -651,10 +644,7 @@ export const initializeAuth = (config: AuthConfig): AuthService => {
   return authService;
 };
 
-export const getAuthService = (): AuthService => {
-  if (!authService) {
-    throw new Error('Auth service not initialized. Call initializeAuth first.');
-  }
+export const getAuthService = (): AuthService | null => {
   return authService;
 };
 
