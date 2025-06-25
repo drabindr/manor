@@ -17,13 +17,14 @@ export class AWSCredentialsService {
     }
 
     try {
-      // Load modules with controlled timing - sequentially to avoid race conditions
-      const cognitoModule = await import('@aws-sdk/client-cognito-identity');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
-      const credentialModule = await import('@aws-sdk/credential-provider-cognito-identity');
-
-      const { CognitoIdentityClient } = cognitoModule;
-      const { fromCognitoIdentityPool } = credentialModule;
+      // Import required modules
+      const [
+        { CognitoIdentityClient },
+        { fromCognitoIdentityPool }
+      ] = await Promise.all([
+        import('@aws-sdk/client-cognito-identity'),
+        import('@aws-sdk/credential-provider-cognito-identity')
+      ]);
 
       const credentials = fromCognitoIdentityPool({
         client: new CognitoIdentityClient({ region: config.region }),

@@ -7,38 +7,33 @@ import { logger } from './utils/Logger';
 const REGION = 'us-east-1';
 const IDENTITY_POOL_ID = 'us-east-1:35b377d0-baae-4ee6-b329-3d17e24fd55c';
 
-// Dynamic AWS client initialization to avoid circular dependencies
+// Simplified AWS client initialization 
 let dynamoDBClientPromise: Promise<any> | null = null;
 
 async function getDynamoDBClient() {
   if (!dynamoDBClientPromise) {
     dynamoDBClientPromise = (async () => {
       try {
-        // Load modules sequentially with delays to avoid circular dependency race conditions
-        console.log('Loading DynamoDB client...');
-        
-        // Load core DynamoDB modules first
-        const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const { DynamoDBDocumentClient } = await import('@aws-sdk/lib-dynamodb');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Load Cognito modules with longer delays
-        const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Import AWS modules
+        const [
+          { DynamoDBClient },
+          { DynamoDBDocumentClient },
+          { CognitoIdentityClient },
+          { fromCognitoIdentityPool }
+        ] = await Promise.all([
+          import('@aws-sdk/client-dynamodb'),
+          import('@aws-sdk/lib-dynamodb'),
+          import('@aws-sdk/client-cognito-identity'),
+          import('@aws-sdk/credential-provider-cognito-identity')
+        ]);
 
-        console.log('Creating AWS credentials...');
+        // Create AWS credentials and DynamoDB client
         const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
         const credentials = fromCognitoIdentityPool({
           client: cognitoIdentityClient,
           identityPoolId: IDENTITY_POOL_ID,
         });
 
-        console.log('Creating DynamoDB client...');
         const client = DynamoDBDocumentClient.from(
           new DynamoDBClient({
             region: REGION,
@@ -46,11 +41,9 @@ async function getDynamoDBClient() {
           })
         );
         
-        console.log('DynamoDB client ready');
         return client;
       } catch (error) {
         console.error('Failed to initialize DynamoDB client:', error);
-        // Reset promise so it can be retried
         dynamoDBClientPromise = null;
         throw error;
       }
