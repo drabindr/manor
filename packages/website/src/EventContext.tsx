@@ -7,51 +7,6 @@ import { logger } from './utils/Logger';
 const REGION = 'us-east-1';
 const IDENTITY_POOL_ID = 'us-east-1:35b377d0-baae-4ee6-b329-3d17e24fd55c';
 
-// Simplified AWS client initialization 
-let dynamoDBClientPromise: Promise<any> | null = null;
-
-async function getDynamoDBClient() {
-  if (!dynamoDBClientPromise) {
-    dynamoDBClientPromise = (async () => {
-      try {
-        // Import AWS modules
-        const [
-          { DynamoDBClient },
-          { DynamoDBDocumentClient },
-          { CognitoIdentityClient },
-          { fromCognitoIdentityPool }
-        ] = await Promise.all([
-          import('@aws-sdk/client-dynamodb'),
-          import('@aws-sdk/lib-dynamodb'),
-          import('@aws-sdk/client-cognito-identity'),
-          import('@aws-sdk/credential-provider-cognito-identity')
-        ]);
-
-        // Create AWS credentials and DynamoDB client
-        const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
-        const credentials = fromCognitoIdentityPool({
-          client: cognitoIdentityClient,
-          identityPoolId: IDENTITY_POOL_ID,
-        });
-
-        const client = DynamoDBDocumentClient.from(
-          new DynamoDBClient({
-            region: REGION,
-            credentials,
-          })
-        );
-        
-        return client;
-      } catch (error) {
-        console.error('Failed to initialize DynamoDB client:', error);
-        dynamoDBClientPromise = null;
-        throw error;
-      }
-    })();
-  }
-  return dynamoDBClientPromise;
-}
-
 type Event = {
   id: number;
   event: string;
@@ -87,11 +42,21 @@ export const EventProvider: React.FC<EventProviderProps> = ({ children }) => {
     try {
       logger.debug(`Fetching events for home: ${homeId}...`);
       
-      // Get the dynamically initialized DynamoDB client
-      const dynamoDBClient = await getDynamoDBClient();
+      // Simple dynamic imports
+      const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+      const { DynamoDBDocumentClient, QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+      const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
+      const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
       
-      // Import QueryCommand dynamically as well
-      const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+      // Create simple unauthenticated client
+      const credentials = fromCognitoIdentityPool({
+        client: new CognitoIdentityClient({ region: REGION }),
+        identityPoolId: IDENTITY_POOL_ID,
+      });
+
+      const dynamoDBClient = DynamoDBDocumentClient.from(
+        new DynamoDBClient({ region: REGION, credentials })
+      );
       
       // Use Query instead of Scan to filter by homeId using the GSI
       const command = new QueryCommand({

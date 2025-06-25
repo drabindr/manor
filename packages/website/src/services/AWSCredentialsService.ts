@@ -17,14 +17,9 @@ export class AWSCredentialsService {
     }
 
     try {
-      // Import required modules
-      const [
-        { CognitoIdentityClient },
-        { fromCognitoIdentityPool }
-      ] = await Promise.all([
-        import('@aws-sdk/client-cognito-identity'),
-        import('@aws-sdk/credential-provider-cognito-identity')
-      ]);
+      // Simple dynamic import without over-engineering
+      const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
+      const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
 
       const credentials = fromCognitoIdentityPool({
         client: new CognitoIdentityClient({ region: config.region }),

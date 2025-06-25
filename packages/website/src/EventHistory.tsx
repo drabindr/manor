@@ -82,30 +82,20 @@ async function getDynamoDBClient() {
     dynamoDBClientPromise = (async () => {
       try {
         // Import AWS modules
-        const [
-          { DynamoDBClient },
-          { DynamoDBDocumentClient },
-          { CognitoIdentityClient },
-          { fromCognitoIdentityPool }
-        ] = await Promise.all([
-          import('@aws-sdk/client-dynamodb'),
-          import('@aws-sdk/lib-dynamodb'),
-          import('@aws-sdk/client-cognito-identity'),
-          import('@aws-sdk/credential-provider-cognito-identity')
-        ]);
+        // Simple dynamic imports
+        const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+        const { DynamoDBDocumentClient } = await import('@aws-sdk/lib-dynamodb');
+        const { CognitoIdentityClient } = await import('@aws-sdk/client-cognito-identity');
+        const { fromCognitoIdentityPool } = await import('@aws-sdk/credential-provider-cognito-identity');
 
         // Create AWS credentials and DynamoDB client
-        const cognitoIdentityClient = new CognitoIdentityClient({ region: REGION });
         const credentials = fromCognitoIdentityPool({
-          client: cognitoIdentityClient,
+          client: new CognitoIdentityClient({ region: REGION }),
           identityPoolId: IDENTITY_POOL_ID,
         });
 
         const client = DynamoDBDocumentClient.from(
-          new DynamoDBClient({
-            region: REGION,
-            credentials,
-          })
+          new DynamoDBClient({ region: REGION, credentials })
         );
         
         return client;
