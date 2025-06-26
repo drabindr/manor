@@ -18,11 +18,17 @@
     "ios:clean": "npm run clean --workspace=@manor/ios",
     "ios:open": "npm run open --workspace=@manor/ios"
   },
+  "overrides": {
+    "fast-xml-parser": "4.2.5"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "4.2.5"
   }
 }

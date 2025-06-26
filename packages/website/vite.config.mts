@@ -10,12 +10,35 @@ export default defineConfig({
       }
     })
   ],
+  // Configure dependency optimization
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      // Force fast-xml-parser to be pre-bundled as CommonJS
+      'fast-xml-parser',
+      // Force mnemonist to be pre-bundled to handle CommonJS/ESM compatibility
+      'mnemonist/lru-cache'
+    ],
+    exclude: [
+      // Exclude AWS SDK from pre-bundling to avoid circular dependency issues
+      '@aws-sdk/client-cognito-identity-provider',
+      '@aws-sdk/client-cognito-identity',
+      '@aws-sdk/credential-provider-cognito-identity',
+      '@aws-sdk/client-s3',
+      '@aws-sdk/client-dynamodb',
+      '@aws-sdk/lib-dynamodb'
+    ]
+  },
   server: {
     port: 3000,
   },
   // Configure esbuild to remove console.log in production
   esbuild: {
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+    // Fix AWS SDK initialization issues
+    keepNames: true,
   },
   build: {
     outDir: 'build',
@@ -29,6 +52,8 @@ export default defineConfig({
     cssCodeSplit: true,
     // Additional build optimizations
     rollupOptions: {
+      // External dependencies that should not be bundled
+      external: [],
       output: {
         // Optimize chunk naming for better caching
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -55,15 +80,15 @@ export default defineConfig({
             return 'react-vendor';
           }
           
-          // AWS SDK chunks - split further for better caching
-          if (id.includes('@aws-sdk/client-cognito') || id.includes('@aws-sdk/credential-provider-cognito')) {
-            return 'aws-auth';
+          // AWS SDK - Use a single chunk to avoid circular dependency issues
+          // The problem was splitting them too granularly caused initialization order issues
+          if (id.includes('@aws-sdk/')) {
+            return 'aws-sdk';
           }
-          if (id.includes('@aws-sdk/client-s3') || id.includes('@aws-sdk/s3-request-presigner')) {
-            return 'aws-storage';
-          }
-          if (id.includes('@aws-sdk/client-dynamodb') || id.includes('@aws-sdk/lib-dynamodb')) {
-            return 'aws-db';
+          
+          // Smithy protocols (AWS SDK dependencies) - separate chunk
+          if (id.includes('@smithy/')) {
+            return 'smithy';
           }
           
           // Icon libraries - frequently used, cache separately
