@@ -28,9 +28,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     setIsIOS(/iP(hone|od|ad)/.test(ua));
   }, []);
 
-  const onlineIndicatorColor = isOnline
-    ? "bg-gradient-to-r from-teal-400 to-green-600 border-2 border-teal-300"
-    : "bg-gradient-to-r from-gray-500 to-gray-700 border-2 border-gray-400";
+  // Logo filter for connection status
+  const logoFilter = isOnline
+    ? "none" // Color version when connected
+    : "grayscale(100%) brightness(0.7)"; // Grayscale when not connected
 
   const getArmModeDisplay = () =>
     armMode === "stay" ? "Home" : armMode === "away" ? "Away" : "Disarmed";
@@ -76,8 +77,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       >
         <div className="flex items-center space-x-3 xs:space-x-3 sm:space-x-4">
           <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
-            {/* Enhanced online indicator with better visual feedback */}
-            <div className={`w-3.5 h-3.5 rounded-full ${onlineIndicatorColor} shadow-xl transition-all duration-500 ring-2 ring-black/30 hover:scale-110 active:scale-95 status-indicator`} />
+            {/* Logo2 as connection indicator */}
+            <img 
+              src="/logo2.png" 
+              alt="Connection Status" 
+              className="w-12 h-12 transition-all duration-500 hover:scale-110 active:scale-95 status-indicator"
+              style={{
+                filter: logoFilter,
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden"
+              }}
+            />
             
             {/* Simple house name text */}
             <span className="veedu-text text-lg xs:text-xl sm:text-2xl font-black text-liquid-primary tracking-wide drop-shadow-md transition-all duration-300 text-optimized whitespace-nowrap"
