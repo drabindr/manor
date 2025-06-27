@@ -91,11 +91,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKIP_PREBUILD: true
 
-      - name: Deploy public website separately
+      - name: Deploy public website
         run: |
           echo "🌐 Deploying public website to AWS..."
-          # Deploy the public website stack separately
-          npm run deploy:public-website --workspace=@manor/cdk
+          # Deploy the public website stack
+          npm run deploy:public-website:ci --workspace=@manor/cdk
           echo "✅ Public website deployment completed"
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
