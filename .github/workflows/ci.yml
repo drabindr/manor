@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "📦 Installing dependencies excluding iOS package..."
           # Install dependencies for specific workspaces (iOS is automatically excluded)
-          npm install --workspace=@manor/cdk --workspace=@manor/website
+          npm install --workspace=@manor/cdk --workspace=@manor/website --workspace=@manor/public-website
           echo "✅ Dependencies installed successfully"
 
       - name: Fix website rollup dependencies
@@ -69,14 +69,34 @@ jobs:
           
           echo "✅ Website build completed"
 
+      - name: Build public website
+        run: |
+          echo "🏗️ Building public website..."
+          cd packages/public-website
+          
+          # Build the public website
+          npm run build
+          
+          echo "✅ Public website build completed"
+
       - name: Deploy to AWS
         run: |
           echo "🚀 Deploying Manor to AWS..."
           # Use the fixed website dependencies for deployment
           npm run deploy --workspace=@manor/cdk
-          echo "✅ Deployment completed"
+          echo "✅ Main deployment completed"
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: us-east-1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKIP_PREBUILD: true
+
+      - name: Deploy public website separately
+        run: |
+          echo "🌐 Deploying public website to AWS..."
+          # Deploy the public website stack separately
+          npm run deploy:public-website --workspace=@manor/cdk
+          echo "✅ Public website deployment completed"
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: us-east-1

@@ -16,7 +16,8 @@ This is a monorepo containing three main packages:
 ```
 manor/
 ├── packages/
-│   ├── website/          # React frontend application
+│   ├── website/          # React frontend application (authenticated)
+│   ├── public-website/   # React public website (no authentication required)
 │   ├── cdk/              # AWS CDK infrastructure and Lambda functions
 │   └── ios/              # iOS mobile application (Veedu/CasaGuard)
 ├── .github/workflows/    # CI/CD pipelines
@@ -27,9 +28,15 @@ manor/
 
 ### 📱 Website (`packages/website`)
 - **Technology**: React, TypeScript, Vite
-- **Purpose**: Frontend web application for home automation control
+- **Purpose**: Authenticated frontend web application for home automation control
 - **Features**: Device control, camera monitoring, user authentication, real-time updates
 - **Package Name**: `@manor/website`
+
+### 🌐 Public Website (`packages/public-website`)
+- **Technology**: React, TypeScript, Vite
+- **Purpose**: Public-facing marketing and landing website
+- **Features**: Product information, marketing content, no authentication required
+- **Package Name**: `@manor/public-website`
 
 ### ☁️ CDK (`packages/cdk`)
 - **Technology**: AWS CDK, TypeScript, Python
@@ -80,6 +87,9 @@ npm run build
 # Start website development server
 npm run dev
 
+# Start public website development server  
+npm run dev:public
+
 # Run tests for all packages
 npm run test
 ```
@@ -92,8 +102,11 @@ npm run test
 
 **Manual:**
 ```bash
-# Deploy infrastructure
+# Deploy infrastructure (authenticated app at 720frontrd.mymanor.click)
 npm run deploy
+
+# Deploy public website (at mymanor.click)
+npm run deploy:public-website
 ```
 
 **Setup CI/CD Pipeline:**

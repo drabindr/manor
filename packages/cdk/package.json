@@ -12,6 +12,8 @@
     "test": "jest",
     "cdk": "cdk",
     "deploy": "npm run build && cdk deploy --require-approval never ManorWebsiteStack",
+    "deploy:public-website": "cd ../public-website && npm run build && cd ../cdk && npm run build && cdk deploy --require-approval never ManorPublicWebsiteStack",
+    "deploy:public-website:ci": "npm run build:ci && cdk deploy --require-approval never ManorPublicWebsiteStack",
     "deploy:domain": "npm run build && cdk deploy --require-approval never CasaDomainStack",
     "deploy:auth": "npm run build && cdk deploy --require-approval never CasaAuthStack", 
     "deploy:website": "cd ../website && npm run build:production && cd ../cdk && npm run build && cdk deploy --require-approval never ManorWebsiteStack",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.728.0",
+    "@aws-sdk/client-ses": "^3.728.0",
     "@types/aws-lambda": "^8.10.150",
     "@types/jest": "^29.5.14",
     "@types/node": "22.10.0",
