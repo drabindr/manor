@@ -9,6 +9,8 @@ import { CasaAdminCdkStack } from '../lib/casa-admin-cdk-stack';
 import { CasaDomainStack } from '../lib/casa-domain-stack';
 import { CasaAuthStack } from '../lib/casa-auth-stack';
 import { ManorWebsiteStack } from '../lib/manor-website-stack';
+import { ManorPublicWebsiteStack } from '../lib/manor-public-website-stack';
+import { ManorEmailStack } from '../lib/manor-email-stack';
 
 const app = new cdk.App();
 
@@ -43,6 +45,27 @@ const websiteStack = new ManorWebsiteStack(app, 'ManorWebsiteStack', {
   },
 });
 
+// Public website stack for the main domain (mymanor.click)
+const publicWebsiteStack = new ManorPublicWebsiteStack(app, 'ManorPublicWebsiteStack', {
+  domainName: 'mymanor.click',
+  hostedZone: domainStack.hostedZone,
+  websiteBuildPath: process.env.PUBLIC_WEBSITE_BUILD_PATH || '../public-website/dist',
+  skipWebsiteDeployment: skipWebsiteDeployment,
+  env: {
+    account: '680511694845',
+    region: 'us-east-1',
+  },
+});
+
+// Email stack for email signup functionality  
+const emailStack = new ManorEmailStack(app, 'ManorEmailStack', {
+  notificationEmail: process.env.NOTIFICATION_EMAIL || 'drabindr@gmail.com',
+  env: {
+    account: '680511694845',
+    region: 'us-east-1',
+  },
+});
+
 // Other stacks
 new CasaGuardCdkStack(app, 'CasaGuardCdkStack', {});
 new CasaCamerasCdkStack(app, 'CasaCamerasCdkStack', {});
@@ -55,3 +78,4 @@ new CasaAdminCdkStack(app, 'CasaAdminCdkStack', {});
 // Add dependencies
 authStack.addDependency(domainStack);
 websiteStack.addDependency(domainStack);
+publicWebsiteStack.addDependency(domainStack);

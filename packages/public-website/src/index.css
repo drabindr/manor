@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* General Animations */
+.fade-in { 
+  animation: fadeIn 1s ease-in-out; 
+}
+
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(20px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+/* Feature Icons */
+.icon-feature svg { 
+  width: 3rem; 
+  height: 3rem; 
+  stroke-width: 1.5; 
+}
+
+/* Pricing Checkmarks */
+.pricing-checkmark { 
+  width: 1.25rem; 
+  height: 1.25rem; 
+  stroke-width: 2; 
+  color: #329A59; 
+}
+
+/* Mobile fixes */
+body { 
+  overflow-x: hidden; 
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Fix to prevent horizontal overflow on mobile */
+.container { 
+  width: 100%; 
+  max-width: 100%; 
+  overflow-x: hidden; 
+}
+
+@media (max-width: 640px) {
+  .container { 
+    padding-left: 1rem; 
+    padding-right: 1rem; 
+  }
+  .hero-image { 
+    width: 100%; 
+    height: auto; 
+    margin-left: auto; 
+    margin-right: auto; 
+  }
+}
+
+/* Logo Ticker */
+.ticker-wrap { 
+  width: 100%; 
+  overflow: hidden; 
+}
+
+.ticker-move { 
+  display: flex; 
+  align-items: center; 
+  width: max-content; 
+  will-change: transform; 
+}
+
+.ticker-move img { 
+  height: 48px; 
+  width: auto; 
+  max-width: 150px; 
+  margin: 0 2rem; 
+  opacity: 0.8; 
+  transition: opacity 0.3s ease; 
+  object-fit: contain; 
+}
+
+.ticker-move:hover img { 
+  opacity: 0.5; 
+}
+
+.ticker-move img:hover { 
+  opacity: 1; 
+}
+
+.ticker-wrap:hover .ticker-move { 
+  animation-play-state: paused; 
+}
+
+/* --- Interactive Screenshot Viewer Styles --- */
+.iphone-frame {
+  width: 380px; 
+  height: 775px;
+  background-image: linear-gradient(to bottom, #E5E7EB, #B0B4BC);
+  border-radius: 55px; 
+  padding: 16px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25), inset 0 2px 4px 0 rgba(255,255,255,0.2);
+  position: relative; 
+  margin: 0 auto; 
+  border: 1px solid #9CA3AF;
+}
+
+.iphone-frame::before, .iphone-frame::after {
+  content: ''; 
+  position: absolute; 
+  background-color: #A0A4AE;
+  border-radius: 3px; 
+  box-shadow: inset 0 -1px 1px rgba(0,0,0,0.2);
+}
+
+.iphone-frame::before { 
+  left: -3px; 
+  top: 140px; 
+  width: 4px; 
+  height: 40px; 
+}
+
+.iphone-frame::after { 
+  right: -3px; 
+  top: 180px; 
+  width: 4px; 
+  height: 70px; 
+}
+
+.iphone-inner-bezel {
+  background-color: #111827; 
+  height: 100%; 
+  width: 100%;
+  border-radius: 39px; 
+  padding: 4px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+}
+
+.iphone-screen {
+  background-color: #000; 
+  height: 100%; 
+  width: 100%; 
+  border-radius: 35px;
+  overflow: hidden; 
+  position: relative; 
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+}
+
+.iphone-screen img {
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  display: block;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.iphone-notch {
+  position: absolute; 
+  top: 10px; 
+  left: 50%; 
+  transform: translateX(-50%);
+  width: 140px; 
+  height: 30px; 
+  background-color: #000000;
+  border-radius: 15px; 
+  z-index: 10;
+}
+
+/* App Menu Bar */
+.app-menu-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  margin-top: 1.5rem;
+  background-color: #E5E7EB;
+  border-radius: 9999px;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.menu-item {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  border-radius: 9999px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6B7280;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.menu-item:hover:not(.active) {
+  background-color: #F3F4F6;
+}
+
+.menu-item:active:not(.active) {
+  background-color: #E5E7EB;
+}
+
+.menu-item.active {
+  background-color: #FFFFFF;
+  color: #329A59;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.menu-item span { 
+  font-size: 0.75rem; 
+  font-weight: 500; 
+  display: block; 
+  white-space: nowrap; 
+}
