@@ -22,11 +22,11 @@
     "fast-xml-parser": "4.2.5"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0"
+    "@types/node": "^22.10.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "fast-xml-parser": "4.2.5"
