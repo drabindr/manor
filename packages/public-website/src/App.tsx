@@ -176,7 +176,7 @@ function App() {
             <div>
               <div className="inline-flex items-center bg-gradient-to-r from-orange-100 to-yellow-100 rounded-full px-4 py-2 mb-8 border border-orange-200">
                 <img src="logo2.png" alt="MANOR" className="h-4 w-4 mr-2" />
-                <span className="text-orange-700 text-sm font-medium">Intelligent home security and automation made simple</span>
+                <span className="text-orange-700 text-sm font-medium">Enterprise-grade smart home platform</span>
               </div>
               
               <h1 className="text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
@@ -468,7 +468,7 @@ function App() {
                 <span className="ml-3 text-3xl md:text-4xl font-extrabold tracking-tight uppercase text-primary font-sans" style={{fontFamily: 'Inter, sans-serif'}}>MANOR</span>
               </div>
               <p className="text-slate-400 mb-4">
-                Intelligent home security and automation made simple.
+                Professional smart home automation and security platform.
               </p>
             </div>
             <div>
