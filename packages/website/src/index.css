@@ -697,6 +697,14 @@ code {
   }
 }
 
+/* iPhone Pro Max specific optimization for 720 Front text */
+@media only screen and (max-width: 430px) and (min-width: 428px) and (orientation: portrait) {
+  .veedu-text {
+    font-size: 1.1rem !important;
+    letter-spacing: 0.015em !important;
+  }
+}
+
 /* iPhone 15 Pro Landscape optimizations */
 @media only screen and (max-width: 852px) and (orientation: landscape) and (max-height: 393px) {
   .top-app-bar {
