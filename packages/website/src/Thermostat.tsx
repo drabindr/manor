@@ -329,35 +329,213 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   }, [thermostatData?.setpoint]);
 
   /**
-   * Handler to set the thermostat temperature
+   * Keep eco mode state in sync with actual device state
    */
-  const setThermostatTemperature = (newSetpoint: number) => {
+  useEffect(() => {
+    if (thermostatData?.ecoMode) {
+      setEcoModeActive(thermostatData.ecoMode === "MANUAL_ECO");
+    }
+  }, [thermostatData?.ecoMode]);
+
+  /**
+   * Handler to set the thermostat temperature - now calls backend API
+   */
+  const setThermostatTemperature = async (newSetpoint: number) => {
     console.log("Setting new setpoint to:", newSetpoint);
     setLocalSetpoint(newSetpoint);
+    setIsTemperatureChanging(true);
+    
+    try {
+      // Use SetRange command which works for both heat and cool setpoints
+      const currentHeat = thermostatData?.heatCelsius || newSetpoint;
+      const currentCool = thermostatData?.coolCelsius || newSetpoint + 2;
+      
+      let heatSetpoint, coolSetpoint;
+      
+      if (thermostatData?.mode === "HEAT") {
+        heatSetpoint = newSetpoint;
+        coolSetpoint = Math.max(newSetpoint + 2, currentCool); // Ensure cool is higher than heat
+      } else if (thermostatData?.mode === "COOL") {
+        heatSetpoint = Math.min(newSetpoint - 2, currentHeat); // Ensure heat is lower than cool
+        coolSetpoint = newSetpoint;
+      } else if (thermostatData?.mode === "HEATCOOL") {
+        // For auto mode, adjust the closer setpoint and maintain the gap
+        const currentTemp = thermostatData?.currentTemperature || 20;
+        if (Math.abs(newSetpoint - currentHeat) < Math.abs(newSetpoint - currentCool)) {
+          heatSetpoint = newSetpoint;
+          coolSetpoint = Math.max(newSetpoint + 2, currentCool);
+        } else {
+          heatSetpoint = Math.min(newSetpoint - 2, currentHeat);
+          coolSetpoint = newSetpoint;
+        }
+      } else {
+        // Default case - assume heating
+        heatSetpoint = newSetpoint;
+        coolSetpoint = Math.max(newSetpoint + 2, 25);
+      }
+      
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
+              params: {
+                heatCelsius: heatSetpoint,
+                coolCelsius: coolSetpoint
+              }
+            }
+          })
+        }
+      );
+      
+      if (response.status === 401) {
+        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        return;
+      }
+      
+      if (response.ok) {
+        console.log("Temperature setpoint updated successfully");
+        // Refresh thermostat data after a short delay
+        setTimeout(fetchThermostatData, 2000);
+      } else {
+        console.error("Failed to update temperature setpoint:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error setting temperature:", error);
+    } finally {
+      setIsTemperatureChanging(false);
+    }
   };
 
   /**
-   * Handler to change the thermostat mode
+   * Handler to change the thermostat mode - now calls backend API
    */
-  const changeThermostatMode = (newMode: string) => {
+  const changeThermostatMode = async (newMode: string) => {
     console.log("Changing thermostat mode to", newMode);
     setModeDropdownOpen(false);
+    
+    try {
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              command: "sdm.devices.commands.ThermostatMode.SetMode",
+              params: { mode: newMode }
+            }
+          })
+        }
+      );
+      
+      if (response.status === 401) {
+        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        return;
+      }
+      
+      if (response.ok) {
+        console.log("Thermostat mode changed successfully");
+        // Refresh thermostat data after a short delay
+        setTimeout(fetchThermostatData, 2000);
+      } else {
+        console.error("Failed to change thermostat mode:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error changing thermostat mode:", error);
+    }
   };
 
   /**
-   * Toggle eco mode
+   * Toggle eco mode - gracefully handles API limitations
    */
-  const toggleEcoMode = () => {
+  const toggleEcoMode = async () => {
     console.log("Toggling eco mode");
-    setEcoModeActive(!ecoModeActive);
+    const newEcoMode = ecoModeActive ? "OFF" : "MANUAL_ECO";
+    
+    try {
+      // Note: Based on testing, eco mode commands return 500 errors
+      // This might be a limitation of the current Google Nest API or device permissions
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              command: "sdm.devices.commands.ThermostatEco.SetMode",
+              params: { mode: newEcoMode }
+            }
+          })
+        }
+      );
+      
+      if (response.status === 401) {
+        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        return;
+      }
+      
+      if (response.ok) {
+        console.log("Eco mode toggled successfully");
+        setTimeout(fetchThermostatData, 2000);
+      } else {
+        console.warn("Eco mode API call failed (this may be expected due to device permissions)");
+        // Don't change local state since the API call failed
+        // The real state will be synced when fetchThermostatData runs
+      }
+    } catch (error) {
+      console.error("Error toggling eco mode:", error);
+      // Don't change local state on error - let it sync from real device state
+    }
   };
 
   /**
-   * Toggle fan for a specified duration
+   * Toggle fan for a specified duration - now calls backend API
    */
-  const toggleFan = (duration: number) => {
+  const toggleFan = async (duration: number) => {
     console.log("Toggling fan with duration", duration, "seconds");
     setFanDropdownOpen(false);
+    
+    try {
+      const response = await fetch(
+        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              deviceId,
+              command: "sdm.devices.commands.Fan.SetTimer",
+              params: {
+                timerMode: duration > 0 ? "ON" : "OFF",
+                duration: `${duration}s`
+              }
+            }
+          })
+        }
+      );
+      
+      if (response.status === 401) {
+        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        return;
+      }
+      
+      if (response.ok) {
+        console.log("Fan timer set successfully");
+        // Refresh thermostat data after a short delay
+        setTimeout(fetchThermostatData, 2000);
+      } else {
+        console.error("Failed to set fan timer:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error setting fan timer:", error);
+    }
   };
 
   // Add detailed thermostat dial variables before the return
