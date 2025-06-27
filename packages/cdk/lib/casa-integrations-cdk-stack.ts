@@ -27,7 +27,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       entry: 'lambda/casa-integrations/integrationHandler.ts',
       bundling: {
         externalModules: ['@aws-sdk/*'], // Use the '@aws-sdk/*' available in the Lambda runtime
-        nodeModules: ['ws', 'node-apn', 'axios', 'uuid'], // Include all required modules
+        nodeModules: ['ws', 'axios', 'uuid'], // Include required modules (removed node-apn)
         platform: 'linux',
         minify: false, // Disable minification to help with debugging
         sourceMap: false, // Disable source maps to simplify output
@@ -95,7 +95,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     // Lambda function to register device tokens
     const registerTokenLambda = new NodejsFunction(this, 'RegisterTokenLambda', {
       entry: 'lambda/casa-integrations/apns/register-token.ts',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       bundling: {
         minify: true,
         externalModules: ['@aws-sdk/*']
@@ -109,15 +109,15 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     // Lambda function to send push notifications
     const sendPushLambda = new NodejsFunction(this, 'SendPushLambda', {
       entry: 'lambda/casa-integrations/apns/send-push.ts',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       bundling: {
         minify: true,
         externalModules: ['@aws-sdk/*', 'aws-sdk'], // Include both AWS SDK v2 and v3
-        nodeModules: ['node-apn'], // Include node-apn for APNs functionality
         platform: 'linux',
       },
       environment: {
         DEVICE_TOKENS_TABLE: deviceTokensTable.tableName,
+        SNS_PLATFORM_APPLICATION_ARN: process.env.SNS_PLATFORM_APPLICATION_ARN || '',
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
@@ -127,17 +127,18 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     deviceTokensTable.grantReadWriteData(registerTokenLambda);
     deviceTokensTable.grantReadData(sendPushLambda);
     
-    // Grant access to Parameter Store for APNs certificates
-    const apnsPolicy = new PolicyStatement({
+    // Grant access to SNS for push notifications
+    const snsPolicy = new PolicyStatement({
       actions: [
-        'ssm:GetParameter',
-        'ssm:GetParameters',
+        'sns:Publish',
+        'sns:CreatePlatformEndpoint',
+        'sns:GetEndpointAttributes',
+        'sns:SetEndpointAttributes',
+        'sns:DeleteEndpoint',
       ],
-      resources: [
-        `arn:aws:ssm:${this.region}:${this.account}:parameter/apns/*`,
-      ],
+      resources: ['*'], // SNS platform applications need wildcard access
     });
-    sendPushLambda.addToRolePolicy(apnsPolicy);
+    sendPushLambda.addToRolePolicy(snsPolicy);
     
     // Register token API endpoint
     const apnsResource = api.root.addResource('apns');
@@ -241,7 +242,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     // Lambda function to handle garage door control operations
     const garageDoorLambda = new NodejsFunction(this, 'GarageDoorControlLambda', {
       entry: 'lambda/casa-integrations/garage-door/garage-door-handler.ts',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       bundling: {
         minify: true,
         externalModules: ['@aws-sdk/*']
@@ -318,7 +319,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     // Lambda function to handle garage door WebSocket operations
     const garageDoorWebSocketLambda = new NodejsFunction(this, 'GarageDoorWebSocketLambda', {
       entry: 'lambda/casa-integrations/garage-door/garage-door-websocket.ts',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       bundling: {
         minify: true,
         externalModules: ['@aws-sdk/*']

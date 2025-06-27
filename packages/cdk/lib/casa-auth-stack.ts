@@ -32,7 +32,7 @@ export class CasaAuthStack extends cdk.Stack {
     const preTokenGenerationLambda = new nodejs.NodejsFunction(this, 'PreTokenGenerationFunction', {
       entry: path.join(__dirname, '../lambda/auth/pre-token-generation.ts'),
       functionName: 'casa-guard-pre-token-generation',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {
@@ -46,7 +46,7 @@ export class CasaAuthStack extends cdk.Stack {
     const preSignupLambda = new nodejs.NodejsFunction(this, 'PreSignupFunction', {
       entry: path.join(__dirname, '../lambda/auth/pre-signup.ts'),
       functionName: 'casa-guard-pre-signup',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {

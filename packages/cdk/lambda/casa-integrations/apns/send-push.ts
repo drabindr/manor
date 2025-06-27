@@ -1,28 +1,21 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import * as AWS from 'aws-sdk';
-import * as apn from 'node-apn';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { SNSClient, PublishCommand, CreatePlatformEndpointCommand } from '@aws-sdk/client-sns';
 
-const dynamodb = new AWS.DynamoDB.DocumentClient();
-const ssm = new AWS.SSM();
+const dynamoClient = new DynamoDBClient({});
+const dynamodb = DynamoDBDocumentClient.from(dynamoClient);
+const sns = new SNSClient({});
 const TABLE_NAME = process.env.DEVICE_TOKENS_TABLE || '';
-
-// APNS credentials cache to reduce KMS calls
-let apnsCredentialsCache: {
-  cert: string;
-  key: string;
-  teamId: string;
-  keyId: string;
-  timestamp: number;
-} | null = null;
-
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
+const SNS_PLATFORM_APPLICATION_ARN = process.env.SNS_PLATFORM_APPLICATION_ARN || '';
 
 interface PushNotification {
   alert?: {
     title?: string;
     subtitle?: string;
     body: string;
-  };
+  } | string;
+  body?: string;
   badge?: number;
   sound?: string;
   contentAvailable?: boolean;
@@ -57,102 +50,59 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Get APNs credentials from cache or SSM Parameter Store
-    let cert, key, teamId, keyId;
-
-    if (apnsCredentialsCache && (Date.now() - apnsCredentialsCache.timestamp) < CACHE_TTL) {
-      // Use cached credentials
-      cert = apnsCredentialsCache.cert;
-      key = apnsCredentialsCache.key;
-      teamId = apnsCredentialsCache.teamId;
-      keyId = apnsCredentialsCache.keyId;
-    } else {
-      // Fetch credentials from SSM Parameter Store
-      const [certResponse, keyResponse, teamIdResponse, keyIdResponse] = await Promise.all([
-        ssm.getParameter({ Name: '/apns/cert', WithDecryption: true }).promise(),
-        ssm.getParameter({ Name: '/apns/key', WithDecryption: true }).promise(),
-        ssm.getParameter({ Name: '/apns/team-id', WithDecryption: true }).promise(),
-        ssm.getParameter({ Name: '/apns/key-id', WithDecryption: true }).promise()
-      ]);
-      
-      cert = certResponse.Parameter?.Value;
-      key = keyResponse.Parameter?.Value;
-      teamId = teamIdResponse.Parameter?.Value;
-      keyId = keyIdResponse.Parameter?.Value;
-      
-      if (!cert || !key || !teamId || !keyId) {
-        throw new Error('Failed to retrieve APNs credentials from Parameter Store');
-      }
-
-      // Update cache
-      apnsCredentialsCache = {
-        cert,
-        key,
-        teamId,
-        keyId,
-        timestamp: Date.now()
-      };
-    }
-
-    // Configure APN provider
-    const options: apn.ProviderOptions = {
-      token: {
-        key,
-        keyId,
-        teamId
+    // Build APNS payload for SNS
+    const apnsPayload = {
+      aps: {
+        alert: notification.alert || notification.body,
+        badge: notification.badge,
+        sound: notification.sound || 'default',
+        'content-available': notification.contentAvailable ? 1 : 0,
+        category: notification.category,
+        'thread-id': notification.threadId
       },
-      production: useProductionAPNS
+      ...notification.customData
     };
 
-    const apnProvider = new apn.Provider(options);
-    
-    // Create notification
-    const note = new apn.Notification();
+    // Remove undefined values
+    Object.keys(apnsPayload.aps).forEach(key => {
+      if (apnsPayload.aps[key] === undefined) {
+        delete apnsPayload.aps[key];
+      }
+    });
 
-    if (notification.alert) {
-      note.alert = notification.alert;
-    }
-    if (notification.badge !== undefined) {
-      note.badge = notification.badge;
-    }
-    if (notification.sound) {
-      note.sound = notification.sound;
-    }
-    if (notification.category) {
-      // @ts-ignore - Custom property for APN
-      note.category = notification.category;
-    }
-    if (notification.threadId) {
-      // @ts-ignore - Custom property for APN
-      note.threadId = notification.threadId;
-    }
-    if (notification.contentAvailable) {
-      note.contentAvailable = true;
-    }
-
-    // Add custom data
-    if (notification.customData) {
-      Object.entries(notification.customData).forEach(([key, value]) => {
-        note.payload[key] = value;
-      });
-    }
-
-    note.topic = 'com.drabindr.casaguard';
+    const messageStructure = {
+      default: typeof notification.alert === 'string' 
+        ? notification.alert 
+        : notification.alert?.body || notification.body || 'Notification',
+      APNS: JSON.stringify(apnsPayload),
+      APNS_SANDBOX: JSON.stringify(apnsPayload)
+    };
 
     try {
-      // If deviceToken is provided, use it directly
+      // If deviceToken is provided, send to that specific device
       if (deviceToken) {
-        const result = await apnProvider.send(note, deviceToken);
-        console.log('APNS Send Result:', result);
+        // Create or get SNS endpoint for the device token
+        const endpointResponse = await sns.send(new CreatePlatformEndpointCommand({
+          PlatformApplicationArn: SNS_PLATFORM_APPLICATION_ARN,
+          Token: deviceToken
+        }));
         
-        apnProvider.shutdown();
+        if (!endpointResponse.EndpointArn) {
+          throw new Error('Failed to create SNS endpoint');
+        }
+
+        const publishResult = await sns.send(new PublishCommand({
+          TargetArn: endpointResponse.EndpointArn,
+          MessageStructure: 'json',
+          Message: JSON.stringify(messageStructure)
+        }));
         
         return {
           statusCode: 200,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             message: 'Push notification sent',
-            result 
+            messageId: publishResult.MessageId
           })
         };
       }
@@ -162,7 +112,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const tokens = await getDeviceTokens(userId);
         
         if (!tokens.length) {
-          apnProvider.shutdown();
           return {
             statusCode: 404,
             headers: { 'Content-Type': 'application/json' },
@@ -170,23 +119,44 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
           };
         }
         
-        const result = await apnProvider.send(note, tokens);
-        console.log('APNS Send Result:', result);
+        // Send to all user tokens
+        const sendPromises = tokens.map(async token => {
+          try {
+            const endpointResponse = await sns.send(new CreatePlatformEndpointCommand({
+              PlatformApplicationArn: SNS_PLATFORM_APPLICATION_ARN,
+              Token: token
+            }));
+            
+            if (!endpointResponse.EndpointArn) {
+              throw new Error('Failed to create SNS endpoint');
+            }
+
+            return await sns.send(new PublishCommand({
+              TargetArn: endpointResponse.EndpointArn,
+              MessageStructure: 'json',
+              Message: JSON.stringify(messageStructure)
+            }));
+          } catch (error) {
+            console.error(`Failed to send to token ${token}:`, error);
+            throw error;
+          }
+        });
         
-        apnProvider.shutdown();
+        const results = await Promise.allSettled(sendPromises);
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
         
         return {
           statusCode: 200,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            message: 'Push notifications sent',
+            message: 'Push notifications processed',
             tokensCount: tokens.length,
-            result
+            successful,
+            failed
           })
         };
       }
-      
-      apnProvider.shutdown();
       
       // Neither userId nor deviceToken provided
       return {
@@ -196,7 +166,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
       
     } catch (error) {
-      apnProvider.shutdown();
+      console.error('SNS Error:', error);
       throw error;
     }
     
@@ -214,13 +184,37 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 }
 
 async function getDeviceTokens(userId: string): Promise<string[]> {
-  const result = await dynamodb.query({
-    TableName: TABLE_NAME,
-    KeyConditionExpression: 'userId = :userId',
-    ExpressionAttributeValues: {
-      ':userId': userId
+  try {
+    // First try to get a specific user record
+    const result = await dynamodb.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: { userId }
+    }));
+    
+    // If this is a simple key-value store, look for deviceTokens array
+    if (result.Item?.deviceTokens && Array.isArray(result.Item.deviceTokens)) {
+      return result.Item.deviceTokens;
     }
-  }).promise();
-  
-  return (result.Items || []).map(item => item.deviceToken);
+    
+    // If deviceToken is directly on the item
+    if (result.Item?.deviceToken) {
+      return [result.Item.deviceToken];
+    }
+    
+    // Otherwise scan for all tokens for this user
+    const scanResult = await dynamodb.send(new ScanCommand({
+      TableName: TABLE_NAME,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      }
+    }));
+    
+    return (scanResult.Items || [])
+      .map((item: any) => item.deviceToken)
+      .filter(Boolean);
+  } catch (error) {
+    console.error('Error fetching device tokens:', error);
+    return [];
+  }
 }
