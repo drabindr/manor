@@ -76,7 +76,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         }}
       >
         <div className="flex items-center space-x-3 xs:space-x-3 sm:space-x-4">
-          <div className="flex items-center space-x-2 xs:space-x-2.5 sm:space-x-3">
+          <div className="flex items-center space-x-1 xs:space-x-1.5 sm:space-x-2">
             {/* Logo2 as connection indicator */}
             <img 
               src="/logo2.png" 
