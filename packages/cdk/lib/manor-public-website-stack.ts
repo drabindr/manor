@@ -32,7 +32,7 @@ export class ManorPublicWebsiteStack extends cdk.Stack {
 
     // Create S3 bucket for public website hosting
     this.websiteBucket = new s3.Bucket(this, 'PublicWebsiteBucket', {
-      bucketName: `manor-public-website-${this.account}-${Date.now()}`,
+      bucketName: `manor-public-website-${this.account}`,
       publicReadAccess: false, // We'll use CloudFront OAC instead
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.RETAIN, // Keep the bucket if stack is deleted
