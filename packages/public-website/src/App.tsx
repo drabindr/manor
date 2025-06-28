@@ -193,7 +193,7 @@ function App() {
 
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <a href="#signup" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group">
-                  Secure Your Home Today
+                  Request Enterprise Demo
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </a>
                 
@@ -398,9 +398,9 @@ function App() {
       {/* Email Signup Section */}
       <section id="signup" className="py-20 md:py-32 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-8">Stay Updated</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-8">Product Updates & Notifications</h2>
           <p className="text-lg md:text-xl text-slate-300 mb-12 max-w-3xl mx-auto">
-            Be the first to get updates or notifications on product releases and express interest in the product.
+            Stay informed about platform updates, new features, and enterprise announcements. Join our professional network.
           </p>
           
           {!isSubmitted ? (
@@ -428,7 +428,7 @@ function App() {
                   disabled={isSubmitting}
                   className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-bold py-4 px-8 rounded-lg transition duration-300 shadow-lg hover:shadow-xl whitespace-nowrap"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Get Updates'}
+                  {isSubmitting ? 'Processing...' : 'Subscribe to Updates'}
                 </button>
               </div>
               {submitError && (
@@ -437,7 +437,7 @@ function App() {
                 </p>
               )}
               <p className="text-sm text-slate-400 mt-4">
-                No spam, unsubscribe at any time. We respect your privacy.
+                Enterprise-grade privacy protection. Unsubscribe anytime.
               </p>
             </div>
           ) : (
@@ -450,7 +450,7 @@ function App() {
                 </div>
                 <h3 className="text-2xl font-bold mb-2">Thank You!</h3>
                 <p className="text-slate-300">
-                  You're all set! We'll keep you updated with the latest from MANOR.
+                  You're subscribed! We'll keep you informed about MANOR platform developments.
                 </p>
               </div>
             </div>
@@ -484,7 +484,7 @@ function App() {
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
               <p className="text-center md:text-left">&copy; 2025 MANOR. All rights reserved.</p>
               <div className="flex items-center space-x-2 text-slate-400">
-                <span>Crafted in the Great North</span>
+                <span>Proudly Canadian Technology</span>
                 <span className="text-red-500 text-lg">🇨🇦</span>
               </div>
             </div>
