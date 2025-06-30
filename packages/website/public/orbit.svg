@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="orbit-logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 200 200" style="enable-background:new 0 0 200 200;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#00A0FF;}
+	.st1{fill:#0080CC;}
+	.st2{fill:#FFFFFF;}
+</style>
+<g>
+	<!-- Outer orbit ring -->
+	<circle class="st0" cx="100" cy="100" r="90" fill="none" stroke="#00A0FF" stroke-width="8"/>
+	
+	<!-- Middle orbit ring -->
+	<circle class="st1" cx="100" cy="100" r="65" fill="none" stroke="#0080CC" stroke-width="6"/>
+	
+	<!-- Inner orbit ring -->
+	<circle class="st0" cx="100" cy="100" r="40" fill="none" stroke="#00A0FF" stroke-width="4"/>
+	
+	<!-- Central core -->
+	<circle class="st2" cx="100" cy="100" r="15" fill="#FFFFFF"/>
+	
+	<!-- Orbital elements/satellites -->
+	<circle class="st2" cx="190" cy="100" r="6" fill="#FFFFFF"/>
+	<circle class="st2" cx="10" cy="100" r="6" fill="#FFFFFF"/>
+	<circle class="st2" cx="100" cy="10" r="6" fill="#FFFFFF"/>
+	<circle class="st2" cx="100" cy="190" r="6" fill="#FFFFFF"/>
+	
+	<!-- Diagonal orbital elements -->
+	<circle class="st2" cx="163" cy="163" r="4" fill="#FFFFFF"/>
+	<circle class="st2" cx="37" cy="37" r="4" fill="#FFFFFF"/>
+	<circle class="st2" cx="163" cy="37" r="4" fill="#FFFFFF"/>
+	<circle class="st2" cx="37" cy="163" r="4" fill="#FFFFFF"/>
+</g>
+</svg>
