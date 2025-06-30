@@ -184,6 +184,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             // Save to UserDefaults for processing
             if let authCode = authCode {
                 UserDefaults.standard.set(authCode, forKey: "oauth_code")
+                
+                // Complete the OAuth flow by calling the backend callback endpoint
+                completeGoogleOAuthFlow(code: authCode)
             }
             if let state = state {
                 UserDefaults.standard.set(state, forKey: "oauth_state")
@@ -222,5 +225,48 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         }
         
         return false
+    }
+    
+    // MARK: - OAuth Flow Completion
+    private func completeGoogleOAuthFlow(code: String) {
+        // Create the callback URL
+        let baseURL = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/callback"
+        guard let url = URL(string: "\(baseURL)?code=\(code)") else {
+            print("Failed to create OAuth callback URL")
+            return
+        }
+        
+        // Create request with iOS User-Agent
+        var request = URLRequest(url: url)
+        request.setValue("Manor-iOS/1.0 (iOS WebView)", forHTTPHeaderField: "User-Agent")
+        request.httpMethod = "GET"
+        
+        // Make the request
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("OAuth callback error: \(error.localizedDescription)")
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("OAuth callback response status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode == 302 || httpResponse.statusCode == 200 {
+                    print("OAuth callback completed successfully")
+                    
+                    // Notify the WebView to refresh or navigate to main app
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: Notification.Name("GoogleOAuthCompleted"),
+                            object: nil
+                        )
+                    }
+                } else {
+                    print("OAuth callback failed with status: \(httpResponse.statusCode)")
+                }
+            }
+        }
+        
+        task.resume()
     }
 }
