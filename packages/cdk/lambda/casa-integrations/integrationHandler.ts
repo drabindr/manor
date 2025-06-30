@@ -111,10 +111,15 @@ export const handler = async (
       const userAgent = event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '';
       const isIOS = userAgent.includes('Manor-iOS') || userAgent.includes('casaguard') || userAgent.includes('CFNetwork');
       
+      console.log(`OAuth initiate request - User-Agent: ${userAgent}, isIOS: ${isIOS}`);
+      
       // Use iOS-specific redirect URI if request is from iOS
       let customRedirectUri: string | undefined;
       if (isIOS) {
         customRedirectUri = 'casaguard://auth/callback';
+        console.log(`Using iOS redirect URI: ${customRedirectUri}`);
+      } else {
+        console.log('Using default web redirect URI from SSM');
       }
       
       // Initiate OAuth2 flow
@@ -143,10 +148,15 @@ export const handler = async (
       const userAgent = event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '';
       const isIOS = userAgent.includes('Manor-iOS') || userAgent.includes('casaguard') || userAgent.includes('CFNetwork');
       
+      console.log(`OAuth callback request - User-Agent: ${userAgent}, isIOS: ${isIOS}`);
+      
       // Use iOS-specific redirect URI if request is from iOS
       let customRedirectUri: string | undefined;
       if (isIOS) {
         customRedirectUri = 'casaguard://auth/callback';
+        console.log(`Using iOS redirect URI for callback: ${customRedirectUri}`);
+      } else {
+        console.log('Using default web redirect URI for callback from SSM');
       }
       
       await google.handleOAuth2Callback(code, customRedirectUri);
