@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import OptimizedImage from './components/OptimizedImage';
 
 // Enhanced haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -1108,19 +1107,6 @@ const BhyveIrrigation: React.FC = () => {
           >
             {/* Enhanced glass effect overlay */}
             <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>
-
-            {/* Orbit Logo (Top Right) */}
-            <div className="absolute top-3 right-3 z-10">
-              <div className="bg-black/30 rounded-full p-1.5 backdrop-blur-sm">
-                <OptimizedImage 
-                  src="/orbit.svg" 
-                  alt="Orbit"
-                  className="h-5 w-auto opacity-70"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-            </div>
 
             {/* Header - Cleaned up */}
             <div className="flex items-center justify-between mb-2.5">
