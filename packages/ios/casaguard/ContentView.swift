@@ -438,6 +438,32 @@ struct WebView: UIViewRepresentable {
         
         init(_ parent: WebView) {
             self.parent = parent
+            super.init()
+            
+            // Add observer for Google OAuth completion
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleGoogleOAuthCompleted),
+                name: Notification.Name("GoogleOAuthCompleted"),
+                object: nil
+            )
+        }
+        
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+        
+        @objc private func handleGoogleOAuthCompleted() {
+            // Navigate the WebView back to the main app after OAuth completion
+            DispatchQueue.main.async {
+                if let webView = self.webView {
+                    let mainAppURL = EndpointManager.shared.webAppURL
+                    if let url = URL(string: mainAppURL) {
+                        print("OAuth completed, navigating to main app: \(mainAppURL)")
+                        webView.load(URLRequest(url: url))
+                    }
+                }
+            }
         }
         
         // MARK: - ASAuthorizationControllerPresentationContextProviding
