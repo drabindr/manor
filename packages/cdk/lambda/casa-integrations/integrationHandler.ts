@@ -107,8 +107,18 @@ export const handler = async (
   // Handle OAuth Initiation and Callback using event.path
   if (event.path.endsWith('/auth/initiate')) {
     if (provider.toLowerCase() === 'google') {
+      // Detect if request is from iOS based on User-Agent
+      const userAgent = event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '';
+      const isIOS = userAgent.includes('Manor-iOS') || userAgent.includes('casaguard') || userAgent.includes('CFNetwork');
+      
+      // Use iOS-specific redirect URI if request is from iOS
+      let customRedirectUri: string | undefined;
+      if (isIOS) {
+        customRedirectUri = 'casaguard://auth/callback';
+      }
+      
       // Initiate OAuth2 flow
-      const authUrl = await google.initiateOAuth2Flow();
+      const authUrl = await google.initiateOAuth2Flow(customRedirectUri);
       return {
         statusCode: 302,
         headers: {
@@ -128,7 +138,18 @@ export const handler = async (
       if (!code) {
         return createResponse(400, { error: 'Missing code parameter in query string' });
       }
-      await google.handleOAuth2Callback(code);
+      
+      // Detect if request is from iOS based on User-Agent
+      const userAgent = event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '';
+      const isIOS = userAgent.includes('Manor-iOS') || userAgent.includes('casaguard') || userAgent.includes('CFNetwork');
+      
+      // Use iOS-specific redirect URI if request is from iOS
+      let customRedirectUri: string | undefined;
+      if (isIOS) {
+        customRedirectUri = 'casaguard://auth/callback';
+      }
+      
+      await google.handleOAuth2Callback(code, customRedirectUri);
       // Redirect back to your web page after successful authorization
       const domainName = process.env.DOMAIN_NAME || '720frontrd.mymanor.click';
       return {

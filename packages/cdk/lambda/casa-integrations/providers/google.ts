@@ -70,9 +70,9 @@ async function putParameter(
 }
 
 // Function to initiate the OAuth2 flow
-export async function initiateOAuth2Flow(): Promise<string> {
+export async function initiateOAuth2Flow(customRedirectUri?: string): Promise<string> {
   const clientId = await getParameter('/google/clientId');
-  const redirectUri = await getParameter('/google/redirectUri');
+  const redirectUri = customRedirectUri || await getParameter('/google/redirectUri');
 
   const scope = 'https://www.googleapis.com/auth/sdm.service';
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
@@ -87,10 +87,10 @@ export async function initiateOAuth2Flow(): Promise<string> {
 }
 
 // Function to handle the OAuth2 callback and exchange code for tokens
-export async function handleOAuth2Callback(code: string): Promise<void> {
+export async function handleOAuth2Callback(code: string, customRedirectUri?: string): Promise<void> {
   const clientId = await getParameter('/google/clientId');
   const clientSecret = await getParameter('/google/clientSecret');
-  const redirectUri = await getParameter('/google/redirectUri');
+  const redirectUri = customRedirectUri || await getParameter('/google/redirectUri');
 
   const tokenUrl = 'https://oauth2.googleapis.com/token';
   const params = new URLSearchParams();

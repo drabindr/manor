@@ -389,6 +389,9 @@ struct WebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         
+        // Set custom User-Agent to identify iOS requests
+        webView.customUserAgent = "Manor-iOS/1.0 (iOS WebView)"
+        
         // Store webView reference in coordinator for later use
         context.coordinator.webView = webView
         
