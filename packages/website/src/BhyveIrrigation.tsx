@@ -246,7 +246,7 @@ const BhyveIrrigation: React.FC = () => {
   const statusRef = useRef<Record<string, WateringStatus>>({});
   const activeFlowerPresetsRef = useRef<Record<string, { zones: number[], currentIndex: number, startTime: number }>>({});
 
-  const API_BASE = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod";
+  const API_BASE = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod";
 
   // Time-based priorities - Updated to include noon time
   const getTimeBasedPriority = () => {

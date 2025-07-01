@@ -5,7 +5,7 @@ echo "🌸 Testing Bhyve Flowers Preset Implementation"
 echo "=============================================="
 
 # Base API URL - update this to match your deployment
-API_BASE="https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod"
+API_BASE="https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod"
 
 # Function to make API calls with proper error handling
 make_api_call() {

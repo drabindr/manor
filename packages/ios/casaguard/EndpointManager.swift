@@ -94,7 +94,7 @@ class EndpointManager {
     // PRODUCTION ENDPOINTS
     private let prodWebAppURL = "https://720frontrd.mymanor.click/"
     private let prodUserHomeStatesURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod/user-home-states"
-    private let prodAPNSBaseURL = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/apns"
+    private let prodAPNSBaseURL = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/apns"
     
     // TEST ENDPOINTS - Replace with actual test endpoints when available
     private let testWebAppURL = "http://casa-guard-webapp-test.s3-website-us-east-1.amazonaws.com/" // Placeholder

@@ -1,7 +1,10 @@
+// How to deploy:
+// scp programs/hue.py drabindr@casaguard:/home/drabindr/ && ssh drabindr@casaguard 'sudo reboot'
+
 import WebSocket from 'ws';
 import { promisify } from 'util';
 
-const WS_URL = 'wss://dlioqxgq4m.execute-api.us-east-1.amazonaws.com/prod'; // WebSocket URL
+const WS_URL = 'wss://zt4cmsh5r8.execute-api.us-east-1.amazonaws.com/prod'; // WebSocket URL
 
 // Promisified delay function for waiting for the response
 const wait = promisify(setTimeout);

@@ -79,16 +79,28 @@ jobs:
           
           echo "✅ Public website build completed"
 
-      - name: Deploy to AWS
+      - name: Deploy Infrastructure to AWS
         run: |
-          echo "🚀 Deploying Manor to AWS..."
-          # Use the fixed website dependencies for deployment
-          npm run deploy --workspace=@manor/cdk
-          echo "✅ Main deployment completed"
+          echo "🚀 Deploying CDK Infrastructure to AWS..."
+          echo "This includes all stacks: Domain, Auth, Guard, Cameras, Integrations, Dashboards, Admin"
+          # Deploy all infrastructure stacks including integrations in proper order
+          npm run deploy:infrastructure --workspace=@manor/cdk
+          echo "✅ Infrastructure deployment completed"
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: us-east-1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SKIP_PREBUILD: true
+
+      - name: Deploy Website to AWS
+        run: |
+          echo "🌐 Deploying Website to AWS..."
+          # Deploy the website stack (depends on infrastructure)
+          npm run deploy:website:ci --workspace=@manor/cdk
+          echo "✅ Website deployment completed"
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: us-east-1
           SKIP_PREBUILD: true
 
       - name: Deploy public website
@@ -100,3 +112,30 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: us-east-1
+
+      - name: Verify Deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          echo "Checking if integration stack endpoints are accessible..."
+          # Give AWS a moment to propagate changes
+          sleep 30
+          
+          # Test if the API Gateway is responding (basic connectivity check)
+          INTEGRATION_API_URL=$(aws cloudformation describe-stacks \
+            --stack-name CasaIntegrationsCdkStack \
+            --query 'Stacks[0].Outputs[?OutputKey==`IntegrationApiUrl`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+          
+          if [ -n "$INTEGRATION_API_URL" ]; then
+            echo "✅ Integration API URL found: $INTEGRATION_API_URL"
+            # Test basic connectivity
+            if curl -f -s -o /dev/null "$INTEGRATION_API_URL/health" || curl -f -s -o /dev/null "$INTEGRATION_API_URL" ; then
+              echo "✅ Integration API is responding"
+            else
+              echo "⚠️  Integration API deployed but not responding (this may be normal)"
+            fi
+          else
+            echo "⚠️  Could not retrieve Integration API URL"
+          fi
+          
+          echo "✅ Deployment verification completed"

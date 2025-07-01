@@ -17,7 +17,7 @@
 
 const axios = require('axios');
 
-const API_BASE = 'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod';
+const API_BASE = 'https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod';
 
 console.log('🏥 LG Appliances Integration Health Check');
 console.log('=========================================\n');

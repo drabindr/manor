@@ -120,7 +120,7 @@ aws dynamodb delete-table --table-name BhyveWateringSchedule
 
 - **Device ID**: Found in Bhyve devices list
 - **Zone Names**: Must match fuzzy matching logic
-- **API Base**: `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod`
+- **API Base**: `https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod`
 
 ### Common Fixes
 

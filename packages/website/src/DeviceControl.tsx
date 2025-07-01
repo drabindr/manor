@@ -377,24 +377,24 @@ const DeviceControl: React.FC = () => {
     setIsLoading(true);
     try {
       const tplinkResponse = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
       );
 
       if (tplinkResponse.status === 401) {
         window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
 
       const tplinkData = await tplinkResponse.json();
 
       const hueResponse = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
       );
 
       if (hueResponse.status === 401) {
         window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
 
@@ -438,7 +438,7 @@ const DeviceControl: React.FC = () => {
     setIsRefreshing(true);
     try {
       const tplinkResponse = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
       );
 
       if (tplinkResponse.status === 401) {
@@ -450,7 +450,7 @@ const DeviceControl: React.FC = () => {
       const tplinkData = await tplinkResponse.json();
 
       const hueResponse = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
       );
 
       if (hueResponse.status === 401) {
@@ -535,7 +535,7 @@ const DeviceControl: React.FC = () => {
       if (!device) return;
 
       const response = await fetch(
-        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/${device.provider}/lights/trigger`,
+        `https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/${device.provider}/lights/trigger`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -10,47 +10,18 @@ import {
 // Create an SSM client
 const ssmClient = new SSMClient({});
 
-// Parameter cache to reduce KMS calls
-const parameterCache = new Map<string, { value: string; timestamp: number }>();
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache TTL
-
-// Function to retrieve a parameter from AWS SSM Parameter Store with caching
-async function getCachedParameter(
+// Function to retrieve a parameter from AWS SSM Parameter Store
+async function getParameter(
   name: string,
   withDecryption: boolean = false
 ): Promise<string> {
-  const cacheKey = `${name}_${withDecryption}`;
-  const cached = parameterCache.get(cacheKey);
-
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.value;
-  }
-
   const command = new GetParameterCommand({
     Name: name,
     WithDecryption: withDecryption,
   });
 
   const response = await ssmClient.send(command);
-  if (!response.Parameter?.Value) {
-    throw new Error(`Parameter ${name} not found or empty`);
-  }
-
-  // Cache the parameter
-  parameterCache.set(cacheKey, {
-    value: response.Parameter.Value,
-    timestamp: Date.now(),
-  });
-
-  return response.Parameter.Value;
-}
-
-// Legacy function for backward compatibility
-async function getParameter(
-  name: string,
-  withDecryption: boolean = false
-): Promise<string> {
-  return getCachedParameter(name, withDecryption);
+  return response.Parameter?.Value || '';
 }
 
 // Function to store a parameter in AWS SSM Parameter Store

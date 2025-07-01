@@ -11,7 +11,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "npm run build && cdk deploy --require-approval never ManorWebsiteStack",
+    "deploy": "npm run deploy:infrastructure && npm run deploy:website:ci",
     "deploy:public-website": "cd ../public-website && npm run build && cd ../cdk && npm run build && cdk deploy --require-approval never ManorPublicWebsiteStack",
     "deploy:public-website:ci": "npm run build:ci && cdk deploy --require-approval never ManorPublicWebsiteStack",
     "deploy:domain": "npm run build && cdk deploy --require-approval never CasaDomainStack",
