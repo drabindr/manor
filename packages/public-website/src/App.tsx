@@ -383,11 +383,13 @@ function App() {
               <img src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Google_Nest_logo.svg" alt="Google Nest Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Nest'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/TPLINK_Logo_2.svg" alt="TP-Link Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=TP-Link'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Philips_Hue_logo.svg" alt="Philips Hue Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Hue'} />
+              <img src="/orbit.svg" alt="Orbit Logo" />
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Airthings_logo.svg" alt="Airthings Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Airthings'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=AWS'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Google_Nest_logo.svg" alt="Google Nest Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Nest'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/TPLINK_Logo_2.svg" alt="TP-Link Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=TP-Link'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Philips_Hue_logo.svg" alt="Philips Hue Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Hue'} />
+              <img src="/orbit.svg" alt="Orbit Logo" />
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Airthings_logo.svg" alt="Airthings Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=Airthings'} />
               <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS Logo" onError={(e) => (e.target as HTMLImageElement).src='https://placehold.co/150x60/e0e0e0/a0a0a0?text=AWS'} />
             </div>
