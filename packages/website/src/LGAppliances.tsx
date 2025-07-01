@@ -687,7 +687,7 @@ const LGAppliances: React.FC = () => {
     try {
       // 1) List devices
       const listRes = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/list",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/devices/list",
         { method:"GET", headers:{ "Accept":"application/json","Content-Type":"application/json" } }
       );
       if (listRes.status === 401) {
@@ -705,7 +705,7 @@ const LGAppliances: React.FC = () => {
       try {
         // Batch status fetch instead of individual requests
         const batchStatusRes = await fetch(
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/batch-status",
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/devices/batch-status",
           {
             method: "POST",
             headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -740,7 +740,7 @@ const LGAppliances: React.FC = () => {
           
           try {
             const sr = await fetch(
-              "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/devices/status",
+              "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/devices/status",
               {
                 method: "POST",
                 headers: { 
@@ -823,7 +823,7 @@ const LGAppliances: React.FC = () => {
 
       try {
         await fetch(
-          `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
+          `https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
           {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -854,7 +854,7 @@ const LGAppliances: React.FC = () => {
 
     try {
       await fetch(
-        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
+        `https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
         {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
@@ -901,7 +901,7 @@ const LGAppliances: React.FC = () => {
       }
 
       await fetch(
-        `https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
+        `https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/${dev.deviceType}/control`,
         {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
@@ -1026,7 +1026,7 @@ const LGAppliances: React.FC = () => {
   const fetchAvailableCycles = async (deviceId: string) => {
     try {
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/lg/washer/cycles",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/washer/cycles",
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },

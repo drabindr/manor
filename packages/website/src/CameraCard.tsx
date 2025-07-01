@@ -207,7 +207,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         if (mediaSessionIdRef.current) {
           // Extend existing stream
           const response = await fetch(
-            'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
+            'https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -263,7 +263,7 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           }
 
           const response = await fetch(
-            'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
+            'https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/camera/command',
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

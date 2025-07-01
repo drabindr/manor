@@ -16,7 +16,7 @@ type DoorStatus = 'open' | 'closed' | 'unknown' | 'moving' | 'fault';
 type ActionType = 'open' | 'close' | 'toggle';
 
 // WebSocket endpoint for the AWS backend
-const WS_ENDPOINT = 'wss://ie0qxhdgx9.execute-api.us-east-1.amazonaws.com/prod';
+const WS_ENDPOINT = 'wss://utekypghuf.execute-api.us-east-1.amazonaws.com/prod';
 const DEVICE_ID = 'garage-door-001';
 
 const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {

@@ -27,7 +27,7 @@ const char* ssid = "NSA Truck";
 const char* password = "a1b2c3d4e519";
 
 // WebSocket API Gateway endpoint
-const char* websocketHost = "ie0qxhdgx9.execute-api.us-east-1.amazonaws.com";
+const char* websocketHost = "utekypghuf.execute-api.us-east-1.amazonaws.com";
 const int websocketPort = 443; // WSS port for secure WebSocket
 const String websocketPath = "/prod";
 

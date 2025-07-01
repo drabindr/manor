@@ -69,7 +69,7 @@ const emailStack = new ManorEmailStack(app, 'ManorEmailStack', {
 // Other stacks
 new CasaGuardCdkStack(app, 'CasaGuardCdkStack', {});
 new CasaCamerasCdkStack(app, 'CasaCamerasCdkStack', {});
-new CasaIntegrationsCdkStack(app, 'CasaIntegrationsStack', {
+new CasaIntegrationsCdkStack(app, 'CasaIntegrationsCdkStack', {
   domainName: '720frontrd.mymanor.click',
 });
 new CasaCamerasDashboardsStack(app, 'CasaCamerasDashboardsStack', {});

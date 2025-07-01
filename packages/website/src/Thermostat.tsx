@@ -193,7 +193,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const fetchThermostatData = async () => {
     try {
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -206,7 +206,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       );
       if (response.status === 401) {
         window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       const data = await response.json();
@@ -255,7 +255,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
    */
   const fetchAirthings = async () => {
     try {
-      const endpoint = 'https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/airthings/sensor/data';
+      const endpoint = 'https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/airthings/sensor/data';
       const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
@@ -375,7 +375,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       }
       
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -393,7 +393,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       );
       
       if (response.status === 401) {
-        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        window.location.href = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       
@@ -420,7 +420,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
     
     try {
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -435,7 +435,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       );
       
       if (response.status === 401) {
-        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        window.location.href = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       
@@ -462,7 +462,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       // Note: Based on testing, eco mode commands return 500 errors
       // This might be a limitation of the current Google Nest API or device permissions
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -477,7 +477,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       );
       
       if (response.status === 401) {
-        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        window.location.href = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       
@@ -504,7 +504,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
     
     try {
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -522,7 +522,7 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
       );
       
       if (response.status === 401) {
-        window.location.href = "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+        window.location.href = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       

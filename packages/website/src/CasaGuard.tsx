@@ -254,11 +254,11 @@ const CasaGuard: React.FC = () => {
     try {
       setRefreshing(true);
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/devices/list"
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/devices/list"
       );
       if (response.status === 401) {
         window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       const data = await response.json();
@@ -284,7 +284,7 @@ const CasaGuard: React.FC = () => {
     try {
       setRefreshing(true);
       const response = await fetch(
-        "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
+        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -294,7 +294,7 @@ const CasaGuard: React.FC = () => {
       );
       if (response.status === 401) {
         window.location.href =
-          "https://749cc0fpwc.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/auth/initiate";
         return;
       }
       const data = await response.json();

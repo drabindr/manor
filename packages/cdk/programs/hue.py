@@ -27,7 +27,7 @@ PHILIPS_HUE_BRIDGE_IP = "192.168.86.115"
 PHILIPS_HUE_USER = "t3SH1fzd1zG6tY5hqygvxFprZkQs1FfFatJwoG-L"
 
 # WebSocket URL (from your WebSocket API)
-WS_URL = "wss://dlioqxgq4m.execute-api.us-east-1.amazonaws.com/prod"
+WS_URL = "wss://zt4cmsh5r8.execute-api.us-east-1.amazonaws.com/prod"
 
 # Function to list lights from the Philips Hue Bridge
 def list_lights():

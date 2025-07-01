@@ -14,7 +14,7 @@ interface StatusRequest {
 }
 
 // WebSocket API configuration for direct device communication
-const WEBSOCKET_API_URL = process.env.WEBSOCKET_API_URL || 'wss://ie0qxhdgx9.execute-api.us-east-1.amazonaws.com/prod';
+const WEBSOCKET_API_URL = process.env.WEBSOCKET_API_URL || 'wss://utekypghuf.execute-api.us-east-1.amazonaws.com/prod';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Event:', JSON.stringify(event, null, 2));
