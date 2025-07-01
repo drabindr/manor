@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import OptimizedImage from "./components/OptimizedImage";
 
 // Enhanced haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -100,15 +101,22 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
 }) => {
   const [selectedDuration, setSelectedDuration] = useState(idealDuration);
   const [localTime, setLocalTime] = useState<number | undefined>(timeRemaining);
+  const [originalDuration, setOriginalDuration] = useState<number | undefined>(undefined);
   const intervalRef = useRef<number | null>(null);
 
-  // Start local countdown when watering - allows negative countdown
+  // Start local countdown when watering - sync with server time more frequently
   useEffect(() => {
     if (isWatering) {
-      // Only reset localTime if we don't have a timer running or if this is a significant change
-      if (!intervalRef.current || localTime === undefined || Math.abs((timeRemaining || 0) - localTime) > 5) {
-        console.log(`[Bhyve] Setting timer for zone ${zone.station}: ${timeRemaining} seconds`);
-        setLocalTime(timeRemaining || 0);
+      // Always sync with server time for better accuracy - don't restrict updates
+      if (timeRemaining !== undefined) {
+        console.log(`[Bhyve] Syncing timer for zone ${zone.station}: ${timeRemaining} seconds (local: ${localTime})`);
+        setLocalTime(timeRemaining);
+        // Set original duration when watering starts if we don't have it
+        if (originalDuration === undefined && timeRemaining > 0) {
+          const startDuration = Math.max(timeRemaining, 60); // Assume at least 1 minute for progress bar
+          setOriginalDuration(startDuration);
+          console.log(`[Bhyve] Set original duration for zone ${zone.station}: ${startDuration} seconds`);
+        }
       }
       
       // Start timer if not already running
@@ -124,7 +132,7 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
               }
               return 0; // Don't go negative
             }
-            return prev !== undefined ? prev - 1 : -1;
+            return prev !== undefined ? prev - 1 : 0;
           });
         }, 1000);
       }
@@ -136,11 +144,12 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
         intervalRef.current = null;
       }
       setLocalTime(timeRemaining);
+      setOriginalDuration(undefined); // Clear original duration when not watering
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isWatering, timeRemaining, zone.station]);
+  }, [isWatering, timeRemaining, zone.station]); // Removed originalDuration from deps to prevent loops
 
   return (
     <div className={`device-widget-small ${isWatering ? 'device-widget-small-active' : ''} ${flowerPresetInfo?.isInPreset ? 'border border-pink-500/30' : ''} p-2`}>
@@ -169,8 +178,13 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
         {isWatering && (
           <div className="text-right flex-shrink-0">
             <div className={`font-medium text-xs ${localTime !== undefined && localTime <= 0 ? 'text-green-300' : 'text-blue-300'}`}>
-              {localTime !== undefined ? (localTime <= 0 ? 'Finished' : formatTimeRemaining(localTime)) : ''}
+              {localTime !== undefined ? (localTime <= 0 ? 'Finished' : formatTimeRemaining(localTime)) : 'Loading...'}
             </div>
+            {originalDuration !== undefined && localTime !== undefined && (
+              <div className="text-xs text-gray-500 opacity-75">
+                {Math.round(((originalDuration - localTime) / originalDuration) * 100)}%
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -178,16 +192,35 @@ const ZoneCard: React.FC<ZoneCardProps> = ({
       {/* Controls */}
       {isWatering ? (
         <div className="space-y-1.5">
-          {/* Stop button when watering */}
+          {/* Stop button when watering with progress bar */}
           <button
             onClick={() => {
               triggerHaptic('heavy');
               stopWatering(deviceId, zone.station);
             }}
             disabled={activeRequests.has(`${deviceId}-${zone.station}-stop`)}
-            className="w-full px-2.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white text-xs rounded transition-colors touch-manipulation font-medium"
+            className="w-full px-2.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white text-xs rounded transition-colors touch-manipulation font-medium relative overflow-hidden"
           >
-            Stop Watering
+            {/* Progress bar background */}
+            <div 
+              className="absolute inset-0 bg-red-800/40 transition-all duration-1000 ease-linear"
+              style={{
+                width: localTime !== undefined && originalDuration !== undefined && originalDuration > 0
+                  ? `${Math.max(0, Math.min(100, ((originalDuration - localTime) / originalDuration) * 100))}%`
+                  : '0%'
+              }}
+            />
+            {/* Button text */}
+            <span className="relative z-10 drop-shadow-sm">
+              {activeRequests.has(`${deviceId}-${zone.station}-stop`) ? (
+                <span className="flex items-center justify-center">
+                  <span className="loader mr-1 w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Stopping...
+                </span>
+              ) : (
+                `Stop (${localTime !== undefined ? formatTimeRemaining(localTime) : ''})`
+              )}
+            </span>
           </button>
         </div>
       ) : (
@@ -409,56 +442,67 @@ const BhyveIrrigation: React.FC = () => {
           status: deviceStatus,
           lastUpdated: Date.now()
         };
-      }
-      
-      // Update status with grace period logic and check for flower preset progressions
-      setStatus(prev => {
-        const updated = { ...prev };
-        
-        for (const deviceId in deviceStatuses) {
-          const newStatus = deviceStatuses[deviceId];
-          const existingStatus = prev[deviceId];
-          const timeSinceUpdate = Date.now() - (existingStatus as any)?.lastUpdated;
+      }        // Update status with grace period logic and check for flower preset progressions
+        setStatus(prev => {
+          const updated = { ...prev };
           
-          // Grace period logic: preserve immediate user actions for a short time
-          if (existingStatus && timeSinceUpdate < 15000) { // 15 seconds grace period (reduced from 30)
-            // If we just started watering but backend shows idle, preserve watering status
-            if (existingStatus.isWatering && !newStatus.isWatering) {
-              console.log(`[Bhyve] Preserving watering status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
-              continue;
+          for (const deviceId in deviceStatuses) {
+            const newStatus = deviceStatuses[deviceId];
+            const existingStatus = prev[deviceId];
+            const timeSinceUpdate = Date.now() - (existingStatus as any)?.lastUpdated;
+            const hasActiveFlowerPreset = activeFlowerPresetsRef.current[deviceId];
+            
+            // Reduced grace period for flower presets to enable faster progression
+            const gracePeriod = hasActiveFlowerPreset ? 5000 : 15000; // 5s for flower presets, 15s for manual actions
+            
+            // Grace period logic: preserve immediate user actions for a short time
+            if (existingStatus && timeSinceUpdate < gracePeriod) {
+              // For flower presets, be more aggressive about detecting completion
+              if (hasActiveFlowerPreset && existingStatus.isWatering && !newStatus.isWatering) {
+                // Allow quicker progression for flower presets - only preserve for 2 seconds max
+                if (timeSinceUpdate < 2000) {
+                  console.log(`[Bhyve] Preserving watering status for flower preset device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
+                  continue;
+                } else {
+                  console.log(`[Bhyve] Flower preset grace period expired, allowing progression for device ${deviceId}`);
+                }
+              } else if (!hasActiveFlowerPreset) {
+                // Standard grace period for manual actions
+                if (existingStatus.isWatering && !newStatus.isWatering) {
+                  console.log(`[Bhyve] Preserving watering status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
+                  continue;
+                }
+                if (!existingStatus.isWatering && newStatus.isWatering) {
+                  console.log(`[Bhyve] Preserving stopped status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
+                  continue;
+                }
+              }
             }
-            // If we just stopped watering but backend still shows watering, preserve stopped status
-            if (!existingStatus.isWatering && newStatus.isWatering) {
-              console.log(`[Bhyve] Preserving stopped status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
-              continue;
-            }
+            
+            console.log(`[Bhyve] Device ${deviceId} status:`, newStatus);
+            updated[deviceId] = newStatus as WateringStatus;
           }
           
-          console.log(`[Bhyve] Device ${deviceId} status:`, newStatus);
-          updated[deviceId] = newStatus as WateringStatus;
-        }
-        
-        // Check for flower preset progressions after status update using the updated statuses
-        const currentActiveFlowerPresets = activeFlowerPresetsRef.current;
-        for (const deviceId in currentActiveFlowerPresets) {
-          const preset = currentActiveFlowerPresets[deviceId];
-          const deviceStatus = updated[deviceId]; // Use updated status instead of old status
-          const currentStation = preset.zones[preset.currentIndex];
-          
-          // If the current preset zone is no longer watering, progress to next zone
-          if (deviceStatus && (!deviceStatus.isWatering || deviceStatus.currentStation !== currentStation)) {
-            console.log(`[Bhyve] Zone ${currentStation} finished in flower preset, progressing to next zone`);
-            // Use setTimeout to avoid dependency issues
-            setTimeout(() => {
-              // Find progressFlowerPreset function and call it
+          // Check for flower preset progressions after status update using the updated statuses
+          const currentActiveFlowerPresets = activeFlowerPresetsRef.current;
+          for (const deviceId in currentActiveFlowerPresets) {
+            const preset = currentActiveFlowerPresets[deviceId];
+            const deviceStatus = updated[deviceId]; // Use updated status instead of old status
+            const currentStation = preset.zones[preset.currentIndex];
+            
+            // If the current preset zone is no longer watering, progress to next zone
+            if (deviceStatus && (!deviceStatus.isWatering || deviceStatus.currentStation !== currentStation)) {
+              console.log(`[Bhyve] Zone ${currentStation} finished in flower preset, progressing to next zone`);
+              // Immediate progression for flower presets - no delay
               const progressFn = progressFlowerPresetRef.current;
-              if (progressFn) progressFn(deviceId);
-            }, 1000);
+              if (progressFn) {
+                setTimeout(() => progressFn(deviceId), 500); // Reduced from 1000ms to 500ms
+              }
+            }
           }
-        }
-        
-        return updated;
-      });
+          
+          return updated;
+        });
     } catch (error) {
       console.error('Failed to load Bhyve devices:', error);
       setError('Failed to load irrigation devices');
@@ -977,14 +1021,14 @@ const BhyveIrrigation: React.FC = () => {
         flowerPresetIntervalId = setInterval(() => {
           // Don't poll if we recently performed a watering action (avoid timer conflicts)
           const timeSinceAction = Date.now() - lastWateringActionRef.current;
-          if (timeSinceAction < 3000) { // Shorter pause for flower presets (3 seconds)
+          if (timeSinceAction < 2000) { // Reduced from 3 seconds to 2 seconds for faster progression
             console.log(`[Bhyve] Skipping flower preset poll - recent watering action ${Math.round(timeSinceAction/1000)}s ago`);
             return;
           }
           
           console.log('[Bhyve] Flower preset polling - checking device status for progression');
           loadDevicesRef.current?.();
-        }, 3000); // Check every 3 seconds for flower preset progression
+        }, 2000); // Reduced from 3000ms to 2000ms for faster progression detection
       } else {
         console.log('[Bhyve] Stopping flower preset polling - no active presets');
       }
@@ -1093,7 +1137,7 @@ const BhyveIrrigation: React.FC = () => {
   }
 
   return (
-    <div ref={widgetRef} className="w-full px-0 sm:px-0">
+    <div ref={widgetRef} className="flex flex-col space-y-6 w-screen -ml-4 px-4">
       {devices.map((device) => {
         const deviceStatus = status[device.id];
         const isDeviceWatering = deviceStatus?.isWatering;
@@ -1103,34 +1147,43 @@ const BhyveIrrigation: React.FC = () => {
         return (
           <div
             key={device.id}
-            className={`device-widget ${timePriority === 'high' ? 'device-widget-priority' : ''} p-2.5 sm:p-3 w-full max-w-full my-2`}
+            className={`relative p-4 bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-xl shadow-lg overflow-hidden w-full ${timePriority === 'high' ? 'device-widget-priority' : ''}`}
           >
-            {/* Enhanced glass effect overlay */}
-            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-xl"></div>
+            {/* Glass reflective overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent h-1/3 pointer-events-none"></div>
+            
+            {/* Orbit Logo (Top Right) */}
+            <div className="absolute top-2 right-3">
+              <OptimizedImage 
+                src="/orbit.svg" 
+                alt="Orbit"
+                className="h-12 w-auto opacity-70 filter brightness-0 invert"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
 
-            {/* Header - Cleaned up */}
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="text-gray-200 font-medium flex items-center space-x-2">
-                <span className="text-base sm:text-lg filter drop-shadow-sm">💧</span>
-                <span className="text-xs sm:text-sm font-semibold tracking-wide">Outdoor Irrigation</span>
-              </div>
-              <div className="flex space-x-1 text-xs">
-                <div className="text-blue-200 bg-blue-900/30 px-2 py-1 rounded-full border border-blue-700/30 backdrop-blur-sm shadow-sm font-bold tracking-widest">
+            {/* Header - Device Name and Status */}
+            <div className="text-gray-200 text-base font-bold mb-4 flex items-center space-x-2">
+              <span className="text-blue-400 text-xl">💧</span>
+              <span>Outdoor Irrigation</span>
+              {timePriority === 'high' && (
+                <div className="text-blue-200 bg-blue-900/30 px-2 py-1 rounded-full border border-blue-700/30 backdrop-blur-sm shadow-sm font-bold tracking-widest text-xs">
                   AUTO
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Activity Status - Compact status with active counter */}
-            <div className="flex items-center justify-between mb-3 p-1.5 bg-gray-900/20 rounded-lg border border-gray-700/30">
-              <div className="flex items-center space-x-2 text-xs text-gray-300">
-                <span>💧 {device.zones.filter(z => deviceStatus?.isWatering && deviceStatus.currentStation === z.station).length} active</span>
+            <div className="flex items-center justify-between mb-4 p-2 bg-gray-900/20 rounded-lg border border-gray-700/30">
+              <div className="flex items-center space-x-2 text-sm text-gray-300">
+                <span>{device.zones.filter(z => deviceStatus?.isWatering && deviceStatus.currentStation === z.station).length} active</span>
                 {deviceStatus?.timeRemaining && deviceStatus.isWatering && (
                   <span>⏱️ {formatTimeRemaining(deviceStatus.timeRemaining)}</span>
                 )}
               </div>
               {rainDelay > 0 && (
-                <div className="text-yellow-300 text-xs">
+                <div className="text-yellow-300 text-sm">
                   Rain delayed {rainDelay}h
                 </div>
               )}
@@ -1140,7 +1193,7 @@ const BhyveIrrigation: React.FC = () => {
             {activeFlowerPresets[device.id] ? (
               <button
                 onClick={() => stopFlowerPreset(device.id)}
-                className="w-full mb-3 px-3 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
+                className="w-full mb-4 px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
               >
                 🛑 Stop Flower Preset ({activeFlowerPresets[device.id].currentIndex + 1}/{activeFlowerPresets[device.id].zones.length})
               </button>
@@ -1148,7 +1201,7 @@ const BhyveIrrigation: React.FC = () => {
               <button
                 onClick={() => startFlowerPreset(device.id)}
                 disabled={activeRequests.has(`${device.id}-flower-preset`) || isDeviceWatering}
-                className="w-full mb-3 px-3 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
+                className="w-full mb-4 px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
               >
                 {activeRequests.has(`${device.id}-flower-preset`) ? 
                   <span className="loader mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 
@@ -1163,7 +1216,7 @@ const BhyveIrrigation: React.FC = () => {
               <button
                 onClick={() => handleSetRainDelay(device.id, 24)}
                 disabled={activeRequests.has(`${device.id}-rain-24`) || isDelayLoading}
-                className="w-full mb-2.5 px-2.5 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 text-white text-xs rounded-lg transition-colors touch-manipulation flex items-center justify-center"
+                className="w-full mb-4 px-3 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 text-white text-sm rounded-lg transition-colors touch-manipulation flex items-center justify-center"
               >
                 {isDelayLoading ? <span className="loader mr-2 w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : '🌧️'} Set 24h Rain Delay
               </button>
@@ -1171,14 +1224,14 @@ const BhyveIrrigation: React.FC = () => {
               <button
                 onClick={() => handleSetRainDelay(device.id, 0)}
                 disabled={activeRequests.has(`${device.id}-rain-0`) || isDelayLoading}
-                className="w-full mb-2.5 px-2 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-gray-300 text-xs rounded-md transition-colors touch-manipulation flex items-center justify-center opacity-75"
+                className="w-full mb-4 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-gray-300 text-sm rounded-md transition-colors touch-manipulation flex items-center justify-center opacity-75"
               >
                 {isDelayLoading ? <span className="loader mr-2 w-2 h-2 border border-gray-300 border-t-transparent rounded-full animate-spin"></span> : '☀️'} Clear Rain Delay ({rainDelay}h)
               </button>
             )}
 
-            {/* Zones Grid - 2 per row with tighter spacing */}
-            <div className="grid grid-cols-2 gap-1.5">
+            {/* Zones Grid - 2 per row with consistent spacing */}
+            <div className="grid grid-cols-2 gap-3">
               {device.zones.map((zone) => {
                 const isZoneWatering = deviceStatus?.isWatering && deviceStatus.currentStation === zone.station;
                 const { durations, ideal } = getZoneDurations(zone.name);
