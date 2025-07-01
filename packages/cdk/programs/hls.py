@@ -1,3 +1,6 @@
+# Deployment Commands:
+# scp programs/hls.py drabindr@casa5:/home/drabindr/hls.py && ssh drabindr@casa5 'sudo reboot'
+
 import subprocess
 import threading
 import sys
