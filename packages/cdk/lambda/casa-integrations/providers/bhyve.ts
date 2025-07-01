@@ -120,6 +120,10 @@ class BhyveWebSocketClient {
     }
   }
 
+  public sendCommand(message: any): void {
+    this.send(message);
+  }
+
   async startWatering(station: number, minutes: number): Promise<void> {
     if (!this.deviceId) {
       throw new Error('Device ID not set');
@@ -416,6 +420,89 @@ export async function setRainDelay(deviceId: string, hours: number): Promise<any
     };
   } catch (error) {
     console.error('[Bhyve] Error setting rain delay:', error);
+    throw error;
+  }
+}
+
+/**
+ * Explore Bhyve programs/presets functionality
+ */
+export async function explorePrograms(deviceId: string): Promise<any> {
+  console.log(`[Bhyve] Exploring programs for device ${deviceId}`);
+  
+  try {
+    // Try various endpoints that might contain program information
+    const endpoints = [
+      `/devices/${deviceId}`,
+      `/devices/${deviceId}/programs`,
+      `/devices/${deviceId}/presets`,
+      `/devices/${deviceId}/schedules`,
+      `/programs`,
+      `/presets`
+    ];
+    
+    const results: Record<string, any> = {};
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`[Bhyve] Trying endpoint: ${endpoint}`);
+        const response = await makeAuthenticatedRequest(endpoint);
+        results[endpoint] = response;
+        console.log(`[Bhyve] Success for ${endpoint}:`, JSON.stringify(response, null, 2));
+      } catch (error: any) {
+        console.log(`[Bhyve] Failed for ${endpoint}:`, error.message);
+        results[endpoint] = { error: error.message };
+      }
+    }
+    
+    return {
+      success: true,
+      explorationResults: results
+    };
+  } catch (error) {
+    console.error('[Bhyve] Error exploring programs:', error);
+    throw error;
+  }
+}
+
+/**
+ * Start a watering program with multiple zones
+ */
+export async function startWateringProgram(deviceId: string, zones: Array<{station: number, duration: number}>): Promise<any> {
+  console.log(`[Bhyve] Starting watering program for device ${deviceId} with zones:`, zones);
+  
+  try {
+    const auth = await authenticate();
+    
+    // Initialize WebSocket client if not already connected
+    if (!wsClient) {
+      wsClient = new BhyveWebSocketClient();
+      await wsClient.connect(auth.token, deviceId);
+    }
+
+    // Try the multi-zone approach - this might be the key
+    const command = {
+      event: 'change_mode',
+      mode: 'manual',
+      device_id: deviceId,
+      timestamp: new Date().toISOString(),
+      stations: zones.map(zone => ({
+        station: zone.station,
+        run_time: zone.duration
+      }))
+    };
+
+    // Send via WebSocket using the public method
+    wsClient.sendCommand(command);
+    console.log('[Bhyve] Sent multi-zone command:', command);
+    
+    return {
+      success: true,
+      message: `Started watering program with ${zones.length} zones`,
+      command
+    };
+  } catch (error) {
+    console.error('[Bhyve] Error starting watering program:', error);
     throw error;
   }
 }

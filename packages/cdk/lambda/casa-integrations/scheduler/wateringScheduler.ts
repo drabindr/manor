@@ -273,6 +273,10 @@ function findZoneByName(zones: Array<{station: number, name: string}>, targetNam
       return lowerName.includes('back') && (lowerName.includes('yard') || lowerName.includes('lawn'));
     });
     if (zone) return zone;
+    
+    // Also try just "backyard" as a single word
+    zone = zones.find(z => z.name.toLowerCase().includes('backyard'));
+    if (zone) return zone;
   }
   
   // Try broader matches
@@ -285,6 +289,18 @@ function findZoneByName(zones: Array<{station: number, name: string}>, targetNam
     zone = zones.find(z => {
       const lowerName = z.name.toLowerCase();
       return lowerName.includes('yard') || lowerName.includes('back') || lowerName.includes('lawn');
+    });
+    if (zone) return zone;
+  }
+  
+  // Special handling for specific zone names
+  if (lowerTarget === 'backyard') {
+    // Try to find any zone that could be the backyard
+    zone = zones.find(z => {
+      const lowerName = z.name.toLowerCase();
+      return lowerName.includes('back') || lowerName === 'backyard' || 
+             (lowerName.includes('yard') && !lowerName.includes('front')) ||
+             z.station === 3; // Assume zone 3 is backyard if other matches fail
     });
     if (zone) return zone;
   }
