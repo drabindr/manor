@@ -265,7 +265,7 @@ const BhyveIrrigation: React.FC = () => {
   const [isWidgetVisible, setIsWidgetVisible] = useState(false);
   const [isUserActive, setIsUserActive] = useState(true);
   const [lastWateringAction, setLastWateringAction] = useState<number>(0);
-  const [activeFlowerPresets, setActiveFlowerPresets] = useState<Record<string, { zones: number[], currentIndex: number, startTime: number }>>({});
+  const [activePresetSchedules, setActivePresetSchedules] = useState<Record<string, any>>({});
   
   const widgetRef = useRef<HTMLDivElement>(null);
   const lastActivityRef = useRef<number>(Date.now());
@@ -273,11 +273,10 @@ const BhyveIrrigation: React.FC = () => {
   const lastWateringActionRef = useRef<number>(0);
   const hasInitializedRef = useRef<boolean>(false);
   const loadDevicesRef = useRef<typeof loadDevices>();
-  const progressFlowerPresetRef = useRef<((deviceId: string) => Promise<void>) | null>(null);
   
   // Refs for state variables accessed in loadDevices to avoid dependencies
   const statusRef = useRef<Record<string, WateringStatus>>({});
-  const activeFlowerPresetsRef = useRef<Record<string, { zones: number[], currentIndex: number, startTime: number }>>({});
+  const activePresetSchedulesRef = useRef<Record<string, any>>({});
 
   const API_BASE = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod";
 
@@ -360,19 +359,13 @@ const BhyveIrrigation: React.FC = () => {
       const headers: Record<string, string> = {};
       if (body) {
         headers['Content-Type'] = 'application/json';
-        console.log('[Bhyve] Request body:', body);
       }
-      
-      console.log('[Bhyve] Request headers:', headers);
       
       const response = await fetch(fullUrl, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
       });
-
-      console.log(`[Bhyve] Response status: ${response.status}`);
-      console.log(`[Bhyve] Response headers:`, response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -381,7 +374,6 @@ const BhyveIrrigation: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log('[Bhyve] Response data:', data);
       return data;
     } catch (error) {
       console.error(`[Bhyve] API request failed: ${endpoint}`, error);
@@ -417,8 +409,18 @@ const BhyveIrrigation: React.FC = () => {
         let timeRemaining: number | undefined;
         let deviceStatus = 'idle';
         
-        if (wateringZone) {
-          // Zone-level status (more reliable)
+        // First, check if this device has active preset schedule data (more reliable)
+        const presetKey = `${device.id}_flowers`;
+        const activePreset = activePresetSchedulesRef.current[presetKey];
+        if (activePreset && activePreset.backendProgress && activePreset.backendProgress.isActive) {
+          // Use backend preset data for more accurate status during preset schedules
+          isWatering = true;
+          currentStation = activePreset.backendProgress.currentStation;
+          timeRemaining = activePreset.backendProgress.timeRemaining;
+          deviceStatus = 'watering';
+          console.log(`[Bhyve] Using preset data for device ${device.id}: station ${currentStation}, time: ${timeRemaining}`);
+        } else if (wateringZone) {
+          // Zone-level status (fallback)
           isWatering = true;
           currentStation = wateringZone.station;
           // Use remaining_time if watering_time is 0 or undefined
@@ -426,7 +428,7 @@ const BhyveIrrigation: React.FC = () => {
           deviceStatus = 'watering';
           console.log(`[Bhyve] Zone ${wateringZone.station} is watering, watering_time: ${wateringZone.watering_time}, remaining_time: ${wateringZone.remaining_time}`);
         } else if (deviceWateringStatus && (deviceWateringStatus.status === 'watering' || deviceWateringStatus.status === 'watering_in_progress')) {
-          // Device-level status as fallback
+          // Device-level status as final fallback
           isWatering = true;
           currentStation = deviceWateringStatus.current_station;
           timeRemaining = deviceWateringStatus.current_time_remaining_sec;
@@ -442,63 +444,14 @@ const BhyveIrrigation: React.FC = () => {
           status: deviceStatus,
           lastUpdated: Date.now()
         };
-      }        // Update status with grace period logic and check for flower preset progressions
+      }        // Simple status update without complex grace period logic
         setStatus(prev => {
           const updated = { ...prev };
           
           for (const deviceId in deviceStatuses) {
             const newStatus = deviceStatuses[deviceId];
-            const existingStatus = prev[deviceId];
-            const timeSinceUpdate = Date.now() - (existingStatus as any)?.lastUpdated;
-            const hasActiveFlowerPreset = activeFlowerPresetsRef.current[deviceId];
-            
-            // Reduced grace period for flower presets to enable faster progression
-            const gracePeriod = hasActiveFlowerPreset ? 5000 : 15000; // 5s for flower presets, 15s for manual actions
-            
-            // Grace period logic: preserve immediate user actions for a short time
-            if (existingStatus && timeSinceUpdate < gracePeriod) {
-              // For flower presets, be more aggressive about detecting completion
-              if (hasActiveFlowerPreset && existingStatus.isWatering && !newStatus.isWatering) {
-                // Allow quicker progression for flower presets - only preserve for 2 seconds max
-                if (timeSinceUpdate < 2000) {
-                  console.log(`[Bhyve] Preserving watering status for flower preset device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
-                  continue;
-                } else {
-                  console.log(`[Bhyve] Flower preset grace period expired, allowing progression for device ${deviceId}`);
-                }
-              } else if (!hasActiveFlowerPreset) {
-                // Standard grace period for manual actions
-                if (existingStatus.isWatering && !newStatus.isWatering) {
-                  console.log(`[Bhyve] Preserving watering status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
-                  continue;
-                }
-                if (!existingStatus.isWatering && newStatus.isWatering) {
-                  console.log(`[Bhyve] Preserving stopped status for device ${deviceId} (grace period: ${Math.round(timeSinceUpdate/1000)}s)`);
-                  continue;
-                }
-              }
-            }
-            
             console.log(`[Bhyve] Device ${deviceId} status:`, newStatus);
             updated[deviceId] = newStatus as WateringStatus;
-          }
-          
-          // Check for flower preset progressions after status update using the updated statuses
-          const currentActiveFlowerPresets = activeFlowerPresetsRef.current;
-          for (const deviceId in currentActiveFlowerPresets) {
-            const preset = currentActiveFlowerPresets[deviceId];
-            const deviceStatus = updated[deviceId]; // Use updated status instead of old status
-            const currentStation = preset.zones[preset.currentIndex];
-            
-            // If the current preset zone is no longer watering, progress to next zone
-            if (deviceStatus && (!deviceStatus.isWatering || deviceStatus.currentStation !== currentStation)) {
-              console.log(`[Bhyve] Zone ${currentStation} finished in flower preset, progressing to next zone`);
-              // Immediate progression for flower presets - no delay
-              const progressFn = progressFlowerPresetRef.current;
-              if (progressFn) {
-                setTimeout(() => progressFn(deviceId), 500); // Reduced from 1000ms to 500ms
-              }
-            }
           }
           
           return updated;
@@ -512,21 +465,21 @@ const BhyveIrrigation: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [makeRequest]); // Removed activeFlowerPresets and status from dependencies to prevent constant reloading
+  }, [makeRequest]); // Keep simple dependency to prevent constant reloading
 
   // Update ref when loadDevices function changes
   useEffect(() => {
     loadDevicesRef.current = loadDevices;
   }, [loadDevices]);
 
-  // Keep refs in sync with state to avoid dependencies in loadDevices
+  // Keep refs in sync with state - simplified
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
   useEffect(() => {
-    activeFlowerPresetsRef.current = activeFlowerPresets;
-  }, [activeFlowerPresets]);
+    activePresetSchedulesRef.current = activePresetSchedules;
+  }, [activePresetSchedules]);
 
   // Enhanced status tracking with immediate updates for better user feedback
   const updateImmediateStatus = useCallback((deviceId: string, action: 'start' | 'stop', station?: number, duration?: number) => {
@@ -625,8 +578,7 @@ const BhyveIrrigation: React.FC = () => {
         station: station
       });
       
-      // Don't force immediate refresh - let immediate update and polling handle sync
-      console.log('[Bhyve] Stop command completed - immediate status updated');
+      console.log('[Bhyve] Stop command completed - relying on regular polling for sync');
       
     } catch (error) {
       console.error('Failed to stop zone watering:', error);
@@ -722,6 +674,81 @@ const BhyveIrrigation: React.FC = () => {
     }
   }, [setRainDelay]);
 
+  // Function to load preset schedules for a device with enhanced progress tracking
+  const loadPresetSchedules = useCallback(async (deviceId: string) => {
+    try {
+      const response = await makeRequest('bhyve/presets/status', 'POST', {
+        device_id: deviceId
+      });
+      
+      console.log(`[Bhyve] Preset status response for ${deviceId}:`, response);
+      
+      if (response.success) {
+        if (response.preset_progress && response.preset_progress.isActive) {
+          // Use enhanced backend progress tracking
+          const progress = response.preset_progress;
+          setActivePresetSchedules(prev => {
+            const updated = { ...prev };
+            const key = `${deviceId}_${progress.type}`;
+            
+            updated[key] = {
+              deviceId,
+              presetType: progress.type,
+              currentStepIndex: progress.currentStationIndex >= 0 ? progress.currentStationIndex : 0,
+              totalSteps: progress.totalStations,
+              timeRemaining: progress.timeRemaining || 0,
+              isActive: true,
+              isStarting: false, // Clear starting flag when real data comes in
+              lastUpdated: Date.now(),
+              backendProgress: progress,
+              stations: progress.stations || []
+            };
+            
+            console.log(`[Bhyve] Updated active preset for ${deviceId}:`, updated[key]);
+            return updated;
+          });
+        } else {
+          // No active preset schedules or preset_progress is null
+          console.log(`[Bhyve] No active preset for ${deviceId}, clearing schedules`);
+          setActivePresetSchedules(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(key => {
+              if (key.startsWith(deviceId + '_')) {
+                console.log(`[Bhyve] Removing preset schedule: ${key}`);
+                delete updated[key];
+              }
+            });
+            return updated;
+          });
+        }
+      } else {
+        console.log(`[Bhyve] Preset status request failed for ${deviceId}:`, response);
+        // Clear schedules on failed response
+        setActivePresetSchedules(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(key => {
+            if (key.startsWith(deviceId + '_')) {
+              delete updated[key];
+            }
+          });
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load preset schedules:', error);
+      // Clear schedules on error
+      setActivePresetSchedules(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          if (key.startsWith(deviceId + '_')) {
+            delete updated[key];
+          }
+        });
+        return updated;
+      });
+    }
+  }, [makeRequest]);
+
   const startFlowerPreset = useCallback(async (deviceId: string) => {
     const requestKey = `${deviceId}-flower-preset`;
     
@@ -733,66 +760,35 @@ const BhyveIrrigation: React.FC = () => {
       
       console.log('[Bhyve] Starting flower preset for device:', deviceId);
       
-      // Get device zones for the preset
-      const device = devices.find(d => d.id === deviceId);
-      if (!device) {
-        throw new Error('Device not found');
-      }
-      
-      // Define flower preset zones in order: Front flower bed (zone 2) -> Backyard (zone 3)
-      const flowerPresetZones = device.zones.filter(zone => {
-        const lowerName = zone.name.toLowerCase();
-        // Include flower/bed/garden zones AND backyard
-        return lowerName.includes('flower') || 
-               lowerName.includes('bed') || 
-               lowerName.includes('garden') ||
-               (lowerName.includes('back') && lowerName.includes('yard')) ||
-               zone.station === 3; // Specifically include zone 3 (backyard)
-      }).sort((a, b) => a.station - b.station); // Sort by station number for consistent order
-      
-      if (flowerPresetZones.length === 0) {
-        throw new Error('No flower preset zones found for this device');
-      }
-      
-      console.log('[Bhyve] Found flower preset zones:', flowerPresetZones.map(z => `${z.name} (station ${z.station})`));
-      
-      // Set up the preset sequence state
-      setActiveFlowerPresets(prev => ({
-        ...prev,
-        [deviceId]: {
-          zones: flowerPresetZones.map(z => z.station),
-          currentIndex: 0,
-          startTime: Date.now()
-        }
-      }));
-      
-      // Start the first zone
-      const firstZone = flowerPresetZones[0];
-      console.log(`[Bhyve] Starting first flower preset zone: ${firstZone.name} (station ${firstZone.station}) for 1 minute`);
-      
-      // Update UI immediately before making the API call
-      updateImmediateStatus(deviceId, 'start', firstZone.station, 1); // 1 minute
-      
-      await makeRequest('bhyve/zones/start', 'POST', {
+      // Call backend API to start the preset schedule
+      const response = await makeRequest('bhyve/presets/start', 'POST', {
         device_id: deviceId,
-        station: firstZone.station,
-        time: 1 // 1 minute
+        preset_name: 'Flowers'
       });
+      
+      console.log('[Bhyve] Preset start response:', response);
       
       // Track watering action to pause polling temporarily
       const actionTime = Date.now();
       setLastWateringAction(actionTime);
       lastWateringActionRef.current = actionTime;
       
-      console.log('[Bhyve] First flower preset zone started successfully');
+      // Immediate status check after starting (simple approach)
+      setTimeout(() => {
+        loadDevicesRef.current?.();
+      }, 2000); // Simple 2-second delay to let the command take effect
+      
+      console.log('[Bhyve] Flower preset started successfully');
       
     } catch (error) {
       console.error('Failed to start flower preset:', error);
       triggerHaptic('heavy');
-      // Clean up preset state on error
-      setActiveFlowerPresets(prev => {
+      
+      // Clear the starting state on error
+      setActivePresetSchedules(prev => {
         const updated = { ...prev };
-        delete updated[deviceId];
+        const key = `${deviceId}_flowers`;
+        delete updated[key];
         return updated;
       });
     } finally {
@@ -802,100 +798,49 @@ const BhyveIrrigation: React.FC = () => {
         return next;
       });
     }
-  }, [makeRequest, activeRequests, devices, updateImmediateStatus]);
-
-  // Function to progress flower preset to next zone
-  const progressFlowerPreset = useCallback(async (deviceId: string) => {
-    const preset = activeFlowerPresets[deviceId];
-    if (!preset) return;
-    
-    const device = devices.find(d => d.id === deviceId);
-    if (!device) return;
-    
-    const nextIndex = preset.currentIndex + 1;
-    
-    if (nextIndex >= preset.zones.length) {
-      // Preset completed - clean up
-      console.log('[Bhyve] Flower preset completed for device:', deviceId);
-      setActiveFlowerPresets(prev => {
-        const updated = { ...prev };
-        delete updated[deviceId];
-        return updated;
-      });
-      return;
-    }
-    
-    // Start next zone
-    const nextStation = preset.zones[nextIndex];
-    const nextZone = device.zones.find(z => z.station === nextStation);
-    
-    if (nextZone) {
-      console.log(`[Bhyve] Progressing flower preset to zone: ${nextZone.name} (station ${nextStation})`);
-      
-      // Update preset state
-      setActiveFlowerPresets(prev => ({
-        ...prev,
-        [deviceId]: {
-          ...preset,
-          currentIndex: nextIndex
-        }
-      }));
-      
-      // Start the next zone
-      updateImmediateStatus(deviceId, 'start', nextStation, 1); // 1 minute
-      
-      try {
-        await makeRequest('bhyve/zones/start', 'POST', {
-          device_id: deviceId,
-          station: nextStation,
-          time: 1 // 1 minute
-        });
-        
-        // Track watering action
-        const actionTime = Date.now();
-        setLastWateringAction(actionTime);
-        lastWateringActionRef.current = actionTime;
-        
-        console.log(`[Bhyve] Successfully started next flower preset zone: ${nextZone.name}`);
-      } catch (error) {
-        console.error('Failed to start next flower preset zone:', error);
-        // Clean up preset on error
-        setActiveFlowerPresets(prev => {
-          const updated = { ...prev };
-          delete updated[deviceId];
-          return updated;
-        });
-      }
-    }
-  }, [activeFlowerPresets, devices, makeRequest, updateImmediateStatus]);
-
-  // Update ref when progressFlowerPreset function changes
-  useEffect(() => {
-    progressFlowerPresetRef.current = progressFlowerPreset;
-  }, [progressFlowerPreset]);
+  }, [makeRequest, activeRequests, loadPresetSchedules]);
 
   // Function to stop flower preset
   const stopFlowerPreset = useCallback(async (deviceId: string) => {
-    const preset = activeFlowerPresets[deviceId];
-    if (!preset) return;
+    const requestKey = `${deviceId}-stop-preset`;
     
-    console.log('[Bhyve] Stopping flower preset for device:', deviceId);
+    if (activeRequests.has(requestKey)) return;
     
-    // Stop current watering zone if any
-    const deviceStatus = status[deviceId];
-    if (deviceStatus?.isWatering && deviceStatus.currentStation) {
-      await stopZoneWatering(deviceId, deviceStatus.currentStation);
+    try {
+      setActiveRequests(prev => new Set(prev).add(requestKey));
+      triggerHaptic('heavy');
+      
+      console.log('[Bhyve] Stopping flower preset for device:', deviceId);
+      
+      // Call backend API to stop the preset schedule
+      await makeRequest('bhyve/presets/stop', 'POST', {
+        device_id: deviceId
+      });
+      
+      // Clear local preset schedules
+      setActivePresetSchedules(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          if (key.startsWith(deviceId + '_')) {
+            delete updated[key];
+          }
+        });
+        return updated;
+      });
+      
+      console.log('[Bhyve] Flower preset stopped');
+      
+    } catch (error) {
+      console.error('Failed to stop flower preset:', error);
+      triggerHaptic('heavy');
+    } finally {
+      setActiveRequests(prev => {
+        const next = new Set(prev);
+        next.delete(requestKey);
+        return next;
+      });
     }
-    
-    // Clean up preset state
-    setActiveFlowerPresets(prev => {
-      const updated = { ...prev };
-      delete updated[deviceId];
-      return updated;
-    });
-    
-    console.log('[Bhyve] Flower preset stopped');
-  }, [activeFlowerPresets, status, stopZoneWatering]);
+  }, [makeRequest, activeRequests]);
 
   // Track user activity (mouse, touch, keyboard)
   useEffect(() => {
@@ -963,6 +908,16 @@ const BhyveIrrigation: React.FC = () => {
     };
   }, [isWidgetVisible]);
 
+  // Load preset schedules when devices change
+  useEffect(() => {
+    if (devices.length > 0) {
+      // Load preset schedules for all devices
+      devices.forEach(device => {
+        loadPresetSchedules(device.id);
+      });
+    }
+  }, [devices, loadPresetSchedules]);
+
   // Initial load when component mounts - only once
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -971,90 +926,70 @@ const BhyveIrrigation: React.FC = () => {
     }
   }, []); // Empty dependency array to run only once
 
-  // Smart polling: only when widget is visible AND user is active AND not recently acted
-  // PLUS special polling for active flower presets
+  // Simplified polling: only when widget is visible AND user is active
   useEffect(() => {
-    // Don't call loadDevices() immediately here as it causes refreshes on every dependency change
-    
     let intervalId: number;
-    let flowerPresetIntervalId: number;
     
     const shouldPoll = isWidgetVisible && isUserActive && document.visibilityState === 'visible';
-    const hasActiveFlowerPresets = Object.keys(activeFlowerPresets).length > 0;
+    const hasActivePresetSchedules = Object.keys(activePresetSchedules).length > 0;
     
-    const startSmartPolling = () => {
+    const startPolling = () => {
       if (intervalId) clearInterval(intervalId);
       
       if (shouldPoll) {
-        console.log('[Bhyve] Starting smart polling - widget visible and user active');
+        console.log('[Bhyve] Starting polling - widget visible and user active');
         
         // Determine polling frequency based on activity
         const statusValues = Object.keys(status).map(key => status[key]);
         const hasActiveWatering = statusValues.some((s: WateringStatus) => s.isWatering);
-        const pollInterval = hasActiveWatering ? 5000 : 30000; // 5s if watering, 30s if idle
+        // More frequent polling during preset schedules for better transition detection
+        const pollInterval = (hasActiveWatering || hasActivePresetSchedules) ? 3000 : 15000; // 3s if active, 15s if idle
         
         intervalId = setInterval(() => {
-          // Don't poll if we recently performed a watering action (avoid timer conflicts)
+          // Simple polling delay to avoid conflicts with user actions
           const timeSinceAction = Date.now() - lastWateringActionRef.current;
-          if (timeSinceAction < 8000) { // 8 seconds pause after watering actions
+          if (timeSinceAction < 2000) { // Reduced to 2 seconds for faster preset transitions
             console.log(`[Bhyve] Skipping poll - recent watering action ${Math.round(timeSinceAction/1000)}s ago`);
             return;
           }
           
           if (isWidgetVisible && isUserActive && document.visibilityState === 'visible') {
-            console.log('[Bhyve] Smart polling - refreshing device status');
+            console.log('[Bhyve] Polling - refreshing device status');
             loadDevicesRef.current?.();
+            
+            // Also refresh preset schedules if we have active ones
+            if (hasActivePresetSchedules) {
+              Object.keys(activePresetSchedules).forEach(presetKey => {
+                const deviceId = presetKey.split('_')[0]; // Extract device ID from key like "device123_flowers"
+                loadPresetSchedules(deviceId);
+              });
+            }
           }
         }, pollInterval);
       } else {
-        console.log('[Bhyve] Stopping smart polling - widget not visible or user inactive');
-      }
-    };
-    
-    // Separate polling for flower presets - always active when presets are running
-    const startFlowerPresetPolling = () => {
-      if (flowerPresetIntervalId) clearInterval(flowerPresetIntervalId);
-      
-      if (hasActiveFlowerPresets) {
-        console.log('[Bhyve] Starting flower preset polling - active presets detected');
-        
-        flowerPresetIntervalId = setInterval(() => {
-          // Don't poll if we recently performed a watering action (avoid timer conflicts)
-          const timeSinceAction = Date.now() - lastWateringActionRef.current;
-          if (timeSinceAction < 2000) { // Reduced from 3 seconds to 2 seconds for faster progression
-            console.log(`[Bhyve] Skipping flower preset poll - recent watering action ${Math.round(timeSinceAction/1000)}s ago`);
-            return;
-          }
-          
-          console.log('[Bhyve] Flower preset polling - checking device status for progression');
-          loadDevicesRef.current?.();
-        }, 2000); // Reduced from 3000ms to 2000ms for faster progression detection
-      } else {
-        console.log('[Bhyve] Stopping flower preset polling - no active presets');
+        console.log('[Bhyve] Stopping polling - widget not visible or user inactive');
       }
     };
     
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isWidgetVisible && isUserActive) {
-        console.log('[Bhyve] Page became visible with active widget - starting smart polling');
+        console.log('[Bhyve] Page became visible with active widget - starting polling');
         loadDevicesRef.current?.(); // Immediate refresh when page becomes visible
-        startSmartPolling();
+        startPolling();
       } else {
-        console.log('[Bhyve] Page hidden or widget not active - stopping smart polling');
+        console.log('[Bhyve] Page hidden or widget not active - stopping polling');
         if (intervalId) clearInterval(intervalId);
       }
     };
     
-    startSmartPolling();
-    startFlowerPresetPolling();
+    startPolling();
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       if (intervalId) clearInterval(intervalId);
-      if (flowerPresetIntervalId) clearInterval(flowerPresetIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isWidgetVisible, isUserActive, activeFlowerPresets]); // Added activeFlowerPresets to deps
+  }, [isWidgetVisible, isUserActive, activePresetSchedules, status]); // Include dependencies for polling frequency
 
   const formatTimeRemaining = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -1189,27 +1124,50 @@ const BhyveIrrigation: React.FC = () => {
               )}
             </div>
 
-            {/* Flower Preset Control - Prominent and First */}
-            {activeFlowerPresets[device.id] ? (
-              <button
-                onClick={() => stopFlowerPreset(device.id)}
-                className="w-full mb-4 px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
-              >
-                🛑 Stop Flower Preset ({activeFlowerPresets[device.id].currentIndex + 1}/{activeFlowerPresets[device.id].zones.length})
-              </button>
-            ) : (
-              <button
-                onClick={() => startFlowerPreset(device.id)}
-                disabled={activeRequests.has(`${device.id}-flower-preset`) || isDeviceWatering}
-                className="w-full mb-4 px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
-              >
-                {activeRequests.has(`${device.id}-flower-preset`) ? 
-                  <span className="loader mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 
-                  '🌸'
-                } 
-                {isDeviceWatering ? 'Watering Active' : 'Start Flower Preset'}
-              </button>
-            )}
+            {/* Flower Preset Control - Only show if actually part of a preset schedule */}
+            {(() => {
+              const presetKey = `${device.id}_flowers`;
+              const activePreset = activePresetSchedules[presetKey];
+              const progress = activePreset?.backendProgress?.progress || 0;
+              const currentStation = activePreset?.backendProgress?.currentStation;
+              const timeRemaining = activePreset?.backendProgress?.timeRemaining;
+              // Only show preset controls if we have a genuine preset schedule from backend
+              const hasActivePresetSchedule = activePreset && activePreset.isActive && activePreset.backendProgress && activePreset.backendProgress.isActive;
+              
+              return hasActivePresetSchedule ? (
+                <button
+                  onClick={() => stopFlowerPreset(device.id)}
+                  className="w-full mb-4 px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation relative overflow-hidden shadow-lg"
+                >
+                  {/* Progress bar background */}
+                  <div 
+                    className="absolute inset-0 bg-red-800/40 transition-all duration-500 ease-linear"
+                    style={{ width: `${progress}%` }}
+                  />
+                  {/* Button content */}
+                  <span className="relative z-10 flex items-center justify-center">
+                    � Stop Flower Preset
+                    {progress > 0 && (
+                      <span className="ml-2 text-xs opacity-75">
+                        ({progress}%{currentStation ? ` - Zone ${currentStation}` : ''}{timeRemaining ? ` - ${formatTimeRemaining(timeRemaining)}` : ''})
+                      </span>
+                    )}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => startFlowerPreset(device.id)}
+                  disabled={activeRequests.has(`${device.id}-flower-preset`) || isDeviceWatering}
+                  className="w-full mb-4 px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors touch-manipulation flex items-center justify-center shadow-lg"
+                >
+                  {activeRequests.has(`${device.id}-flower-preset`) ? 
+                    <span className="loader mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 
+                    '🌸'
+                  } 
+                  {isDeviceWatering ? 'Watering Active' : 'Start Flower Preset'}
+                </button>
+              );
+            })()}
 
             {/* Rain Delay Controls - More compact, with feedback */}
             {rainDelay === 0 ? (
@@ -1239,13 +1197,14 @@ const BhyveIrrigation: React.FC = () => {
                 // Pass time remaining only if this specific zone is watering
                 const zoneTimeRemaining = isZoneWatering ? deviceStatus?.timeRemaining : undefined;
                 
-                // Calculate flower preset info for this zone
-                const preset = activeFlowerPresets[device.id];
-                const flowerPresetInfo = preset ? {
-                  isInPreset: preset.zones.includes(zone.station),
-                  isCurrentZone: preset.zones[preset.currentIndex] === zone.station,
-                  isNextZone: preset.currentIndex + 1 < preset.zones.length && preset.zones[preset.currentIndex + 1] === zone.station,
-                  hasFinished: preset.zones.indexOf(zone.station) !== -1 && preset.zones.indexOf(zone.station) < preset.currentIndex
+                // Calculate preset schedule info for this zone
+                const presetKey = `${device.id}_flowers`;
+                const activePreset = activePresetSchedules[presetKey];
+                const flowerPresetInfo = activePreset?.backendProgress?.stations ? {
+                  isInPreset: activePreset.backendProgress.stations.some((s: any) => s.station === zone.station),
+                  isCurrentZone: activePreset.backendProgress.stations.some((s: any) => s.station === zone.station && s.status === 'running'),
+                  isNextZone: activePreset.backendProgress.stations.some((s: any) => s.station === zone.station && s.status === 'pending'),
+                  hasFinished: activePreset.backendProgress.stations.some((s: any) => s.station === zone.station && s.status === 'completed')
                 } : undefined;
 
                 return (

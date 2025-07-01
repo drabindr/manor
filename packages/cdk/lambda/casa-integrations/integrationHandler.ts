@@ -548,6 +548,250 @@ export const handler = async (
             error: `Unknown action '${action}' for rain-delay under Bhyve provider`,
           });
         }
+      } else if (deviceType.toLowerCase() === 'presets') {
+        if (action.toLowerCase() === 'start') {
+          // Start a watering preset using Bhyve's native multi-zone functionality
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id || !requestBody.preset_name) {
+            return createResponse(400, {
+              error: 'Missing device_id or preset_name in request body',
+            });
+          }
+
+          const { device_id, preset_name } = requestBody;
+          
+          // Get device info to determine zone durations for preset
+          const deviceData = await bhyve.listDevices();
+          const device = deviceData.devices.find(d => d.id === device_id);
+          
+          if (!device) {
+            return createResponse(400, {
+              error: 'Device not found',
+            });
+          }
+
+          // Define preset configurations (you can expand this)
+          const presets: Record<string, Array<{station: number, duration: number}>> = {
+            'flowers': [
+              { station: 2, duration: 1 },  // 1 minute for front flower bed
+              { station: 3, duration: 1 }   // 1 minute for backyard
+            ]
+          };
+
+          const zones = presets[preset_name.toLowerCase()];
+          if (!zones) {
+            return createResponse(400, {
+              error: `Unknown preset: ${preset_name}. Available presets: ${Object.keys(presets).join(', ')}`
+            });
+          }
+
+          // Use Bhyve's native multi-zone watering
+          response = await bhyve.startWateringProgram(device_id, zones);
+        } else if (action.toLowerCase() === 'stop') {
+          // Stop/cancel active preset
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id) {
+            return createResponse(400, {
+              error: 'Missing device_id in request body',
+            });
+          }
+
+          const { device_id } = requestBody;
+          // Stop all watering
+          response = await bhyve.stopWatering(device_id, 0); // station 0 might stop all
+        } else if (action.toLowerCase() === 'status') {
+          // Get device status with enhanced preset progress tracking
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id) {
+            return createResponse(400, {
+              error: 'Missing device_id in request body',
+            });
+          }
+
+          const { device_id } = requestBody;
+          const deviceData = await bhyve.listDevices();
+          const device = deviceData.devices.find(d => d.id === device_id);
+          
+          if (!device) {
+            return createResponse(400, {
+              error: 'Device not found',
+            });
+          }
+
+          // Analyze current watering status and program progress
+          const wateringStatus = device.status?.watering_status;
+          const currentStation = wateringStatus?.current_station;
+          const isWatering = wateringStatus?.status === 'watering' || wateringStatus?.status === 'watering_in_progress';
+          const stations = wateringStatus?.stations || [];
+          
+          // Also check zone-level watering status for more accurate detection
+          const wateringZones = device.zones?.filter((zone: any) => zone.is_watering || zone.watering_time > 0) || [];
+          const hasActiveZones = wateringZones.length > 0;
+          
+          console.log('[Bhyve] Device watering status:', JSON.stringify(wateringStatus, null, 2));
+          console.log('[Bhyve] Detected stations:', stations);
+          console.log('[Bhyve] Is watering:', isWatering);
+          console.log('[Bhyve] Current station:', currentStation);
+          console.log('[Bhyve] Watering zones:', wateringZones);
+          console.log('[Bhyve] Has active zones:', hasActiveZones);
+          
+          // Enhanced preset progress information
+          let presetProgress = null;
+          
+          // Check for preset patterns: multi-zone programs OR specific flower zones active
+          const flowerPresetStations = [2, 3]; // Based on your preset configuration
+          const isMultiZoneProgram = stations.length > 1;
+          const isFlowerZoneActive = wateringZones.some((zone: any) => flowerPresetStations.includes(zone.station));
+          const isFlowerPreset = isMultiZoneProgram && stations.some((s: any) => flowerPresetStations.includes(s.station));
+          
+          console.log('[Bhyve] Multi-zone program:', isMultiZoneProgram);
+          console.log('[Bhyve] Flower zone active:', isFlowerZoneActive);
+          console.log('[Bhyve] Is flower preset:', isFlowerPreset);
+          
+          if (isFlowerPreset || (isFlowerZoneActive && hasActiveZones)) {
+            console.log('[Bhyve] Flower preset detected with enhanced logic');
+            
+            // Use stations array if available (multi-zone program), otherwise build from active zones
+            const programStations = isMultiZoneProgram ? stations : 
+              wateringZones.filter((zone: any) => flowerPresetStations.includes(zone.station))
+                .map((zone: any) => ({ station: zone.station, run_time: zone.watering_time || 0 }));
+            
+            const totalStations = programStations.length;
+            let currentStationIndex = -1;
+            let completedStations = 0;
+            let activeStation = currentStation;
+            
+            // If no current station from watering status, check zone-level status
+            if (!activeStation && hasActiveZones) {
+              const activeZone = wateringZones.find((zone: any) => zone.is_watering);
+              activeStation = activeZone?.station;
+            }
+            
+            console.log('[Bhyve] Program stations:', programStations);
+            console.log('[Bhyve] Active station:', activeStation);
+            
+            // Find current station index in the sequence
+            if (activeStation && (isWatering || hasActiveZones)) {
+              currentStationIndex = programStations.findIndex((s: any) => s.station === activeStation);
+              completedStations = Math.max(0, currentStationIndex); // Don't count current station as completed yet
+            } else if (!isWatering && !hasActiveZones && programStations.length > 0) {
+              // If not watering, all stations are complete
+              completedStations = totalStations;
+              currentStationIndex = totalStations - 1;
+            }
+            
+            console.log('[Bhyve] Preset progress calculation:', {
+              totalStations,
+              currentStationIndex,
+              completedStations,
+              activeStation,
+              isWatering,
+              hasActiveZones
+            });
+            
+            // Calculate more granular progress including within-station progress
+            let overallProgress = 0;
+            if (totalStations > 0) {
+              // Base progress from completed stations
+              const completedStationProgress = (completedStations / totalStations) * 100;
+              
+              // Add progress within current station if we have timing information
+              let currentStationProgress = 0;
+              if (currentStationIndex >= 0 && (isWatering || hasActiveZones)) {
+                const currentStationData = programStations[currentStationIndex];
+                const totalTimeForStation = currentStationData?.run_time * 60; // Convert minutes to seconds
+                let remainingTime = wateringStatus?.current_time_remaining_sec || 
+                                  (hasActiveZones ? wateringZones.find((z: any) => z.is_watering)?.remaining_time : 0);
+                
+                // If Bhyve isn't updating the remaining time (common issue), calculate from start time
+                const startTimeStr = (wateringStatus as any)?.started_watering_station_at;
+                if (startTimeStr && remainingTime === totalTimeForStation) {
+                  // Time remaining is unchanged, calculate elapsed time from start timestamp
+                  const startTime = new Date(startTimeStr).getTime();
+                  const currentTime = Date.now();
+                  const elapsedTimeMs = currentTime - startTime;
+                  const elapsedTimeSeconds = Math.floor(elapsedTimeMs / 1000);
+                  
+                  // Update remaining time based on elapsed time
+                  remainingTime = Math.max(0, totalTimeForStation - elapsedTimeSeconds);
+                  
+                  console.log('[Bhyve] Calculated elapsed time from start timestamp:', {
+                    startTimeStr,
+                    startTime,
+                    currentTime,
+                    elapsedTimeMs,
+                    elapsedTimeSeconds,
+                    calculatedRemainingTime: remainingTime
+                  });
+                }
+                
+                if (totalTimeForStation && remainingTime !== undefined) {
+                  const elapsedTime = totalTimeForStation - remainingTime;
+                  const stationProgressPercent = Math.max(0, Math.min(100, (elapsedTime / totalTimeForStation) * 100));
+                  // Current station contributes 1/totalStations of the total progress
+                  currentStationProgress = (stationProgressPercent / totalStations);
+                  
+                  console.log('[Bhyve] Current station progress details:', {
+                    totalTimeForStation,
+                    remainingTime,
+                    elapsedTime,
+                    stationProgressPercent,
+                    currentStationProgress
+                  });
+                }
+              }
+              
+              overallProgress = Math.round(completedStationProgress + currentStationProgress);
+              console.log('[Bhyve] Progress calculation:', {
+                completedStationProgress,
+                currentStationProgress,
+                overallProgress
+              });
+            }
+            
+            presetProgress = {
+              isActive: isWatering || hasActiveZones || programStations.length > 0, // Consider active if we have stations or active zones
+              type: 'flowers',
+              totalStations,
+              completedStations,
+              currentStation: activeStation,
+              currentStationIndex,
+              progress: overallProgress,
+              timeRemaining: wateringStatus?.current_time_remaining_sec || 
+                           (hasActiveZones ? wateringZones.find((z: any) => z.is_watering)?.remaining_time : undefined),
+              stations: programStations.map((s: any, index: number) => ({
+                station: s.station,
+                duration: s.run_time,
+                status: index < completedStations ? 'completed' : 
+                       (index === currentStationIndex && (isWatering || hasActiveZones)) ? 'running' : 'pending'
+              }))
+            };
+            
+            console.log('[Bhyve] Generated preset progress:', JSON.stringify(presetProgress, null, 2));
+          } else {
+            console.log('[Bhyve] No flower preset detected. Multi-zone:', isMultiZoneProgram, 'Flower zones active:', isFlowerZoneActive);
+          }
+          
+          response = {
+            success: true,
+            device_status: device.status,
+            zones: device.zones,
+            watering_status: {
+              isWatering,
+              currentStation,
+              timeRemaining: wateringStatus?.current_time_remaining_sec,
+              stations
+            },
+            preset_progress: presetProgress
+          };
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for presets under Bhyve provider`,
+          });
+        }
       } else {
         console.log('Unknown deviceType for Bhyve:', deviceType);
         return createResponse(400, {

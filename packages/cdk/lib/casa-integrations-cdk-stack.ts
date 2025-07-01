@@ -22,6 +22,16 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     // Default to the current domain if not provided
     const domainName = props?.domainName || '720frontrd.mymanor.click';
 
+    // DynamoDB table for Bhyve watering schedules
+    const wateringScheduleTable = new Table(this, 'BhyveWateringScheduleTable', {
+      partitionKey: { name: 'id', type: AttributeType.STRING },
+      billingMode: cdk.aws_dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl', // Auto-cleanup old schedules
+    });
+
+    // Apply auto-scaling to the watering schedule table
+    applyAutoScaling(wateringScheduleTable);
+
     // Create the Lambda function
     const integrationLambda = new NodejsFunction(this, 'IntegrationLambda', {
       entry: 'lambda/casa-integrations/integrationHandler.ts',
@@ -34,6 +44,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
       },
       environment: {
         DOMAIN_NAME: domainName,
+        WATERING_SCHEDULE_TABLE_NAME: wateringScheduleTable.tableName,
       },
       timeout: cdk.Duration.seconds(10),
     });
@@ -55,6 +66,9 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
     });
 
     integrationLambda.addToRolePolicy(ssmPolicy);
+
+    // Grant the Lambda function access to the watering schedule table
+    wateringScheduleTable.grantReadWriteData(integrationLambda);
 
     // Create the REST API with default CORS options
     const api = new RestApi(this, 'CasaIntegrationsApi', {
