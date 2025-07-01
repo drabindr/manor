@@ -136,8 +136,8 @@ const LGDeviceCard = memo(({
   ];
   
   const iconMap = {
-    washer: "washing-machine.png",
-    dryer: "dryer.png",
+    washer: "washing-machine.svg",
+    dryer: "dryer.svg",
     unknown: "device.png", // fallback icon
   } as const;
 
@@ -173,180 +173,136 @@ const LGDeviceCard = memo(({
   const deviceStatus = isActive ? "active" : (status.isPoweredOn ? "on" : "off");
 
   return (
-    <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/80 to-gray-900/90 rounded-2xl border border-slate-600/30 overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-blue-900/20 active:scale-[0.998] hover:border-slate-500/50 backdrop-blur-md">
-      {/* Enhanced ambient glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3 pointer-events-none" />
-      
-      {/* Status Indicator with premium design */}
-      <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-700 ${
-        isActive
-          ? "bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-400 animate-pulse shadow-lg shadow-blue-500/40"
-          : status.isPoweredOn
-            ? "bg-gradient-to-r from-green-400 via-emerald-500 to-green-400 shadow-md shadow-green-500/25"
-            : "bg-gradient-to-r from-gray-500 via-slate-400 to-gray-500 shadow-md shadow-gray-500/20"
-      }`} />
-
-      {/* Enhanced Running Animation */}
-      {isActive && (
-        <div className="absolute top-4 right-4 z-10">
-          <div className="relative flex h-3.5 w-3.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/50" />
-          </div>
-        </div>
-      )}
-
-      {/* Enhanced Header with better typography */}
-      <div className="p-5 flex items-center space-x-4">
-        <div className="relative w-14 h-14 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl border border-slate-600/40 shadow-inner flex-shrink-0">
+    <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/40 transition-all duration-300 hover:bg-gray-800/40">
+      {/* Device Header */}
+      <div className="flex items-center space-x-3 mb-3">
+        <div className="w-10 h-10 flex items-center justify-center bg-gray-700/50 rounded-lg border border-gray-600/40">
           <OptimizedImage
             src={`/device_icons/${iconMap[device.deviceType]}`}
             alt={device.deviceType}
-            className="w-9 h-9 object-contain opacity-90 transition-opacity duration-300"
+            className="w-6 h-6 object-contain opacity-90"
             onError={handleImgError}
             loading="lazy"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-transparent rounded-2xl pointer-events-none" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-slate-100 font-semibold text-lg truncate leading-tight tracking-wide">
+          <h3 className="text-gray-100 font-medium text-sm truncate">
             {device.deviceName !== "Unknown Device"
               ? device.deviceName
               : `${device.deviceType[0].toUpperCase() + device.deviceType.slice(1)}`}
           </h3>
-          <div className="text-slate-400 text-sm truncate mt-1">
-            {device.modelName !== "Unknown Model"
-              ? device.modelName
-              : "Reconnecting..."}
+          <div className="text-gray-400 text-xs truncate">
+            {device.modelName !== "Unknown Model" ? device.modelName : "Reconnecting..."}
           </div>
-
-          {/* Timer with enhanced premium styling */}
-          {showTimer && status.remainingTime && (
-            <div className="flex items-center mt-3 px-3 py-2 bg-blue-900/20 rounded-xl border border-blue-700/30 backdrop-blur-sm">
-              <UilClock className="h-4 w-4 mr-2 text-blue-400" />
-              <span className="text-sm text-blue-300 font-medium">{status.remainingTime} min remaining</span>
-            </div>
-          )}
         </div>
-        <div className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex-shrink-0 backdrop-blur-sm ${
+        <div className={`px-2 py-1 rounded text-xs font-medium ${
           device.deviceType === "unknown"
-            ? "bg-amber-900/30 text-amber-300 border border-amber-700/40 shadow-md shadow-amber-500/15"
+            ? "bg-yellow-900/30 text-yellow-300"
             : isActive
-              ? "bg-blue-900/40 text-blue-200 border border-blue-700/50 animate-pulse shadow-lg shadow-blue-500/25"
+              ? "bg-blue-900/40 text-blue-200 animate-pulse"
               : status.isPoweredOn
-                ? "bg-emerald-900/40 text-emerald-200 border border-emerald-700/50 shadow-md shadow-emerald-500/15"
-                : "bg-slate-800/60 text-slate-300 border border-slate-600/50 shadow-md shadow-slate-500/10"
+                ? "bg-green-900/40 text-green-200"
+                : "bg-gray-800/60 text-gray-300"
         }`}>
           {badgeText}
         </div>
       </div>
 
-      {/* Enhanced Controls with premium styling */}
-      <div className="px-5 pb-5">
-        <div className="flex gap-3">
-          {/* Power Button */}
-          {device.deviceType === "unknown" ? (
+      {/* Timer */}
+      {showTimer && status.remainingTime && (
+        <div className="flex items-center mb-3 px-2 py-1 bg-blue-900/20 rounded text-xs text-blue-300">
+          <span>{status.remainingTime} min remaining</span>
+        </div>
+      )}
+
+      {/* Controls */}
+      <div className="space-y-2">
+        {device.deviceType === "unknown" ? (
+          <button
+            onClick={() => {
+              setReconnecting(true);
+              onPowerToggle();
+              triggerHapticFeedback(hapticPatterns.WARNING);
+              setTimeout(() => setReconnecting(false), 3000);
+            }}
+            className="w-full py-2 px-3 rounded text-xs font-medium bg-yellow-700/60 hover:bg-yellow-600/70 text-white border border-yellow-500/50 transition-colors touch-manipulation"
+            disabled={reconnecting}
+          >
+            <UilSync size={14} className={`mr-1 ${reconnecting ? 'animate-spin' : ''}`} />
+            {reconnecting ? 'Reconnecting...' : 'Reconnect Device'}
+          </button>
+        ) : (
+          <>
             <button
               onClick={() => {
                 setReconnecting(true);
                 onPowerToggle();
-                triggerHapticFeedback(hapticPatterns.WARNING);
-                setTimeout(() => setReconnecting(false), 3000);
+                triggerHapticFeedback(hapticPatterns.SUCCESS);
+                setTimeout(() => setReconnecting(false), 2000);
               }}
-              className="flex-1 py-3.5 px-5 rounded-xl text-sm font-semibold flex items-center justify-center
-                       transition-all duration-300 bg-gradient-to-r from-amber-700/60 to-amber-600/60 hover:from-amber-600/70 hover:to-amber-500/70 active:from-amber-800/80 active:to-amber-700/80
-                       text-white border border-amber-500/50 shadow-lg hover:shadow-xl active:shadow-inner
-                       tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[52px] touch-manipulation transform"
-              disabled={reconnecting}
-              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+              disabled={reconnecting || status.remoteControlEnabled === false}
+              className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors touch-manipulation ${
+                status.remoteControlEnabled === false
+                  ? "bg-gray-600/40 text-gray-400 cursor-not-allowed"
+                  : status.isPoweredOn
+                    ? "bg-red-700/60 hover:bg-red-600/70 text-white border border-red-500/50"
+                    : "bg-green-700/60 hover:bg-green-600/70 text-white border border-green-500/50"
+              }`}
             >
-              <UilSync size={18} className={`mr-2.5 ${reconnecting ? 'animate-spin' : ''}`} />
-              <span>{reconnecting ? 'Reconnecting...' : 'Reconnect Device'}</span>
+              <UilPower size={14} className={`mr-1 ${reconnecting ? 'animate-spin' : ''}`} />
+              {status.remoteControlEnabled === false 
+                ? "Remote Disabled" 
+                : status.isPoweredOn 
+                  ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
+                  : "Turn On"}
             </button>
-          ) : (
-            <>
+
+            <select
+              value={selectedCycle || ""}
+              onChange={(e) => {
+                if (e.target.value) {
+                  onCycleSelect(e.target.value);
+                  triggerHapticFeedback();
+                }
+              }}
+              disabled={!status.isPoweredOn}
+              className={`w-full py-2 px-3 rounded text-xs border transition-colors ${
+                !status.isPoweredOn
+                  ? "bg-gray-700/40 text-gray-500 border-gray-500/30 cursor-not-allowed"
+                  : selectedCycle
+                    ? "bg-blue-700/60 text-white border-blue-500/50"
+                    : "bg-gray-700/60 text-gray-300 border-gray-500/50 hover:bg-gray-600/70"
+              }`}
+            >
+              <option value="">Select Wash Cycle</option>
+              {cycles.map((cycle: string) => (
+                <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
+                  {formatCycleName(cycle)}
+                </option>
+              ))}
+            </select>
+
+            {selectedCycle && (
               <button
                 onClick={() => {
-                  setReconnecting(true);
-                  onPowerToggle();
+                  onStartStop();
                   triggerHapticFeedback(hapticPatterns.SUCCESS);
-                  setTimeout(() => setReconnecting(false), 2000);
-                }}
-                disabled={reconnecting || status.remoteControlEnabled === false}
-                className={`px-5 py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center
-                           transition-all duration-300 min-h-[52px] touch-manipulation transform ${
-                             status.remoteControlEnabled === false
-                               ? "bg-slate-600/40 text-slate-400 border border-slate-500/30 cursor-not-allowed"
-                               : status.isPoweredOn
-                               ? "bg-gradient-to-r from-rose-700/60 to-rose-600/60 hover:from-rose-600/70 hover:to-rose-500/70 active:from-rose-800/80 active:to-rose-700/80 text-white border border-rose-500/50 shadow-lg hover:shadow-xl"
-                               : "bg-gradient-to-r from-emerald-700/60 to-emerald-600/60 hover:from-emerald-600/70 hover:to-emerald-500/70 active:from-emerald-800/80 active:to-emerald-700/80 text-white border border-emerald-500/50 shadow-lg hover:shadow-xl"
-                           } active:shadow-inner tap-highlight-transparent active:scale-95 backdrop-blur-sm`}
-                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-              >
-                <UilPower size={18} className={`mr-2.5 ${reconnecting ? 'animate-spin' : ''}`} />
-                <span>
-                  {status.remoteControlEnabled === false 
-                    ? "Remote Disabled" 
-                    : status.isPoweredOn 
-                      ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
-                      : "Turn On"}
-                </span>
-              </button>
-
-              {/* Enhanced Cycle Dropdown */}
-              <select
-                value={selectedCycle || ""}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    onCycleSelect(e.target.value);
-                    triggerHapticFeedback();
-                  }
                 }}
                 disabled={!status.isPoweredOn}
-                className={`flex-1 py-3.5 px-5 rounded-xl text-sm font-medium border transition-all duration-300 backdrop-blur-sm
-                          min-h-[52px] touch-manipulation transform ${!status.isPoweredOn
-                            ? "bg-slate-700/40 text-slate-500 border-slate-500/30 cursor-not-allowed"
-                            : selectedCycle
-                              ? "bg-gradient-to-r from-blue-700/60 to-blue-600/60 text-white border-blue-500/50 shadow-lg"
-                              : "bg-slate-700/60 text-slate-300 border-slate-500/50 hover:bg-slate-600/70 shadow-md"
-                          } focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400/60`}
-                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+                className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors touch-manipulation ${
+                  isActive
+                    ? "bg-red-600/70 hover:bg-red-500/80 text-white border border-red-400/50"
+                    : "bg-blue-600/70 hover:bg-blue-500/80 text-white border border-blue-400/50"
+                }`}
               >
-                <option value="">Select Wash Cycle</option>
-                {cycles.map((cycle: string) => (
-                  <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
-                    {formatCycleName(cycle)}
-                  </option>
-                ))}
-              </select>
-
-              {/* Enhanced Start/Stop button */}
-              {selectedCycle && (
-                <button
-                  onClick={() => {
-                    onStartStop();
-                    triggerHapticFeedback(hapticPatterns.SUCCESS);
-                  }}
-                  disabled={!status.isPoweredOn}
-                  className={`px-5 py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center backdrop-blur-sm
-                            min-h-[52px] touch-manipulation transform ${isActive
-                              ? "bg-gradient-to-r from-rose-600/70 to-rose-500/70 hover:from-rose-500/80 hover:to-rose-400/80 text-white border border-rose-400/50 shadow-lg hover:shadow-xl"
-                              : "bg-gradient-to-r from-blue-600/70 to-blue-500/70 hover:from-blue-500/80 hover:to-blue-400/80 text-white border border-blue-400/50 shadow-lg hover:shadow-xl"
-                            } active:shadow-inner tap-highlight-transparent active:scale-95`}
-                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-                >
-                  {isActive ? <UilPower size={18} className="mr-2.5" /> : <UilPower size={18} className="mr-2.5" />}
-                  <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
-                </button>
-              )}
-            </>
-          )}
-        </div>
+                {isActive ? <UilPower size={14} className="mr-1" /> : <UilPower size={14} className="mr-1" />}
+                {isActive ? "Stop Cycle" : "Start Cycle"}
+              </button>
+            )}
+          </>
+        )}
       </div>
-      
-      {/* Enhanced bottom accent line */}
-      <div className="h-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20" />
     </div>
   );
 });
@@ -414,192 +370,172 @@ const LGPairedDeviceCard = memo(({
   const DeviceColumn = ({ device, status }: { device: LGDevice, status: LGDeviceStatus }) => {
     const isActive = isActiveDevice(device, status);
     const badgeText = getDeviceStatusText(device, status);
-    const deviceIcon = device.deviceType === "washer" ? "W" : "D";
     const deviceName = device.deviceType === "washer" ? "Washer" : "Dryer";
     const isReconnecting = reconnecting[device.deviceId];
     
-    return (
-      <div className="flex-1 relative min-w-0">
-        {/* Enhanced Status Indicator */}
-        <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-700 ${
-          isActive
-            ? "bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-400 animate-pulse shadow-lg shadow-blue-500/40"
-            : status.isPoweredOn
-              ? "bg-gradient-to-r from-green-400 via-emerald-500 to-green-400 shadow-md shadow-green-500/25"
-              : "bg-gradient-to-r from-gray-500 via-slate-400 to-gray-500 shadow-md shadow-gray-500/20"
-        }`} />
+    const iconMap = {
+      washer: "washing-machine.svg",
+      dryer: "dryer.svg",
+      unknown: "device.png",
+    } as const;
 
-        {/* Enhanced Running Animation */}
-        {isActive && (
-          <div className="absolute top-4 right-4 z-10">
-            <div className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/50" />
+    // Image error handler for paired device
+    const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      const parent = img.parentElement;
+      if (!parent) return;
+      img.remove();
+      const label = device.deviceType === "washer" ? "W" : "D";
+      parent.textContent = label;
+      parent.classList.add("flex","items-center","justify-center","text-blue-400","text-lg","font-bold");
+    };
+    
+    return (
+      <div className="flex-1 p-3">
+        {/* Device Header */}
+        <div className="flex items-center space-x-3 mb-3">
+          <div className="w-10 h-10 flex items-center justify-center bg-gray-700/50 rounded-lg border border-gray-600/40">
+            <OptimizedImage
+              src={`/device_icons/${iconMap[device.deviceType]}`}
+              alt={device.deviceType}
+              className="w-6 h-6 object-contain opacity-90"
+              onError={handleImgError}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-gray-100 font-medium text-sm truncate">
+              {deviceName}
+            </h4>
+            <div className="text-gray-400 text-xs truncate">
+              {device.modelName !== "Unknown Model" ? device.modelName : "Reconnecting..."}
             </div>
+          </div>
+        </div>
+
+        {/* Status Badge */}
+        <div className={`inline-flex px-2 py-1 rounded text-xs font-medium mb-3 ${
+          device.deviceType === "unknown"
+            ? "bg-yellow-900/30 text-yellow-300"
+            : isActive
+              ? "bg-blue-900/40 text-blue-200 animate-pulse"
+              : status.isPoweredOn
+                ? "bg-green-900/40 text-green-200"
+                : "bg-gray-800/60 text-gray-300"
+        }`}>
+          {badgeText}
+        </div>
+
+        {/* Timer */}
+        {showTimer(device, status) && status.remainingTime && (
+          <div className="flex items-center mb-3 px-2 py-1 bg-blue-900/20 rounded text-xs text-blue-300">
+            <span>{status.remainingTime} min remaining</span>
           </div>
         )}
 
-        {/* Enhanced Device Header */}
-        <div className="p-5 pb-4">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="relative w-12 h-12 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl border border-slate-600/40 shadow-inner flex-shrink-0">
-              <span className="text-blue-400 text-xl font-bold tracking-tight">{deviceIcon}</span>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-transparent rounded-xl pointer-events-none" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-slate-100 font-semibold text-base truncate leading-tight tracking-wide">
-                {deviceName}
-              </h4>
-              <div className="text-slate-400 text-sm truncate mt-1">
-                {device.modelName !== "Unknown Model" ? device.modelName : "Reconnecting..."}
-              </div>
-            </div>
-          </div>
-
-          {/* Enhanced Status Badge */}
-          <div className={`inline-flex px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 backdrop-blur-sm ${
-            device.deviceType === "unknown"
-              ? "bg-amber-900/30 text-amber-300 border border-amber-700/40 shadow-md shadow-amber-500/15"
-              : isActive
-                ? "bg-blue-900/40 text-blue-200 border border-blue-700/50 animate-pulse shadow-lg shadow-blue-500/25"
-                : status.isPoweredOn
-                  ? "bg-emerald-900/40 text-emerald-200 border border-emerald-700/50 shadow-md shadow-emerald-500/15"
-                  : "bg-slate-800/60 text-slate-300 border border-slate-600/50 shadow-md shadow-slate-500/10"
-          }`}>
-            {badgeText}
-          </div>
-
-          {/* Enhanced Timer */}
-          {showTimer(device, status) && status.remainingTime && (
-            <div className="flex items-center mt-3 px-3 py-2 bg-blue-900/20 rounded-xl border border-blue-700/30 backdrop-blur-sm">
-              <UilClock className="h-4 w-4 mr-2 text-blue-400" />
-              <span className="text-sm text-blue-300 font-medium">{status.remainingTime} min remaining</span>
-            </div>
-          )}
-        </div>
-
-        {/* Controls with enhanced mobile optimization */}
-        <div className="px-4 pb-4">
-          <div className="space-y-2.5">
-            {/* Power Button */}
-            {device.deviceType === "unknown" ? (
+        {/* Controls */}
+        <div className="space-y-2">
+          {device.deviceType === "unknown" ? (
+            <button
+              onClick={() => {
+                setReconnecting(prev => ({ ...prev, [device.deviceId]: true }));
+                onPowerToggle(device);
+                triggerHapticFeedback(hapticPatterns.WARNING);
+                setTimeout(() => setReconnecting(prev => ({ ...prev, [device.deviceId]: false })), 3000);
+              }}
+              className="w-full py-2 px-3 rounded text-xs font-medium bg-yellow-700/70 hover:bg-yellow-600/80 text-white border border-yellow-500/60 transition-colors touch-manipulation"
+              disabled={isReconnecting}
+            >
+              <UilSync size={14} className={`mr-1 ${isReconnecting ? 'animate-spin' : ''}`} />
+              {isReconnecting ? 'Reconnecting...' : 'Reconnect Device'}
+            </button>
+          ) : (
+            <>
               <button
                 onClick={() => {
                   setReconnecting(prev => ({ ...prev, [device.deviceId]: true }));
                   onPowerToggle(device);
-                  triggerHapticFeedback(hapticPatterns.WARNING);
-                  setTimeout(() => setReconnecting(prev => ({ ...prev, [device.deviceId]: false })), 3000);
+                  triggerHapticFeedback(hapticPatterns.SUCCESS);
+                  setTimeout(() => setReconnecting(prev => ({ ...prev, [device.deviceId]: false })), 2000);
                 }}
-                className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center
-                         transition-all duration-300 bg-gradient-to-r from-yellow-700/70 to-yellow-600/70 hover:from-yellow-600/80 hover:to-yellow-500/80 active:from-yellow-800/90 active:to-yellow-700/90
-                         text-white border border-yellow-500/60 shadow-lg hover:shadow-xl active:shadow-inner
-                         tap-highlight-transparent active:scale-95 backdrop-blur-sm min-h-[48px] touch-manipulation transform"
-                disabled={isReconnecting}
-                style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+                disabled={isReconnecting || status.remoteControlEnabled === false}
+                className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors touch-manipulation ${
+                  status.remoteControlEnabled === false
+                    ? "bg-gray-600/50 text-gray-400 cursor-not-allowed"
+                    : status.isPoweredOn
+                      ? "bg-red-700/70 hover:bg-red-600/80 text-white border border-red-500/60"
+                      : "bg-green-700/70 hover:bg-green-600/80 text-white border border-green-500/60"
+                }`}
               >
-                <UilSync size={14} className={`mr-2 ${isReconnecting ? 'animate-spin' : ''}`} />
-                <span>{isReconnecting ? 'Reconnecting...' : 'Reconnect Device'}</span>
+                <UilPower size={14} className={`mr-1 ${isReconnecting ? 'animate-spin' : ''}`} />
+                {status.remoteControlEnabled === false 
+                  ? "Remote Disabled" 
+                  : status.isPoweredOn 
+                    ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
+                    : "Turn On"}
               </button>
-            ) : (
-              <>
+
+              <select
+                value={selectedCycles[device.deviceId] || ""}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onCycleSelect(device.deviceId, e.target.value);
+                    triggerHapticFeedback();
+                  }
+                }}
+                disabled={!status.isPoweredOn}
+                className={`w-full py-2 px-3 rounded text-xs border transition-colors ${
+                  !status.isPoweredOn
+                    ? "bg-gray-700/50 text-gray-500 border-gray-500/40 cursor-not-allowed"
+                    : selectedCycles[device.deviceId]
+                      ? "bg-blue-700/70 text-white border-blue-500/60"
+                      : "bg-gray-700/80 text-gray-300 border-gray-500/60 hover:bg-gray-600/90"
+                }`}
+              >
+                <option value="">Select Wash Cycle</option>
+                {getCyclesForDevice(device.deviceId).map((cycle: string) => (
+                  <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
+                    {formatCycleName(cycle)}
+                  </option>
+                ))}
+              </select>
+
+              {selectedCycles[device.deviceId] && (
                 <button
                   onClick={() => {
-                    setReconnecting(prev => ({ ...prev, [device.deviceId]: true }));
-                    onPowerToggle(device);
+                    onStartStop(device);
                     triggerHapticFeedback(hapticPatterns.SUCCESS);
-                    setTimeout(() => setReconnecting(prev => ({ ...prev, [device.deviceId]: false })), 2000);
-                  }}
-                  disabled={isReconnecting || status.remoteControlEnabled === false}
-                  className={`w-full py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center
-                             transition-all duration-300 min-h-[48px] touch-manipulation transform ${
-                               status.remoteControlEnabled === false
-                                 ? "bg-gray-600/50 text-gray-400 border border-gray-500/40 cursor-not-allowed"
-                                 : status.isPoweredOn
-                                 ? "bg-gradient-to-r from-red-700/70 to-red-600/70 hover:from-red-600/80 hover:to-red-500/80 active:from-red-800/90 active:to-red-700/90 text-white border border-red-500/60 shadow-lg hover:shadow-xl"
-                                 : "bg-gradient-to-r from-green-700/70 to-green-600/70 hover:from-green-600/80 hover:to-green-500/80 active:from-green-800/90 active:to-green-700/90 text-white border border-green-500/60 shadow-lg hover:shadow-xl"
-                             } active:shadow-inner tap-highlight-transparent active:scale-95 backdrop-blur-sm`}
-                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-                >
-                  <UilPower size={14} className={`mr-2 ${isReconnecting ? 'animate-spin' : ''}`} />
-                  <span>
-                    {status.remoteControlEnabled === false 
-                      ? "Remote Disabled" 
-                      : status.isPoweredOn 
-                        ? (device.deviceType === "washer" ? "Drain & Off" : "Turn Off")
-                        : "Turn On"}
-                  </span>
-                </button>
-
-                {/* Cycle Dropdown with enhanced styling */}
-                <select
-                  value={selectedCycles[device.deviceId] || ""}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      onCycleSelect(device.deviceId, e.target.value);
-                      triggerHapticFeedback();
-                    }
                   }}
                   disabled={!status.isPoweredOn}
-                  className={`w-full py-2.5 px-3 rounded-lg text-xs font-medium border transition-all duration-300 backdrop-blur-sm
-                            min-h-[48px] touch-manipulation transform ${!status.isPoweredOn
-                              ? "bg-gray-700/50 text-gray-500 border-gray-500/40 cursor-not-allowed"
-                              : selectedCycles[device.deviceId]
-                                ? "bg-gradient-to-r from-blue-700/70 to-blue-600/70 text-white border-blue-500/60 shadow-lg"
-                                : "bg-gray-700/80 text-gray-300 border-gray-500/60 hover:bg-gray-600/90 shadow-md"
-                            } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
-                  style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+                  className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors touch-manipulation ${
+                    isActive
+                      ? "bg-red-600/80 hover:bg-red-500/90 text-white border border-red-400/60"
+                      : "bg-blue-600/80 hover:bg-blue-500/90 text-white border border-blue-400/60"
+                  }`}
                 >
-                  <option value="">Select Wash Cycle</option>
-                  {getCyclesForDevice(device.deviceId).map((cycle: string) => (
-                    <option key={cycle} value={cycle} className="bg-gray-800 text-gray-100">
-                      {formatCycleName(cycle)}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Start/Stop button with enhanced design */}
-                {selectedCycles[device.deviceId] && (
-                  <button
-                    onClick={() => {
-                      onStartStop(device);
-                      triggerHapticFeedback(hapticPatterns.SUCCESS);
-                    }}
-                    disabled={!status.isPoweredOn}
-                    className={`w-full py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center justify-center backdrop-blur-sm
-                              ${isActive
-                                ? "bg-gradient-to-r from-red-600/80 to-red-500/80 hover:from-red-500/90 hover:to-red-400/90 text-white border border-red-400/60 shadow-lg hover:shadow-xl"
-                                : "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500/90 hover:to-blue-400/90 text-white border border-blue-400/60 shadow-lg hover:shadow-xl"
-                              } active:shadow-inner tap-highlight-transparent active:scale-95`}
-                  >
-                    {isActive ? <UilPower size={14} className="mr-2" /> : <UilPower size={14} className="mr-2" />}
-                    <span>{isActive ? "Stop Cycle" : "Start Cycle"}</span>
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+                  {isActive ? <UilPower size={14} className="mr-1" /> : <UilPower size={14} className="mr-1" />}
+                  {isActive ? "Stop Cycle" : "Start Cycle"}
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/80 to-gray-900/90 rounded-2xl border border-slate-600/30 overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-blue-900/20 active:scale-[0.998] hover:border-slate-500/50 backdrop-blur-md">
-      {/* Enhanced ambient glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3 pointer-events-none" />
-      
-      {/* Side-by-side device layout - responsive for mobile */}
-      <div className="flex flex-col sm:flex-row sm:divide-x sm:divide-slate-600/20">
+    <div className="bg-gray-800/30 rounded-lg border border-gray-700/40 overflow-hidden transition-all duration-300 hover:bg-gray-800/40">
+      {/* Side-by-side device layout */}
+      <div className="flex flex-col sm:flex-row sm:divide-x sm:divide-gray-600/20">
         <DeviceColumn device={washer} status={washerStatus} />
         
-        {/* Enhanced horizontal separator for mobile */}
-        <div className="block sm:hidden h-px bg-gradient-to-r from-transparent via-slate-600/40 to-transparent mx-5" />
+        {/* Horizontal separator for mobile */}
+        <div className="block sm:hidden h-px bg-gray-600/40 mx-3" />
         
         <DeviceColumn device={dryer} status={dryerStatus} />
       </div>
-      
-      {/* Enhanced bottom accent line */}
-      <div className="h-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20" />
     </div>
   );
 });
@@ -1116,43 +1052,49 @@ const LGAppliances: React.FC = () => {
   }, [activePollingInterval, lgLoading]); // Use activePollingInterval for actual timing
 
   return (
-    <div className="my-0">
-      <div className="bg-gradient-to-b from-gray-800/70 to-gray-900/90 rounded-xl border border-gray-700/30 shadow-xl overflow-hidden relative hover:shadow-blue-900/10 transition-shadow duration-300">
-        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+    <div className="flex flex-col space-y-6 w-screen -ml-4 px-4">
+      <div className="relative p-4 bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-xl shadow-lg overflow-hidden w-full">
+        {/* Glass reflective overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent h-1/3 pointer-events-none"></div>
+        
+        {/* LG Logo (Top Right) */}
+        <div className="absolute top-4 right-4">
+          <OptimizedImage 
+            src="/lg.svg" 
+            alt="LG" 
+            className="h-8 w-auto opacity-70" 
+            loading="lazy" 
+            decoding="async" 
+          />
+        </div>
         
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-gray-600/30 flex items-center justify-between bg-gradient-to-r from-gray-800/40 to-gray-800/20">
-          <div className="flex items-center space-x-2.5">
-            <div className="bg-gradient-to-br from-blue-700 to-blue-800 p-2 rounded-lg border border-blue-600/50 shadow-inner relative">
-              <OptimizedImage src="/lg.svg" alt="LG" className="h-5 w-5 opacity-90" loading="lazy" decoding="async" />
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-lg pointer-events-none" />
-            </div>
-            <h2 className="text-gray-100 font-semibold text-lg tracking-wide">Laundry Appliances</h2>
-          </div>
-          
+        <div className="text-gray-200 text-base font-bold mb-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
+            <span className="text-blue-400 text-xl">🧺</span>
+            <span>Laundry Appliances</span>
             {!lgLoading && !isRefreshing && (
               <button 
                 onClick={() => fetchLGDevices(true)}
-                className="p-2 rounded-full bg-gray-800/80 hover:bg-gray-700/90 text-blue-400 border border-gray-700/50 
+                className="w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700/90 text-blue-400 border border-gray-700/50 
                           transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50
-                          min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
+                          flex items-center justify-center touch-manipulation transform tap-highlight-transparent active:scale-95 ml-2"
                 aria-label="Refresh devices"
                 style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
               >
-                <UilHistory size={18} />
+                <UilHistory size={16} />
               </button>
             )}
             
             {isRefreshing && (
-              <div className="p-2 rounded-full bg-gray-800/80 text-blue-400 border border-gray-700/50">
-                <UilSync size={18} className="animate-spin" />
+              <div className="w-8 h-8 rounded-full bg-gray-800/80 text-blue-400 border border-gray-700/50 ml-2 flex items-center justify-center">
+                <UilSync size={16} className="animate-spin" />
               </div>
             )}
           </div>
         </div>
 
-        <div className="p-3 sm:p-4">
+        <div className="relative">
           {/* Error State */}
           {lgError && (
             <div className="mb-5 p-4 bg-red-900/20 border border-red-700/40 rounded-lg text-red-300 text-sm shadow-inner">
@@ -1193,7 +1135,7 @@ const LGAppliances: React.FC = () => {
                 </div>
               
               <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(3)].map((_, i) => (
+                {[...Array(2)].map((_, i) => (
                   <DeviceCardSkeleton key={i} />
                 ))}
               </div>

@@ -1,0 +1,85 @@
+<svg width="200" height="250" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Outer body -->
+  <rect x="10" y="10" width="180" height="230" rx="15" ry="15" fill="#ECECEC" stroke="#888" stroke-width="2"/>
+  
+  <!-- Inner body shadow -->
+  <rect x="12" y="12" width="176" height="226" rx="13" ry="13" fill="url(#dryerbody)"/>
+
+  <!-- Control panel -->
+  <rect x="20" y="20" width="160" height="35" rx="6" ry="6" fill="#F5F5F5" stroke="#bbb" stroke-width="1.5"/>
+  
+  <!-- Power LED -->
+  <circle cx="35" cy="37.5" r="6" fill="#FF5722" opacity="0.9"/>
+  <circle cx="35" cy="37.5" r="3" fill="#FF7043"/>
+  
+  <!-- Temperature control knob -->
+  <circle cx="70" cy="37.5" r="8" fill="#666" stroke="#444" stroke-width="1"/>
+  <circle cx="70" cy="37.5" r="2" fill="#333"/>
+  <line x1="70" y1="32.5" x2="70" y2="29.5" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Timer knob -->
+  <circle cx="105" cy="37.5" r="8" fill="#666" stroke="#444" stroke-width="1"/>
+  <circle cx="105" cy="37.5" r="2" fill="#333"/>
+  <line x1="110" y1="32.5" x2="113" y2="29.5" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Start button -->
+  <circle cx="140" cy="37.5" r="10" fill="#FF5722" stroke="#D84315" stroke-width="1"/>
+  <polygon points="136,37.5 144,32.5 144,42.5" fill="white"/>
+
+  <!-- Main drum door -->
+  <circle cx="100" cy="150" r="65" fill="#D0D0D0" stroke="#555" stroke-width="4"/>
+  <circle cx="100" cy="150" r="58" fill="url(#druminterior)" stroke="#333" stroke-width="2"/>
+  
+  <!-- Glass reflection -->
+  <circle cx="100" cy="150" r="58" fill="none" stroke="url(#glassshine)" stroke-width="2"/>
+  <ellipse cx="85" cy="135" rx="15" ry="25" fill="rgba(255,255,255,0.3)"/>
+
+  <!-- Heat visualization inside -->
+  <g opacity="0.8">
+    <!-- Warm air currents -->
+    <path d="M70 130c10-5 20 5 30-5s20 10 30-5" stroke="#FFA726" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M75 145c8-3 15 3 22-3s15 6 22-3" stroke="#FFB74D" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M80 160c6-2 12 2 18-2s12 4 18-2" stroke="#FFCC02" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+    <path d="M85 175c4-1 8 1 12-1s8 2 12-1" stroke="#FDD835" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.3"/>
+  </g>
+  
+  <!-- Heating element glow effect -->
+  <circle cx="100" cy="150" r="25" fill="none" stroke="#FF8A65" stroke-width="1" opacity="0.4"/>
+  <circle cx="100" cy="150" r="35" fill="none" stroke="#FFAB91" stroke-width="1" opacity="0.3"/>
+  <circle cx="100" cy="150" r="45" fill="none" stroke="#FFCCBC" stroke-width="1" opacity="0.2"/>
+
+  <!-- Temperature dots (heat indicators) -->
+  <circle cx="120" cy="130" r="2" fill="#FF6F00" opacity="0.8"/>
+  <circle cx="80" cy="170" r="1.5" fill="#FF8F00" opacity="0.7"/>
+  <circle cx="110" cy="175" r="2" fill="#FFA000" opacity="0.6"/>
+  <circle cx="90" cy="125" r="1" fill="#FFB300" opacity="0.9"/>
+  <circle cx="115" cy="165" r="1.5" fill="#FF9800" opacity="0.5"/>
+
+  <!-- Door handle -->
+  <rect x="160" y="145" width="8" height="25" rx="4" ry="4" fill="#888" stroke="#555" stroke-width="1"/>
+  
+  <!-- Exhaust vent -->
+  <rect x="30" y="225" width="140" height="8" rx="4" ry="4" fill="#999"/>
+  <rect x="35" y="227" width="8" height="4" fill="#777"/>
+  <rect x="48" y="227" width="8" height="4" fill="#777"/>
+  <rect x="61" y="227" width="8" height="4" fill="#777"/>
+  <rect x="74" y="227" width="8" height="4" fill="#777"/>
+
+  <!-- Gradients and effects -->
+  <defs>
+    <linearGradient id="dryerbody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5F5F5"/>
+      <stop offset="100%" style="stop-color:#E0E0E0"/>
+    </linearGradient>
+    <radialGradient id="druminterior" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#FFF8E1"/>
+      <stop offset="30%" style="stop-color:#FFECB3"/>
+      <stop offset="70%" style="stop-color:#FFD54F"/>
+      <stop offset="100%" style="stop-color:#FF8F00"/>
+    </radialGradient>
+    <linearGradient id="glassshine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.6)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0.1)"/>
+    </linearGradient>
+  </defs>
+</svg>
