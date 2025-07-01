@@ -342,37 +342,44 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
    */
   const setThermostatTemperature = async (newSetpoint: number) => {
     console.log("Setting new setpoint to:", newSetpoint);
+    console.log("Current thermostat data:", thermostatData);
     setLocalSetpoint(newSetpoint);
     setIsTemperatureChanging(true);
     
     try {
       // Use SetRange command which works for both heat and cool setpoints
-      const currentHeat = thermostatData?.heatCelsius || newSetpoint;
-      const currentCool = thermostatData?.coolCelsius || newSetpoint + 2;
+      const currentHeat = thermostatData?.heatCelsius || newSetpoint - 1;
+      const currentCool = thermostatData?.coolCelsius || newSetpoint + 1;
       
       let heatSetpoint, coolSetpoint;
       
+      // Ensure minimum 1°C gap between heat and cool setpoints as required by Nest
       if (thermostatData?.mode === "HEAT") {
         heatSetpoint = newSetpoint;
-        coolSetpoint = Math.max(newSetpoint + 2, currentCool); // Ensure cool is higher than heat
+        coolSetpoint = Math.max(newSetpoint + 1, currentCool); // Minimum 1°C gap
       } else if (thermostatData?.mode === "COOL") {
-        heatSetpoint = Math.min(newSetpoint - 2, currentHeat); // Ensure heat is lower than cool
+        heatSetpoint = Math.min(newSetpoint - 1, currentHeat); // Minimum 1°C gap
         coolSetpoint = newSetpoint;
       } else if (thermostatData?.mode === "HEATCOOL") {
-        // For auto mode, adjust the closer setpoint and maintain the gap
-        const currentTemp = thermostatData?.currentTemperature || 20;
-        if (Math.abs(newSetpoint - currentHeat) < Math.abs(newSetpoint - currentCool)) {
-          heatSetpoint = newSetpoint;
-          coolSetpoint = Math.max(newSetpoint + 2, currentCool);
-        } else {
-          heatSetpoint = Math.min(newSetpoint - 2, currentHeat);
-          coolSetpoint = newSetpoint;
-        }
+        // For auto mode, maintain existing setpoints but ensure minimum gap
+        heatSetpoint = Math.min(newSetpoint - 0.5, currentHeat);
+        coolSetpoint = Math.max(newSetpoint + 0.5, currentCool);
       } else {
-        // Default case - assume heating
+        // Default case - assume heating with safe defaults
         heatSetpoint = newSetpoint;
-        coolSetpoint = Math.max(newSetpoint + 2, 25);
+        coolSetpoint = newSetpoint + 1;
       }
+      
+      // Validate setpoints are within reasonable bounds (10-35°C)
+      heatSetpoint = Math.max(10, Math.min(35, heatSetpoint));
+      coolSetpoint = Math.max(10, Math.min(35, coolSetpoint));
+      
+      // Ensure coolSetpoint is always higher than heatSetpoint
+      if (coolSetpoint <= heatSetpoint) {
+        coolSetpoint = heatSetpoint + 1;
+      }
+      
+      console.log("Calculated setpoints:", { heatSetpoint, coolSetpoint, mode: thermostatData?.mode });
       
       const response = await fetch(
         "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/command",
@@ -402,7 +409,20 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         // Refresh thermostat data after a short delay
         setTimeout(fetchThermostatData, 2000);
       } else {
-        console.error("Failed to update temperature setpoint:", await response.text());
+        const errorText = await response.text();
+        console.error("Failed to update temperature setpoint:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          requestBody: {
+            deviceId,
+            command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
+            params: { heatCelsius: heatSetpoint, coolCelsius: coolSetpoint }
+          }
+        });
+        
+        // Show user-friendly error message
+        alert(`Failed to update thermostat: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error("Error setting temperature:", error);
