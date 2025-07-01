@@ -486,7 +486,7 @@ function App() {
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
               <p className="text-center md:text-left">&copy; 2025 MANOR. All rights reserved.</p>
               <div className="flex items-center space-x-2 text-slate-400">
-                <span>Crafted in the Great North</span>
+                <span>Crafted in</span>
                 <span className="text-red-500 text-lg">🇨🇦</span>
               </div>
             </div>
