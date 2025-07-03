@@ -7,6 +7,7 @@ import * as google from './providers/google'; // Import the Google Nest provider
 import * as airthings from './providers/airthings';
 import * as lg from './providers/lg'; // Import the LG ThinQ provider
 import * as bhyve from './providers/bhyve'; // Import the Bhyve irrigation provider
+import * as seam from './providers/seam'; // Import the Seam smart lock provider
 
 // In-memory cache for Google devices
 // { data: any; timestamp: number }
@@ -796,6 +797,111 @@ export const handler = async (
         console.log('Unknown deviceType for Bhyve:', deviceType);
         return createResponse(400, {
           error: `Unknown device type '${deviceType}' for Bhyve provider`,
+        });
+      }
+    }
+
+    // Handle Seam Smart Lock Provider
+    else if (provider.toLowerCase() === 'seam') {
+      if (deviceType.toLowerCase() === 'devices') {
+        if (action.toLowerCase() === 'list') {
+          // List all Seam devices
+          response = await seam.listDevices();
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for devices under Seam provider`,
+          });
+        }
+      } else if (deviceType.toLowerCase() === 'locks') {
+        if (action.toLowerCase() === 'control') {
+          // Control lock (lock/unlock)
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (
+            !requestBody || 
+            !requestBody.device_id || 
+            !requestBody.action
+          ) {
+            return createResponse(400, {
+              error: 'Missing device_id or action in request body',
+            });
+          }
+
+          const { device_id, action: lockAction } = requestBody;
+          
+          if (lockAction.toLowerCase() === 'lock') {
+            response = await seam.lockDevice(device_id);
+          } else if (lockAction.toLowerCase() === 'unlock') {
+            response = await seam.unlockDevice(device_id);
+          } else {
+            return createResponse(400, {
+              error: `Unknown lock action '${lockAction}'. Use 'lock' or 'unlock'`,
+            });
+          }
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for locks under Seam provider`,
+          });
+        }
+      } else if (deviceType.toLowerCase() === 'access-codes') {
+        if (action.toLowerCase() === 'list') {
+          // List access codes for a device
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id) {
+            return createResponse(400, {
+              error: 'Missing device_id in request body',
+            });
+          }
+
+          const { device_id } = requestBody;
+          response = await seam.getAccessCodes(device_id);
+        } else if (action.toLowerCase() === 'create') {
+          // Create new access code
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.device_id || !requestBody.code) {
+            return createResponse(400, {
+              error: 'Missing device_id or code in request body',
+            });
+          }
+
+          const { device_id, code, name } = requestBody;
+          response = await seam.createAccessCode(device_id, code, name);
+        } else if (action.toLowerCase() === 'delete') {
+          // Delete access code
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+
+          if (!requestBody || !requestBody.access_code_id) {
+            return createResponse(400, {
+              error: 'Missing access_code_id in request body',
+            });
+          }
+
+          const { access_code_id } = requestBody;
+          response = await seam.deleteAccessCode(access_code_id);
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for access-codes under Seam provider`,
+          });
+        }
+      } else if (deviceType.toLowerCase() === 'events') {
+        if (action.toLowerCase() === 'list') {
+          // List events for a device or all devices
+          const requestBody = event.body ? JSON.parse(event.body) : null;
+          const device_id = requestBody?.device_id;
+          const limit = requestBody?.limit || 50;
+          const since = requestBody?.since;
+          
+          response = await seam.getEvents(device_id, limit, since);
+        } else {
+          return createResponse(400, {
+            error: `Unknown action '${action}' for events under Seam provider`,
+          });
+        }
+      } else {
+        return createResponse(400, {
+          error: `Unknown device type '${deviceType}' for Seam provider`,
         });
       }
     }

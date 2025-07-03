@@ -62,6 +62,7 @@ export class CasaIntegrationsCdkStack extends cdk.Stack {
         `arn:aws:ssm:${this.region}:${this.account}:parameter/airthings/*`, // Add Airthings permissions
         `arn:aws:ssm:${this.region}:${this.account}:parameter/lg/*`, // Add LG ThinQ permissions
         `arn:aws:ssm:${this.region}:${this.account}:parameter/bhyve/*`, // Add Bhyve permissions
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/casa-integrations/seam/*`, // Add Seam permissions
       ],
     });
 
