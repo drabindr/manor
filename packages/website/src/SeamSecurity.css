@@ -1,0 +1,232 @@
+/* Animation for pulse effect */
+@keyframes gentle-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+/* Mobile optimized pulse (smaller amplitude) */
+@keyframes gentle-pulse-mobile {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 3s ease-in-out infinite;
+}
+
+@media (max-width: 640px) {
+  .animate-gentle-pulse {
+    animation: gentle-pulse-mobile 3s ease-in-out infinite;
+  }
+}
+
+/* Subtle breathing effect for the cards */
+@keyframes breath {
+  0% {
+    box-shadow: 0 10px 30px -15px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 15px 40px -15px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 10px 30px -15px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Mobile optimized breathing (more subtle) */
+@keyframes breath-mobile {
+  0% {
+    box-shadow: 0 8px 20px -12px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 10px 25px -12px rgba(59, 130, 246, 0.4);
+  }
+  100% {
+    box-shadow: 0 8px 20px -12px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.animate-breath {
+  animation: breath 4s ease-in-out infinite;
+}
+
+@media (max-width: 640px) {
+  .animate-breath {
+    animation: breath-mobile 4s ease-in-out infinite;
+  }
+}
+
+/* Lock button animations */
+@keyframes unlock-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15) rotate(15deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes lock-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15) rotate(-15deg); }
+  100% { transform: scale(1); }
+}
+
+/* Mobile optimized lock animations (smaller amplitude) */
+@keyframes unlock-animation-mobile {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1) rotate(10deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes lock-animation-mobile {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1) rotate(-10deg); }
+  100% { transform: scale(1); }
+}
+
+.unlock-animate {
+  animation: unlock-animation 0.5s ease-in-out;
+}
+
+.lock-animate {
+  animation: lock-animation 0.5s ease-in-out;
+}
+
+@media (max-width: 640px) {
+  .unlock-animate {
+    animation: unlock-animation-mobile 0.5s ease-in-out;
+  }
+
+  .lock-animate {
+    animation: lock-animation-mobile 0.5s ease-in-out;
+  }
+}
+
+/* Glow effects - more subtle per screenshot */
+.glow-green {
+  filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.4));
+}
+
+.glow-red {
+  filter: drop-shadow(0 0 3px rgba(248, 113, 113, 0.4));
+}
+
+.glow-blue {
+  filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.4));
+}
+
+/* Mobile optimized glow (reduced intensity) */
+@media (max-width: 640px) {
+  .glow-green {
+    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.3));
+  }
+
+  .glow-red {
+    filter: drop-shadow(0 0 2px rgba(248, 113, 113, 0.3));
+  }
+
+  .glow-blue {
+    filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.3));
+  }
+}
+
+/* Battery indicator styles */
+.battery-indicator {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(to right, #22c55e, #22c55e);
+  transition: width 0.5s ease-in-out;
+}
+
+.battery-low {
+  background: linear-gradient(to right, #ef4444, #f97316);
+}
+
+.battery-medium {
+  background: linear-gradient(to right, #f97316, #facc15);
+}
+
+.battery-high {
+  background: linear-gradient(to right, #22c55e, #16a34a);
+}
+
+/* Mobile optimized battery indicators (reduced gradient intensity) */
+@media (max-width: 640px) {
+  .battery-low {
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.9), rgba(249, 115, 22, 0.9));
+  }
+
+  .battery-medium {
+    background: linear-gradient(to right, rgba(249, 115, 22, 0.9), rgba(250, 204, 21, 0.9));
+  }
+
+  .battery-high {
+    background: linear-gradient(to right, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.9));
+  }
+}
+
+/* Custom scrollbar for card content */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.4);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(75, 85, 99, 0.5);
+  border-radius: 20px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.7);
+}
+
+/* Touch-friendly tap targets for mobile */
+@media (max-width: 640px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Mobile-specific transitions for smoother performance */
+@media (max-width: 640px) {
+  .mobile-transition {
+    transition: all 0.2s ease-out;
+    will-change: transform, opacity;
+  }
+  
+  .mobile-hardware-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+/* Performance optimizations for mobile animations */
+@media (max-width: 640px) {
+  .reduce-motion {
+    animation-duration: 50% !important;
+    transition-duration: 50% !important;
+  }
+}

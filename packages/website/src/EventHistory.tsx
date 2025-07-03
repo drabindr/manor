@@ -28,22 +28,30 @@ import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import UserHomeStatusBoard from "./components/UserHomeStatusBoard";
+import "./EventHistory.css";
 
 // Loading skeleton component
 const EventSkeleton = React.memo(() => (
   <div className="animate-pulse">
-    <div className="bg-gray-800/40 rounded-lg border border-gray-700/30 mb-3">
-      <div className="p-3 border-b border-gray-700/30">
-        <div className="h-4 bg-gray-700/50 rounded w-32"></div>
+    <div className="bg-gray-800/40 rounded-xl border border-gray-700/30 mb-4 overflow-hidden">
+      <div className="p-4 border-b border-gray-700/30 flex items-center space-x-3">
+        <div className="w-10 h-10 bg-gray-700/50 rounded-full"></div>
+        <div>
+          <div className="h-4 bg-gray-700/50 rounded w-32 mb-2"></div>
+          <div className="h-3 bg-gray-700/30 rounded w-20"></div>
+        </div>
       </div>
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gray-700/50 rounded-lg"></div>
-            <div className="flex-1 space-y-2">
-              <div className="h-3 bg-gray-700/50 rounded w-3/4"></div>
-              <div className="h-2 bg-gray-700/30 rounded w-1/2"></div>
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gray-700/50 rounded-full"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-700/50 rounded w-48"></div>
+                <div className="h-3 bg-gray-700/30 rounded w-24"></div>
+              </div>
             </div>
+            <div className="w-16 h-6 bg-gray-700/40 rounded-full"></div>
           </div>
         ))}
       </div>
@@ -92,7 +100,7 @@ const dynamoDBClient = DynamoDBDocumentClient.from(
 type UserHomeStatusType = {
   userId: string;
   homeId: string;
-  state: string;
+  state: 'home' | 'away' | null;
   displayName?: string;
 };
 
@@ -375,21 +383,21 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     const getEventIcon = (eventName: string): JSX.Element | null => {
       if (eventName.includes("ALARM triggered")) {
-        return <UilBell className="mr-2" color="#f44336" size="24" />;
+        return <UilBell color="#f44336" size="20" />;
       } else if (eventName.includes("System mode changed to Disarm")) {
-        return <UilLockOpenAlt className="mr-2" color="#9c27b0" size="24" />;
+        return <UilLockOpenAlt color="#9c27b0" size="20" />;
       } else if (eventName.includes("opened and closed")) {
-        return <UilKeyholeCircle className="mr-2" color="#4caf50" size="24" />;
+        return <UilKeyholeCircle color="#4caf50" size="20" />;
       } else if (eventName.includes("opened")) {
-        return <UilLinkBroken className="mr-2" color="#f44336" size="24" />;
+        return <UilLinkBroken color="#f44336" size="20" />;
       } else if (eventName.includes("closed")) {
-        return <UilLink className="mr-2" color="#2196f3" size="24" />;
+        return <UilLink color="#2196f3" size="20" />;
       } else if (eventName.includes("System mode changed to Arm Stay")) {
-        return <UilHouseUser className="mr-2" color="#3f51b5" size="24" />;
+        return <UilHouseUser color="#3f51b5" size="20" />;
       } else if (eventName.includes("System mode changed to Arm Away")) {
-        return <UilShieldCheck className="mr-2" color="#ff9800" size="24" />;
+        return <UilShieldCheck color="#ff9800" size="20" />;
       } else {
-        return null;
+        return <UilHistory color="#9e9e9e" size="20" />;
       }
     };
 
@@ -443,62 +451,48 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     return (
       <div className="w-full h-full flex flex-col space-y-4 mt-2">
-        {/* Refresh button only */}
-        <div className="mx-4 flex justify-end">
-          <button
-            onClick={refreshData}
-            disabled={isRefreshing}
-            className="bg-gray-800 hover:bg-gray-700 text-blue-400 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 flex items-center justify-center
-                      min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
-            style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* USER HOME STATUS */}
         <div className="mx-4 mb-4">
           {renderUserHomeStatusContent()}
         </div>
 
         {/* EVENT HISTORY CARD */}
-        <div className="mx-4 mb-4 bg-gradient-to-b from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden border border-gray-700/50 transition-all duration-200 flex-grow">
+        <div className="mx-4 mb-4 bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-800/40 transition-all duration-200 flex-grow animate-breath">
           {/* Card Title */}
-          <div className="flex justify-between items-center p-3 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50">
-            <div className="flex items-center space-x-2">
-              <div className="bg-gray-800/70 p-1.5 rounded-lg border border-gray-700/40 shadow-inner">
-                <UilShieldCheck size={16} className="text-blue-400" />
+          <div className="flex justify-between items-center p-4 border-b border-gray-800/30 bg-gradient-to-r from-gray-900/50 to-gray-950/50">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gray-800/70 p-2 rounded-full border border-gray-700/40 shadow-inner">
+                <UilHistory size={18} className="text-blue-400" />
               </div>
-              <span className="text-gray-300 text-sm font-medium">
-                Event Timeline
-              </span>
+              <div>
+                <h3 className="text-gray-200 font-medium">Event Timeline</h3>
+                <p className="text-gray-400 text-xs">
+                  {totalEvents > 0 
+                    ? `${totalEvents} recent ${totalEvents === 1 ? 'event' : 'events'}` 
+                    : 'No recent events'
+                  }
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Events Table - Grouped by Day */}
           <div
-            className="overflow-y-auto rounded-b-xl"
-            style={{ maxHeight: "calc(100vh - 380px)" }}
+            className="overflow-y-auto rounded-b-xl px-2 py-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+            style={{ 
+              maxHeight: "calc(100vh - 380px)",
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgb(55 65 81 / 0.5) transparent'
+            }}
           >
             {sortedDays.map((day) => (
               <div key={day} className="mb-2">
                 {/* Date Header with improved styling */}
-                <div className="flex items-center py-2 px-3 bg-gradient-to-r from-blue-900/20 to-blue-800/10 border-y border-blue-900/30">
-                  <UilCalendarAlt className="mr-2 text-blue-400" size={16} />
-                  <span className="text-blue-300 text-xs font-medium">
+                <div className="flex items-center py-2.5 px-4 bg-gradient-to-r from-blue-900/20 to-blue-800/10 border-y border-blue-900/30">
+                  <div className="flex items-center justify-center w-6 h-6 bg-blue-900/30 rounded-full mr-2">
+                    <UilCalendarAlt className="text-blue-300" size={14} />
+                  </div>
+                  <span className="text-blue-300 text-sm font-medium">
                     {day}
                   </span>
                 </div>
@@ -508,8 +502,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                   <div className="w-full overflow-x-auto">
                     <table className="min-w-full table-auto border-collapse">
                       <tbody>
-                        {paginatedEventsByDay[day].map((event: Event, index: number) => (
-                          <tr
+                        {paginatedEventsByDay[day].map((event: Event, index: number) => (                            <tr
                             key={event.id || index}
                             className={`border-b border-gray-800/30 transition-colors duration-300 hover:bg-gray-700/30 ${
                               index % 2 === 0
@@ -517,18 +510,29 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                                 : "bg-gray-800/20"
                             }`}
                           >
-                            <td className="px-3 py-2 w-full">
+                            <td className="px-4 py-3 w-full">
                               <div className="flex items-center">
-                                <div className="p-1 rounded-lg bg-gray-800/70 mr-2 border border-gray-700/30 shadow-inner">
+                                <div className="p-2 rounded-full bg-gray-800/70 mr-3 border border-gray-700/30 shadow-inner flex items-center justify-center w-10 h-10">
                                   {getEventIcon(event.event)}
                                 </div>
-                                <span className="text-gray-200 text-sm">
-                                  {event.event}
-                                </span>
+                                <div>
+                                  <span className="text-gray-200 text-sm font-medium block">
+                                    {event.event}
+                                  </span>
+                                  <span className="text-gray-400 text-xs block">
+                                    {formatTimeForDisplay(new Date(event.timestamp))}
+                                  </span>
+                                </div>
                               </div>
                             </td>
-                            <td className="px-3 py-2 text-gray-400 text-right whitespace-nowrap text-xs">
-                              {formatTimeForDisplay(new Date(event.timestamp))}
+                            <td className="px-4 py-3 text-gray-400 text-right whitespace-nowrap text-xs">
+                              <div className="bg-gray-800/50 px-3 py-1 rounded-full text-gray-300 border border-gray-700/30">
+                                {new Date(event.timestamp).toLocaleDateString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                }).split(', ')[1]}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -541,7 +545,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
             {/* Show skeleton loading during initial load or refresh */}
             {(isRefreshing && sortedDays.length === 0) && (
-              <div className="mx-4">
+              <div className="px-4 py-2">
                 <EventSkeleton />
                 <EventSkeleton />
               </div>
@@ -549,26 +553,27 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
             {sortedDays.length === 0 && !isRefreshing && (
               <div className="text-center py-12 text-gray-400">
-                <div className="bg-gray-800/80 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center border border-gray-700/30">
-                  <UilHistory size={32} className="text-gray-500" />
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/70 rounded-full p-5 w-20 h-20 mx-auto mb-6 flex items-center justify-center border border-gray-700/30 shadow-inner">
+                  <UilHistory size={36} className="text-gray-500" />
                 </div>
-                <p className="text-sm">No events to display</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Events will appear here as they occur
+                <h3 className="text-gray-300 font-medium mb-2">No Events Yet</h3>
+                <p className="text-sm text-gray-400">Your security events will appear here</p>
+                <p className="text-xs text-gray-500 mt-2 max-w-xs mx-auto">
+                  Monitor door openings, system mode changes, and other security events
                 </p>
               </div>
             )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="mx-4 mt-4 flex items-center justify-between bg-gray-800/50 rounded-lg p-3 border border-gray-700/30">
+              <div className="px-4 py-4 mt-2 flex items-center justify-between">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={!hasPrevPage}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200 
-                            min-h-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95 ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full border transition-colors duration-200 
+                            min-h-[40px] touch-manipulation transform active:scale-95 ${
                     hasPrevPage
-                      ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
+                      ? 'bg-gradient-to-r from-blue-900/30 to-blue-800/20 hover:from-blue-800/40 hover:to-blue-700/30 text-blue-300 border-blue-800/50'
                       : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
                   }`}
                   style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
@@ -579,22 +584,24 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
                   <span className="text-sm">Previous</span>
                 </button>
 
-                <div className="flex items-center space-x-2 text-gray-300">
-                  <span className="text-sm">
-                    Page {currentPage} of {totalPages}
-                  </span>
+                <div className="flex flex-col items-center space-y-1">
+                  <div className="px-4 py-1.5 rounded-full bg-gray-800/60 border border-gray-700/30">
+                    <span className="text-sm text-gray-300">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                  </div>
                   <span className="text-xs text-gray-500">
-                    ({totalEvents} total events)
+                    {totalEvents} total {totalEvents === 1 ? 'event' : 'events'}
                   </span>
                 </div>
 
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={!hasNextPage}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors duration-200
-                            min-h-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95 ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full border transition-colors duration-200
+                            min-h-[40px] touch-manipulation transform active:scale-95 ${
                     hasNextPage
-                      ? 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-200 border-gray-600/50'
+                      ? 'bg-gradient-to-r from-blue-900/30 to-blue-800/20 hover:from-blue-800/40 hover:to-blue-700/30 text-blue-300 border-blue-800/50'
                       : 'bg-gray-800/50 text-gray-500 border-gray-700/30 cursor-not-allowed'
                   }`}
                   style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}

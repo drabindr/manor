@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { UilHome, UilUsersAlt, UilEdit } from '@iconscout/react-unicons';
+import { UilHome, UilUsersAlt, UilBell } from '@iconscout/react-unicons';
 import UserHomeStatus from './UserHomeStatus';
+import './UserHomeStatusBoard.css';
 
 interface UserHomeStatusType {
   userId: string;
@@ -104,8 +105,8 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
           <div 
             className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               isHome 
-                ? 'bg-green-500/20 border-green-500 text-green-300 shadow-lg shadow-green-500/20' 
-                : 'bg-blue-500/20 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/20'
+                ? 'bg-gradient-to-r from-green-500/20 to-green-600/30 border-green-500/60 text-green-300 shadow-lg shadow-green-500/20' 
+                : 'bg-gradient-to-r from-blue-500/20 to-blue-600/30 border-blue-500/60 text-blue-300 shadow-lg shadow-blue-500/20'
             } group-hover:shadow-xl ${isHome ? 'group-hover:shadow-green-500/30' : 'group-hover:shadow-blue-500/30'}`}
           >
             {displayName}
@@ -121,8 +122,8 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
           />
           
           {/* Edit indicator */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <UilEdit size={12} className="text-gray-400" />
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800/80 rounded-full p-1 backdrop-blur-sm">
+            <UilBell size={12} className="text-gray-300" />
           </div>
         </div>
       </div>
@@ -132,10 +133,16 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl p-6 border border-gray-700/50">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-          <span className="ml-3 text-gray-400">Loading who's home...</span>
+      <div className="bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-gray-800/40 animate-breath">
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-2 border-blue-500/20"></div>
+            <div className="absolute inset-0 rounded-full border-t-2 border-blue-400 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <UilHome size={24} className="text-blue-400" />
+            </div>
+          </div>
+          <span className="text-gray-400 text-sm mt-4">Loading occupancy status...</span>
         </div>
       </div>
     );
@@ -144,9 +151,23 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl p-6 border border-red-700/50">
-        <div className="flex items-center justify-center py-8 text-red-400">
-          <span className="text-sm">{error}</span>
+      <div className="bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-red-900/40 animate-breath">
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="bg-red-500/10 p-4 rounded-full border border-red-500/30">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <h3 className="text-red-400 font-medium mb-1">Connection Error</h3>
+            <p className="text-gray-400 text-sm max-w-xs">{error}</p>
+          </div>
+          <button 
+            className="mt-4 px-4 py-2 bg-red-900/30 hover:bg-red-800/40 text-red-300 text-sm rounded-full border border-red-800/40 transition-colors"
+            onClick={() => window.location.reload()}
+          >
+            Retry Connection
+          </button>
         </div>
       </div>
     );
@@ -155,31 +176,39 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
   // Empty state
   if (userHomeStatuses.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl p-6 border border-gray-700/50">
-        <div className="flex items-center justify-center py-8 text-gray-400">
-          <UilUsersAlt className="mr-2" size={20} />
-          <span className="text-sm">No user status information available</span>
+      <div className="bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-gray-800/40 animate-breath">
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="bg-gray-800/70 p-4 rounded-full border border-gray-700/40">
+            <UilUsersAlt size={24} className="text-gray-500" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-gray-400 font-medium mb-1">No Occupancy Data</h3>
+            <p className="text-gray-500 text-sm max-w-xs">Residents will appear here when data is available</p>
+          </div>
+          <div className="mt-4 px-4 py-2 bg-gray-800/50 text-gray-400 text-sm rounded-full border border-gray-700/40">
+            Waiting for data...
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl shadow-xl border border-gray-700/50 overflow-hidden">
+    <div className="bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-800/40 overflow-hidden animate-breath">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-gray-900/50">
+      <div className="p-4 border-b border-gray-800/30 bg-gradient-to-r from-gray-900/50 to-gray-950/50">
         <div className="flex items-center space-x-3">
-          <div className="bg-gray-800/70 p-2 rounded-lg border border-gray-700/40 shadow-inner">
+          <div className="bg-gray-800/70 p-2 rounded-full border border-gray-700/40 shadow-inner">
             <UilHome size={18} className="text-blue-400" />
           </div>
           <div>
-            <h3 className="text-gray-200 font-medium">Who's Home? 🏠</h3>
+            <h3 className="text-gray-200 font-medium">Occupancy Status</h3>
             <p className="text-gray-400 text-xs">
               {usersAtHome.length > 0 
-                ? `${usersAtHome.length} person${usersAtHome.length === 1 ? '' : 's'} enjoying home` 
-                : 'Nobody home'
+                ? `${usersAtHome.length} resident${usersAtHome.length === 1 ? '' : 's'} present` 
+                : 'No one present'
               }
-              {usersAway.length > 0 && ` • ${usersAway.length} out and about`}
+              {usersAway.length > 0 && ` • ${usersAway.length} away`}
               {unknownUsers.length > 0 && ` • ${unknownUsers.length} status unknown`}
             </p>
           </div>
@@ -187,39 +216,46 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
       </div>
 
       {/* House visualization */}
-      <div className="p-4 sm:p-6 pb-6 sm:pb-8">
-        <div className="relative flex items-center justify-center h-40 sm:h-48">
+      <div className="p-6 sm:p-8 pb-8">
+        <div className="relative flex items-center justify-center h-48 sm:h-56">
           {/* House icon - centered */}
           <div className="relative">
-            {/* House background glow */}
-            <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-xl scale-150"></div>
+            {/* House background glow effect */}
+            <div className={`absolute inset-0 blur-2xl scale-150 opacity-30 rounded-full transition-colors duration-700 ${
+              usersAtHome.length > 0 ? 'bg-blue-500' : 'bg-gray-600'
+            }`}></div>
             
             {/* Main house icon */}
-            <div className="relative bg-gradient-to-br from-gray-700/50 to-gray-800/70 p-4 sm:p-6 rounded-2xl border border-gray-600/30 backdrop-blur-sm shadow-2xl">
-              <div className="relative">
-                <UilHome size={32} className="text-gray-300 sm:w-12 sm:h-12" />
+            <div className="relative bg-gradient-to-br from-gray-800/80 to-gray-900/90 p-6 rounded-full border border-gray-700/40 backdrop-blur-sm shadow-2xl">
+              <div className="relative flex items-center justify-center w-16 h-16">
+                {/* Glass reflection */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent h-1/3 rounded-full pointer-events-none"></div>
+                
+                {/* Home icon */}
+                <UilHome size={40} className={`transition-colors duration-700 ${
+                  usersAtHome.length > 0 ? 'text-blue-300' : 'text-gray-400'
+                }`} />
                 
                 {/* Fun house features */}
                 {usersAtHome.length > 0 && (
                   <>
-                    {/* Chimney smoke when people are home */}
-                    <div className="absolute -top-2 -right-1 w-1 h-3 opacity-60">
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                    </div>
+                    {/* Animated pulsing ring */}
+                    <div className="absolute inset-0 border-2 border-blue-400/30 rounded-full animate-pulse"></div>
                     
-                    {/* Window lights */}
-                    <div className="absolute top-1 left-1 w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
-                    <div className="absolute top-1 right-1 w-1 h-1 bg-yellow-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                    {/* Chimney smoke when people are home */}
+                    <div className="absolute -top-4 -right-1 w-1 h-3 opacity-60">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-float"></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-float" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-float" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
                   </>
                 )}
               </div>
               
               {/* House "lights" indicator for people home */}
               {usersAtHome.length > 0 && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50 flex items-center justify-center">
-                  <span className="text-xs font-bold text-yellow-900">{usersAtHome.length}</span>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-400 rounded-full shadow-lg shadow-blue-500/50 flex items-center justify-center">
+                  <span className="text-xs font-bold text-blue-900">{usersAtHome.length}</span>
                 </div>
               )}
             </div>
@@ -249,25 +285,25 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
 
         {/* Status legend */}
         <div className="mt-4 sm:mt-6 flex items-center justify-center space-x-4 sm:space-x-6 text-xs">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-green-400">🏠 At Home ({usersAtHome.length})</span>
+          <div className="flex items-center space-x-2 bg-gray-800/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <div className="w-3 h-3 rounded-full bg-green-500 animate-gentle-pulse"></div>
+            <span className="text-green-400">Present ({usersAtHome.length})</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 bg-gray-800/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-blue-400">🚗 Away ({usersAway.length})</span>
+            <span className="text-blue-400">Away ({usersAway.length})</span>
           </div>
           {unknownUsers.length > 0 && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-gray-800/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
               <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-              <span className="text-gray-400">❓ Unknown ({unknownUsers.length})</span>
+              <span className="text-gray-400">Unknown ({unknownUsers.length})</span>
             </div>
           )}
         </div>
 
-        {/* Hint text */}
+        {/* Professional hint text */}
         <div className="mt-3 sm:mt-4 text-center">
-          <p className="text-gray-500 text-xs">👆 Tap any person to give them a custom name</p>
+          <p className="text-gray-500 text-xs italic">Tap avatar to edit display name</p>
         </div>
       </div>
     </div>

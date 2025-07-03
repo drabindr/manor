@@ -263,16 +263,16 @@ export async function getEvents(deviceId?: string, limit: number = 50, since?: s
   try {
     console.log(`[Seam] Fetching events${deviceId ? ` for device: ${deviceId}` : ' for all devices'}`);
     
+    // If no since parameter is provided, default to 7 days ago
+    const defaultSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
     const requestBody: any = {
       limit: limit,
+      since: since || defaultSince,
     };
     
     if (deviceId) {
       requestBody.device_id = deviceId;
-    }
-    
-    if (since) {
-      requestBody.since = since;
     }
     
     const response = await makeSeamApiCall('/events/list', {
