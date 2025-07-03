@@ -43,7 +43,7 @@ const DeviceControl = lazy(() => import('./DeviceControl'));
 
 // PRIORITY 4: Secondary components (after 1s)
 const CameraPage = lazy(() => import('./components/CameraPage'));
-const EventHistory = lazy(() => import('./EventHistory'));
+const SecurityTab = lazy(() => import('./SecurityTab'));
 
 // PRIORITY 5: Modal/overlay components (on-demand only)
 const LoadingOverlay = lazy(() => import('./components/LoadingOverlay'));
@@ -85,7 +85,7 @@ const prefetchComponents = () => {
 
   // PRIORITY 3: Secondary content (background priority)
   scheduleByPriority(() => {
-    import('./EventHistory');
+    import('./SecurityTab');
     import('./components/CameraPage');
   }, 'background', 500);
 
@@ -524,18 +524,7 @@ const CasaGuard: React.FC = () => {
       />
     ),
     devices: <DeviceControl key="devices-component" />,
-    security: <EventHistory ref={eventHistoryRef} 
-      darkModeStyles={{
-        backgroundColor: "transparent",
-        color: "#f5f5f5",
-        borderColor: "#444",
-        rowStyles: {
-          odd: { backgroundColor: "rgba(40, 40, 40, 0.8)" },
-          even: { backgroundColor: "rgba(25, 25, 25, 0.8)" },
-          hover: { backgroundColor: "rgba(60, 60, 60, 0.8)" },
-        },
-      }}
-    />,
+    security: <SecurityTab ref={eventHistoryRef} />,
   }), [cameras]); // Remove setExpandedCameraName from the dependency array
 
   // Tab configuration - fixed order (no time-based logic)

@@ -443,41 +443,30 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
 
     return (
       <div className="w-full h-full flex flex-col space-y-4 mt-2">
-        {/* Title bar with subtle glass effect */}
-        <div className="mx-4 flex items-center justify-between bg-gray-900 rounded-xl p-3 border border-gray-800/40 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gray-800 p-2 rounded-lg">
-              <UilHistory className="text-blue-400" size={22} />
-            </div>
-            <h2 className="text-gray-200 font-medium">Security History</h2>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-xs text-gray-400 bg-gray-800 px-2.5 py-1 rounded-full border border-gray-700/30">
-              {totalEvents} events
-            </div>
-            <button
-              onClick={refreshData}
-              disabled={isRefreshing}
-              className="bg-gray-800 hover:bg-gray-700 text-blue-400 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 flex items-center justify-center
-                        min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
-              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+        {/* Refresh button only */}
+        <div className="mx-4 flex justify-end">
+          <button
+            onClick={refreshData}
+            disabled={isRefreshing}
+            className="bg-gray-800 hover:bg-gray-700 text-blue-400 p-2 rounded-lg transition-all duration-200 border border-gray-700/30 flex items-center justify-center
+                      min-h-[48px] min-w-[48px] touch-manipulation transform tap-highlight-transparent active:scale-95"
+            style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
         </div>
 
         {/* USER HOME STATUS */}
