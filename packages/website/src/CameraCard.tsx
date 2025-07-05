@@ -9,6 +9,7 @@ import React, {
 import { logger } from './utils/Logger';
 import type { CameraDevice } from './components/CameraPage';
 import cameraConnectionService from './services/CameraConnectionService';
+import metricsService from './services/MetricsService';
 
 export type CameraCardProps = {
   camera: CameraDevice;
@@ -26,6 +27,10 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   const cameraNameRef = useRef(camera.name);
   const maxRetries = 400;
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Performance tracking
+  const loadStartTimeRef = useRef<number | null>(null);
+  const hasRecordedLoadMetric = useRef(false);
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
@@ -194,6 +199,20 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
               mediaSessionIdRef.current = connectionState.sessionId;
               scheduleRenewal(connectionState.expiresAt);
               setIsLoading(false);
+              
+              // Record successful camera connection load time
+              if (loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+                const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+                hasRecordedLoadMetric.current = true;
+                
+                try {
+                  metricsService.recordCameraLoadMetric('nest', camera.name, loadTime);
+                  logger.debug(`[CameraCard] Nest camera ${camera.name} connected via service in ${loadTime}ms`);
+                } catch (error) {
+                  logger.debug('Failed to record camera load metric:', error);
+                }
+              }
+              
               return;
             }
           } catch (error) {
@@ -317,6 +336,57 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
     [createOffer, initializePeerConnection, scheduleRenewal, camera.name]
   );
 
+  // Start performance tracking when component mounts
+  useEffect(() => {
+    loadStartTimeRef.current = performance.now ? performance.now() : Date.now();
+  }, []);
+
+  // Track video load events for performance metrics
+  const handleVideoLoadStart = useCallback(() => {
+    if (!loadStartTimeRef.current) {
+      loadStartTimeRef.current = performance.now ? performance.now() : Date.now();
+    }
+  }, []);
+
+  const handleVideoCanPlay = useCallback(() => {
+    if (loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+      const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+      hasRecordedLoadMetric.current = true;
+      
+      // Record camera load metric
+      try {
+        metricsService.recordCameraLoadMetric('nest', camera.name, loadTime);
+        logger.debug(`[CameraCard] Nest camera ${camera.name} loaded in ${loadTime}ms`);
+      } catch (error) {
+        logger.debug('Failed to record camera load metric:', error);
+      }
+    }
+  }, [camera.name]);
+
+  const handleVideoError = useCallback(() => {
+    if (loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+      const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+      hasRecordedLoadMetric.current = true;
+      
+      // Record failed load metric
+      try {
+        metricsService.recordMetric({
+          metricName: 'CameraLoadError',
+          value: loadTime,
+          unit: 'Milliseconds',
+          dimensions: [
+            { Name: 'CameraType', Value: 'nest' },
+            { Name: 'CameraName', Value: camera.name },
+            { Name: 'Environment', Value: process.env.NODE_ENV || 'development' }
+          ]
+        });
+        logger.debug(`[CameraCard] Nest camera ${camera.name} failed to load after ${loadTime}ms`);
+      } catch (error) {
+        logger.debug('Failed to record camera error metric:', error);
+      }
+    }
+  }, [camera.name]);
+
   useEffect(() => {
     initializePeerConnection();
     getLiveStream();
@@ -353,6 +423,9 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
         muted
         controls
         className='w-full h-full object-cover'
+        onLoadStart={handleVideoLoadStart}
+        onCanPlay={handleVideoCanPlay}
+        onError={handleVideoError}
       ></video>
     </div>
   );

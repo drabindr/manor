@@ -1,7 +1,8 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect, useRef } from 'react';
 import { UilShieldCheck } from '@iconscout/react-unicons';
 import SeamSecurity from './SeamSecurity';
 import EventHistory from './EventHistory';
+import metricsService from './services/MetricsService';
 
 interface SecurityTabProps {
   // Add any props needed
@@ -9,6 +10,34 @@ interface SecurityTabProps {
 
 const SecurityTab = forwardRef<any, SecurityTabProps>((props, ref) => {
   const eventHistoryRef = React.useRef<any>(null);
+  
+  // Performance tracking
+  const loadStartTimeRef = useRef<number | null>(null);
+  const hasRecordedLoadMetric = useRef(false);
+
+  // Start performance tracking when component mounts
+  useEffect(() => {
+    loadStartTimeRef.current = performance.now ? performance.now() : Date.now();
+    
+    // Set a timeout to record completion after components have had time to load
+    const loadTimer = setTimeout(() => {
+      if (loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+        const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+        hasRecordedLoadMetric.current = true;
+        
+        try {
+          metricsService.recordSecurityLoadMetric(loadTime);
+          console.debug(`[SecurityTab] Security card loaded in ${loadTime}ms`);
+        } catch (error) {
+          console.debug('Failed to record security card load metric:', error);
+        }
+      }
+    }, 1000); // Give components 1 second to load
+
+    return () => {
+      clearTimeout(loadTimer);
+    };
+  }, []);
 
   // Expose refresh method to parent component
   useImperativeHandle(ref, () => ({

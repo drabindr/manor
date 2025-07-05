@@ -1,0 +1,165 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "PageLoadLatency", "ComponentType", "Camera", "CameraType", "nest"],
+          ["...", "proprietary"],
+          ["...", "ComponentType", "SecurityCard"],
+          ["...", "DeviceCard"],
+          ["...", "Component"]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Page Load Latency by Component Type",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "PageLoadLatency", "ComponentType", "Camera", "CameraType", "nest", {"stat": "p50"}],
+          ["...", {"stat": "p90"}],
+          ["...", {"stat": "p99"}]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Nest Camera Load Time Percentiles",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "PageLoadLatency", "ComponentType", "Camera", "CameraType", "proprietary", {"stat": "p50"}],
+          ["...", {"stat": "p90"}],
+          ["...", {"stat": "p99"}]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Proprietary Camera Load Time Percentiles",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "LargestContentfulPaint"],
+          ["Manor/Frontend", "FirstInputDelay"],
+          ["Manor/Frontend", "CumulativeLayoutShift"]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Core Web Vitals",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "PageLoadTime"],
+          ["Manor/Frontend", "DOMReadyTime"]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Overall Page Load Performance",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "CameraLoadError", "CameraType", "nest"],
+          ["...", "proprietary"]
+        ],
+        "period": 300,
+        "stat": "Sum",
+        "region": "us-east-1",
+        "title": "Camera Load Errors",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 18,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          ["Manor/Frontend", "ResourceCount", "ResourceType", "Total"],
+          ["...", "JavaScript"],
+          ["...", "CSS"]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1",
+        "title": "Resource Loading Statistics",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    }
+  ]
+}

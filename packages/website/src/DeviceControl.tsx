@@ -1,8 +1,9 @@
-import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
+import React, { useState, useEffect, memo, useMemo, useCallback, useRef } from "react";
 import LightSwitch from "./LightSwitch";
 import LGAppliances from "./LGAppliances";
 import GarageDoor from "./GarageDoor";
 import BhyveIrrigation from "./BhyveIrrigation";
+import metricsService from "./services/MetricsService";
 import { 
   UilCircle, 
   UilLightbulb,
@@ -204,6 +205,30 @@ const DeviceControl: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
+  
+  // Performance tracking
+  const loadStartTimeRef = useRef<number | null>(null);
+  const hasRecordedLoadMetric = useRef(false);
+
+  // Start performance tracking when component mounts
+  useEffect(() => {
+    loadStartTimeRef.current = performance.now ? performance.now() : Date.now();
+  }, []);
+
+  // Record load completion when loading state changes
+  useEffect(() => {
+    if (!isLoading && loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+      const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+      hasRecordedLoadMetric.current = true;
+      
+      try {
+        metricsService.recordDeviceLoadMetric('DeviceControl', loadTime);
+        console.debug(`[DeviceControl] Device controls loaded in ${loadTime}ms`);
+      } catch (error) {
+        console.debug('Failed to record device control load metric:', error);
+      }
+    }
+  }, [isLoading]);
   
   // Enhanced iPhone haptic feedback helper
   const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
