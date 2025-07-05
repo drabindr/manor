@@ -14,29 +14,38 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
     // Add Local Writer widgets
     dashboard.addWidgets(...this.createLocalWriterWidgets());
 
+    // Add Local Writer system metrics widgets 
+    dashboard.addWidgets(...this.createLocalWriterSystemMetricsWidgets());
+
     // Add Camera Live Stream widgets
     dashboard.addWidgets(...this.createCameraStreamWidgets());
 
-    // Add System Usage widgets (CPU, Memory, Disk) 
+    // Add Camera Stream system metrics widgets (CPU, Memory, Disk) 
     dashboard.addWidgets(...this.createSystemMetricsWidgets());
   }
 
   private createLocalWriterWidgets(): GraphWidget[] {
     const namespace = 'CasaCameraLocalWriter';
 
-    // Define specific metrics for Local Writer
+    // Define specific metrics for Local Writer using dimensional metrics
     const diskUsageRootMetric = new Metric({
       namespace,
-      metricName: 'DiskUsageRoot',
+      metricName: 'DiskUsage',
       statistic: 'Average',
       period: cdk.Duration.minutes(5),
+      dimensionsMap: {
+        'MountPoint': 'Root'
+      },
     });
 
-    const diskUsageExternalMediaMetric = new Metric({
+    const diskUsageVideoStorageMetric = new Metric({
       namespace,
-      metricName: 'DiskUsageExternalMedia',
+      metricName: 'DiskUsage',
       statistic: 'Average',
       period: cdk.Duration.minutes(5),
+      dimensionsMap: {
+        'MountPoint': 'VideoStorage'
+      },
     });
 
     // Create widgets for Local Writer metrics
@@ -51,13 +60,52 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
         width: 24,
       }),
       new GraphWidget({
-        title: 'Local Writer - External Media Disk Usage (%)',
-        left: [diskUsageExternalMediaMetric],
+        title: 'Local Writer - Video Storage Disk Usage (%)',
+        left: [diskUsageVideoStorageMetric],
         leftYAxis: {
           min: 0,
           max: 100,
         } as YAxisProps,
         width: 24,
+      }),
+    ];
+  }
+
+  private createLocalWriterSystemMetricsWidgets(): GraphWidget[] {
+    const namespace = 'CasaCameraLocalWriter';
+
+    const cpuUsageMetric = new Metric({
+      namespace,
+      metricName: 'CPUUsage',
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    const memoryUsageMetric = new Metric({
+      namespace,
+      metricName: 'MemoryUsage',
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    return [
+      new GraphWidget({
+        title: 'Local Writer - CPU Usage (%)',
+        left: [cpuUsageMetric],
+        leftYAxis: {
+          min: 0,
+          max: 100,
+        } as YAxisProps,
+        width: 12,
+      }),
+      new GraphWidget({
+        title: 'Local Writer - Memory Usage (%)',
+        left: [memoryUsageMetric],
+        leftYAxis: {
+          min: 0,
+          max: 100,
+        } as YAxisProps,
+        width: 12,
       }),
     ];
   }
