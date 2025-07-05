@@ -2,6 +2,7 @@ import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } f
 import Hls from 'hls.js';
 import { logger } from './utils/Logger';
 import cameraConnectionService from './services/CameraConnectionService';
+import metricsService from './services/MetricsService';
 
 const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -15,6 +16,30 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   const wsReconnectDelay = 500; // Reduced from 1000ms for faster reconnection
   const runId = useRef(Date.now());
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Performance tracking
+  const loadStartTimeRef = useRef<number | null>(null);
+  const hasRecordedLoadMetric = useRef(false);
+
+  // Start performance tracking when component mounts
+  useEffect(() => {
+    loadStartTimeRef.current = performance.now ? performance.now() : Date.now();
+  }, []);
+
+  // Helper function to record load completion
+  const recordLoadCompletion = () => {
+    if (loadStartTimeRef.current && !hasRecordedLoadMetric.current) {
+      const loadTime = (performance.now ? performance.now() : Date.now()) - loadStartTimeRef.current;
+      hasRecordedLoadMetric.current = true;
+      
+      try {
+        metricsService.recordCameraLoadMetric('proprietary', 'casa-camera', loadTime);
+        logger.debug(`[CasaCameraCard] Proprietary camera loaded in ${loadTime}ms`);
+      } catch (error) {
+        logger.debug('Failed to record proprietary camera load metric:', error);
+      }
+    }
+  };
 
   useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
 
@@ -86,6 +111,7 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
           .then(() => {
             resetRetryCount();
             setIsLoading(false); // Video started playing
+            recordLoadCompletion(); // Record performance metric
           })
           .catch((error) => logger.error('Error playing video:', error));
       });
@@ -130,6 +156,7 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
           .then(() => {
             resetRetryCount();
             setIsLoading(false); // Video started playing
+            recordLoadCompletion(); // Record performance metric
           })
           .catch((error) => logger.error('Error playing video:', error));
       });
