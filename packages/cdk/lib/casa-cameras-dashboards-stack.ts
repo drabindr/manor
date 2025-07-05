@@ -182,8 +182,9 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
   }
 
   /**
-   * New: Creates widgets for system metrics (CPUUsage, MemoryUsage, DiskUsage)
+   * Creates widgets for system metrics (CPUUsage, MemoryUsage, DiskUsage)
    * that your Python application emits under the "CasaCameraStream" namespace.
+   * This tracks the hls.py streaming application system usage.
    */
   private createSystemMetricsWidgets(): GraphWidget[] {
     const namespace = 'CasaCameraStream';
