@@ -1,4 +1,5 @@
 import React, { useState, useEffect, memo, useMemo, useCallback } from "react";
+import { useMetrics } from './hooks/useMetrics';
 import LightSwitch from "./LightSwitch";
 import LGAppliances from "./LGAppliances";
 import GarageDoor from "./GarageDoor";
@@ -198,6 +199,9 @@ const MemoizedLightSwitch = memo(({
 });
 
 const DeviceControl: React.FC = () => {
+  // Initialize metrics tracking
+  const { trackLoadStart, trackLoadEnd, trackApiCall, trackInteraction } = useMetrics('DeviceControl');
+
   const [lights, setLights] = useState<LightDevice[]>([]);
   const [lightsError, setLightsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -375,9 +379,12 @@ const DeviceControl: React.FC = () => {
 
   async function fetchLights() {
     setIsLoading(true);
+    
     try {
-      const tplinkResponse = await fetch(
-        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"
+      // Track TP-Link API call
+      const tplinkResponse = await trackApiCall(
+        () => fetch("https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/tplink/lights/list"),
+        'tplink-lights-list'
       );
 
       if (tplinkResponse.status === 401) {
@@ -388,8 +395,10 @@ const DeviceControl: React.FC = () => {
 
       const tplinkData = await tplinkResponse.json();
 
-      const hueResponse = await fetch(
-        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"
+      // Track Hue API call
+      const hueResponse = await trackApiCall(
+        () => fetch("https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/hue/lights/list"),
+        'hue-lights-list'
       );
 
       if (hueResponse.status === 401) {
@@ -487,8 +496,11 @@ const DeviceControl: React.FC = () => {
   }, [lastRefreshTime]);
 
   useEffect(() => {
-    fetchLights();
-  }, []);
+    trackLoadStart();
+    fetchLights().finally(() => {
+      trackLoadEnd();
+    });
+  }, [trackLoadStart, trackLoadEnd]);
 
   // Page visibility detection for background refresh
   useEffect(() => {

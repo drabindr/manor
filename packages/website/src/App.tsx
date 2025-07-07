@@ -7,6 +7,12 @@ import { PlayerProvider } from './PlayerContext';
 import LiveStream from './LiveStream';
 import VideoPlayer from './VideoPlayer';
 import AdminPanel from './AdminPanel';
+import { usePageMetrics } from './hooks/useMetrics';
+import useNavigationTracking from './hooks/useNavigationTracking';
+import MetricsErrorBoundary from './components/MetricsErrorBoundary';
+
+// Initialize metrics collector
+import './utils/MetricsCollector';
 
 // Auth configuration - these values will come from your CDK deployment
 const authConfig = {
@@ -18,45 +24,66 @@ const authConfig = {
 };
 
 function App() {
+  // Track app-level metrics
+  usePageMetrics('App');
+
   return (
     <AuthProvider config={authConfig}>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <PlayerProvider>
-          
-          <Routes>
-            {/* Auth callback route - public */}
-            <Route path="/auth/callback" element={<div>Processing authentication...</div>} />
-            
-            {/* Protected routes */}
-            <Route path="/video-player/:date" element={
-              <ProtectedRoute>
-                <VideoPlayer />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/live-stream/" element={
-              <ProtectedRoute>
-                <LiveStream />
-              </ProtectedRoute>
-            } />
-            
-            {/* Admin route with role-based access */}
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminPanel />
-              </ProtectedRoute>
-            } />
-            
-            {/* Main app route */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <CasaGuard />
-              </ProtectedRoute>
-            } />
-          </Routes>
+          <MetricsErrorBoundary widgetName="App">
+            <AppContent />
+          </MetricsErrorBoundary>
         </PlayerProvider>
       </Router>
     </AuthProvider>
+  );
+}
+
+function AppContent() {
+  // Track navigation between routes
+  useNavigationTracking();
+
+  return (
+    <Routes>
+      {/* Auth callback route - public */}
+      <Route path="/auth/callback" element={<div>Processing authentication...</div>} />
+      
+      {/* Protected routes */}
+      <Route path="/video-player/:date" element={
+        <ProtectedRoute>
+          <MetricsErrorBoundary widgetName="VideoPlayer">
+            <VideoPlayer />
+          </MetricsErrorBoundary>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/live-stream/" element={
+        <ProtectedRoute>
+          <MetricsErrorBoundary widgetName="LiveStream">
+            <LiveStream />
+          </MetricsErrorBoundary>
+        </ProtectedRoute>
+      } />
+      
+      {/* Admin route with role-based access */}
+      <Route path="/admin" element={
+        <ProtectedRoute requiredRole="admin">
+          <MetricsErrorBoundary widgetName="AdminPanel">
+            <AdminPanel />
+          </MetricsErrorBoundary>
+        </ProtectedRoute>
+      } />
+      
+      {/* Main app route */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <MetricsErrorBoundary widgetName="CasaGuard">
+            <CasaGuard />
+          </MetricsErrorBoundary>
+        </ProtectedRoute>
+      } />
+    </Routes>
   );
 }
 

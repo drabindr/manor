@@ -15,12 +15,13 @@
     "deploy:public-website": "cd ../public-website && npm run build && cd ../cdk && npm run build && cdk deploy --require-approval never ManorPublicWebsiteStack",
     "deploy:public-website:ci": "npm run build:ci && cdk deploy --require-approval never ManorPublicWebsiteStack",
     "deploy:domain": "npm run build && cdk deploy --require-approval never CasaDomainStack",
-    "deploy:auth": "npm run build && cdk deploy --require-approval never CasaAuthStack", 
+    "deploy:auth": "npm run build && cdk deploy --require-approval never CasaAuthStack",
     "deploy:website": "cd ../website && npm run build:production && cd ../cdk && npm run build && cdk deploy --require-approval never ManorWebsiteStack",
     "deploy:website:ci": "npm run build:ci && cdk deploy --require-approval never ManorWebsiteStack",
     "deploy:website-content": "./scripts/deploy-website-only.sh",
     "deploy:all": "npm run build && cdk deploy --require-approval never --all",
-    "deploy:infrastructure": "npm run build && cdk deploy --require-approval never CasaDomainStack CasaAuthStack CasaGuardCdkStack CasaCamerasCdkStack CasaIntegrationsCdkStack CasaCamerasDashboardsStack CasaAdminCdkStack",
+    "deploy:infrastructure": "npm run build && cdk deploy --require-approval never CasaDomainStack CasaAuthStack CasaGuardCdkStack CasaCamerasCdkStack CasaIntegrationsCdkStack CasaCamerasDashboardsStack ManorMetricsDashboardStack CasaAdminCdkStack",
+    "deploy:metrics": "npm run build && cdk deploy --require-approval never ManorMetricsDashboardStack",
     "deploy:infrastructure-only": "SKIP_PREBUILD=true SKIP_WEBSITE_DEPLOYMENT=true npm run build && SKIP_WEBSITE_DEPLOYMENT=true cdk deploy --require-approval never --all",
     "clean": "find . -type f -not -path \"./node_modules/*\" -not -path \"./dist/*\" \\( -name \"*.js\" -o -name \"*.d.ts\" \\) -delete"
   },
@@ -37,6 +38,7 @@
     "typescript": "~5.7.0"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.841.0",
     "@aws-sdk/client-dynamodb": "^3.728.0",
     "@aws-sdk/client-sns": "^3.728.0",
     "@aws-sdk/client-ssm": "^3.728.0",

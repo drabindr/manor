@@ -3,6 +3,7 @@ import { UilSync, UilPower, UilClock, UilHistory, UilCheck, UilBell } from "@ico
 import { triggerHapticFeedback, hapticPatterns } from "./utils/haptics";
 import { DeviceCardSkeleton } from "./components/DeviceCardSkeleton";
 import OptimizedImage from "./components/OptimizedImage";
+import { useMetrics } from "./hooks/useMetrics";
 
 // Helper to check if a state is a running state
 const isRunningState = (state: string): boolean => {
@@ -541,6 +542,16 @@ const LGPairedDeviceCard = memo(({
 });
 
 const LGAppliances: React.FC = () => {
+  // Initialize metrics tracking
+  const {
+    trackLoadStart,
+    trackLoadEnd,
+    trackDataFetchStart,
+    trackDataFetchEnd,
+    trackApiCall,
+    trackInteraction
+  } = useMetrics('LGAppliances');
+
   const [lgDevices, setLgDevices] = useState<LGDevice[]>([]);
   const [lgStatus, setLgStatus] = useState<Record<string,LGDeviceStatus>>({});
   const [selectedCycles, setSelectedCycles] = useState<Record<string,string>>({});
@@ -611,20 +622,25 @@ const LGAppliances: React.FC = () => {
     const now = new Date();
     if (!initialLoad && now.getTime() - lastUpdateTime.getTime() < 5000) return;
     
-    if (!initialLoad) {
+    if (initialLoad) {
+      trackLoadStart();
+      setLgLoading(true);
+    } else {
+      trackDataFetchStart();
       setIsRefreshing(true);
       triggerHapticFeedback();
-    } else {
-      setLgLoading(true);
     }
     
     setLastUpdateTime(now);
 
     try {
       // 1) List devices
-      const listRes = await fetch(
-        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/devices/list",
-        { method:"GET", headers:{ "Accept":"application/json","Content-Type":"application/json" } }
+      const listRes = await trackApiCall(
+        () => fetch(
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/lg/devices/list",
+          { method:"GET", headers:{ "Accept":"application/json","Content-Type":"application/json" } }
+        ),
+        '/lg/devices/list'
       );
       if (listRes.status === 401) {
         setLgError("Smart appliance authorization expired. Please reconnect your account.");
@@ -725,9 +741,19 @@ const LGAppliances: React.FC = () => {
       console.error("fetchLGDevices error", err);
       setLgError("Failed to load smart appliances");
       setLgDevices([]);
+      if (initialLoad) {
+        trackLoadEnd(false);
+      } else {
+        trackDataFetchEnd(false);
+      }
     } finally {
       setLgLoading(false);
       setIsRefreshing(false);
+      if (initialLoad) {
+        trackLoadEnd(true);
+      } else {
+        trackDataFetchEnd(true);
+      }
     }
   };
 

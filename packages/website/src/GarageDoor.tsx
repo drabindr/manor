@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useMetrics } from './hooks/useMetrics';
 import { 
   UilHome,
   UilCircle,
@@ -20,6 +21,9 @@ const WS_ENDPOINT = 'wss://utekypghuf.execute-api.us-east-1.amazonaws.com/prod';
 const DEVICE_ID = 'garage-door-001';
 
 const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
+  // Initialize metrics tracking
+  const { trackLoadStart, trackLoadEnd, trackInteraction } = useMetrics('GarageDoor');
+
   const [doorStatus, setDoorStatus] = useState<DoorStatus>('unknown');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -178,6 +182,9 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
   const controlDoor = useCallback(async (action: ActionType) => {
     if (isLoading || !isConnected) return;
 
+    // Track user interaction
+    const endInteraction = trackInteraction('door-control');
+
     try {
       setIsLoading(true);
       setError(null);
@@ -197,6 +204,9 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
         throw new Error('WebSocket not connected');
       }
 
+      // End interaction tracking when command is sent
+      endInteraction();
+
       // The device will send back status updates via WebSocket
     } catch (error) {
       setError(`Failed to ${action} door. Please try again.`);
@@ -205,6 +215,9 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
       
       // Light haptic feedback for error
       triggerHaptic('light');
+      
+      // End interaction tracking on error
+      endInteraction();
       
       // Request status to restore current state
       sendWebSocketMessage({
@@ -274,6 +287,8 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
 
   // Initialize WebSocket connection
   useEffect(() => {
+    trackLoadStart();
+    
     connectWebSocket();
 
     // Set up ping interval
@@ -291,8 +306,9 @@ const GarageDoor: React.FC<GarageDoorProps> = ({ onStatusUpdate }) => {
         clearInterval(pingIntervalRef.current);
       }
       handleLongPressEnd();
+      trackLoadEnd(true);
     };
-  }, [connectWebSocket, sendPing, handleLongPressEnd]);
+  }, [connectWebSocket, sendPing, handleLongPressEnd, trackLoadStart, trackLoadEnd]);
 
   // Get status display info - Enhanced for mobile visibility
   const getStatusInfo = () => {
