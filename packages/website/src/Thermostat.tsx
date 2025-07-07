@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useMetrics } from "./hooks/useMetrics";
 import OptimizedImage from "./components/OptimizedImage";
 import {
   UilMinusCircle,
@@ -148,6 +149,16 @@ const metricIcons: Record<string, JSX.Element> = {
 };
 
 const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
+  // Initialize metrics tracking
+  const {
+    trackLoadStart,
+    trackLoadEnd,
+    trackDataFetchStart,
+    trackDataFetchEnd,
+    trackApiCall,
+    trackInteraction
+  } = useMetrics('Thermostat');
+
   /**
    * State declarations
    */
@@ -192,17 +203,21 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
    */
   const fetchThermostatData = async () => {
     try {
-      const response = await fetch(
-        "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            data: {
-              deviceId,
-            },
-          }),
-        }
+      trackDataFetchStart();
+      const response = await trackApiCall(
+        () => fetch(
+          "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/google/thermostat/get",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              data: {
+                deviceId,
+              },
+            }),
+          }
+        ),
+        '/google/thermostat/get'
       );
       if (response.status === 401) {
         window.location.href =
@@ -244,9 +259,11 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
         hvacStatus,
         fanStatus,
       });
+      trackDataFetchEnd(true);
     } catch (error) {
       console.error("Error fetching thermostat data:", error);
       setThermostatData(null);
+      trackDataFetchEnd(false);
     }
   };
 
@@ -256,7 +273,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
   const fetchAirthings = async () => {
     try {
       const endpoint = 'https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/airthings/sensor/data';
-      const res = await fetch(endpoint);
+      const res = await trackApiCall(
+        () => fetch(endpoint),
+        '/airthings/sensor/data'
+      );
       if (res.ok) {
         const data = await res.json();
         
@@ -310,14 +330,19 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
    * On mount, fetch data from both endpoints and then signal loaded via onLoaded callback.
    */
   useEffect(() => {
+    trackLoadStart();
     async function fetchAll() {
       await Promise.all([fetchThermostatData(), fetchAirthings()]);
+      trackLoadEnd(true);
       if (onLoaded) {
         onLoaded();
       }
     }
-    fetchAll();
-  }, [onLoaded]);
+    fetchAll().catch((error) => {
+      console.error('Error in fetchAll:', error);
+      trackLoadEnd(false);
+    });
+  }, [onLoaded, trackLoadStart, trackLoadEnd]);
 
   /**
    * Keep local setpoint in sync with fetched data
@@ -911,8 +936,10 @@ const Thermostat: React.FC<ThermostatProps> = ({ onLoaded }) => {
                   <button
                     key={modeOption}
                     onClick={() => {
+                      const endInteraction = trackInteraction('mode-change');
                       changeThermostatMode(modeOption);
                       triggerHaptic('medium');
+                      endInteraction();
                     }}
                     className={`block w-full text-left px-4 py-3.5 text-sm 
                                hover:bg-gray-700/60 active:bg-gray-600/60 

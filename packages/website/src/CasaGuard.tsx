@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useContext, Suspense, lazy, useMemo, useCallback } from "react";
 import ReactDOM from "react-dom";
+import { useMetrics } from './hooks/useMetrics';
 import { EventContext, EventProvider } from "./EventContext";
 import { wsService } from "./WebSocketService";
 import { logger } from "./utils/Logger";
@@ -106,6 +107,9 @@ type ArmMode = "stay" | "away" | null;
 
 // Main component
 const CasaGuard: React.FC = () => {
+  // Initialize metrics tracking
+  const { trackLoadStart, trackLoadEnd, trackApiCall, trackInteraction } = useMetrics('CasaGuard');
+
   // Enhanced iPhone haptic feedback helper
   const triggerHaptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
     if ('vibrate' in navigator) {
