@@ -72,25 +72,39 @@ export class AuthService {
 
   // Handle OAuth callback
   async handleCallback(code: string): Promise<User> {
+    console.log('[Auth] Starting handleCallback with code:', code.substring(0, 20) + '...');
+    console.log('[Auth] Current URL:', window.location.href);
+    console.log('[Auth] Redirect URI will be:', `${window.location.origin}/auth/callback`);
+    
     try {
       // Exchange code for tokens via Cognito
+      const tokenRequestBody = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: this.config.userPoolClientId,
+        code: code,
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      });
+      
+      console.log('[Auth] Token request body:', tokenRequestBody.toString());
+      console.log('[Auth] Making request to:', `https://${this.config.authDomain}/oauth2/token`);
+      
       const tokenResponse = await fetch(`https://${this.config.authDomain}/oauth2/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          client_id: this.config.userPoolClientId,
-          code: code,
-          redirect_uri: `${window.location.origin}/auth/callback`,
-        }),
+        body: tokenRequestBody,
       });
+
+      console.log('[Auth] Token response status:', tokenResponse.status);
+      console.log('[Auth] Token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
 
       if (!tokenResponse.ok) {
         // Handle error and try admin create user path
         const errorData = await tokenResponse.text();
-        console.error('Token exchange error:', errorData);
+        console.error('[Auth] Token exchange error:', errorData);
+        console.error('[Auth] Response status:', tokenResponse.status);
+        console.error('[Auth] Response statusText:', tokenResponse.statusText);
         
         if (errorData.includes('given_name') || errorData.includes('family_name')) {
           return this.handleMissingNameAttributes(code);
