@@ -19,17 +19,29 @@ interface AuthProviderProps {
   config: AuthConfig;
 }
 
+// Global flag to prevent double processing across all component instances
+let globalCallbackProcessed = false;
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) => {
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Prevent double processing using global flag
+    if (globalCallbackProcessed && window.location.pathname === '/auth/callback') {
+      console.log('[Auth] Global callback already processed, skipping...');
+      setIsLoading(false);
+      return;
+    }
+
     // Set a timeout to prevent indefinite loading
     const loadingTimeout = setTimeout(() => {
       console.warn('[Auth] Loading timeout reached, forcing loading to false');
       setIsLoading(false);
     }, 10000); // 10 second timeout
+
+    console.log('[Auth] Initializing AuthProvider');
 
     // Initialize auth service
     const service = initializeAuth(config);
@@ -40,29 +52,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       setUser(service.getCurrentUser());
     }
 
-    // Handle OAuth callback if present
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
-    
+    // Handle OAuth callback if present - but only once globally!
     if (window.location.pathname === '/auth/callback') {
+      globalCallbackProcessed = true; // Set global flag immediately
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+      
       if (code) {
         handleAuthCallback(service, code);
       } else if (error) {
         console.error('Auth error:', error, errorDescription);
-        console.log('Full URL params:', window.location.search);
+        setIsLoading(false);
         
-        // For now, let's see what the actual error is instead of intercepting
-        console.log('🍎 Auth error details:', { error, errorDescription, fullUrl: window.location.href });
-        
-        // Only redirect for non-Apple errors or truly fatal Apple errors
-        if (error === 'access_denied') {
-          setIsLoading(false);
-          window.location.href = '/?error=' + encodeURIComponent('User cancelled authentication');
+        // Handle missing attributes error
+        if (error === 'invalid_request' && errorDescription?.includes('given_name')) {
+          handleMissingAttributesError(service, errorDescription);
         } else {
-          // For other errors, try to proceed with normal auth flow
-          setIsLoading(false);
+          // Other errors - redirect to main page with error
           window.location.href = '/?error=' + encodeURIComponent(errorDescription || 'Authentication failed');
         }
       } else {
@@ -79,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     return () => {
       clearTimeout(loadingTimeout);
     };
-  }, [config]);
+  }, [config]); // Remove all state dependencies
 
   const handleMissingAttributesError = async (service: AuthService, errorDescription: string) => {
     try {
@@ -104,6 +113,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
   };
 
   const handleAuthCallback = async (service: AuthService, code: string) => {
+    console.log('[Auth] handleAuthCallback called with code:', code.substring(0, 20) + '...');
+    
     const callbackTimeout = setTimeout(() => {
       console.warn('[Auth] Callback timeout reached, forcing loading to false');
       setIsLoading(false);
@@ -119,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       // Force redirect to main app instead of using history.replaceState
       window.location.href = '/';
     } catch (error) {
-      console.error('Authentication callback failed:', error);
+      console.error('[Auth] Authentication callback failed:', error);
       clearTimeout(callbackTimeout);
       // Redirect to login
       window.location.href = '/';

@@ -14,6 +14,87 @@
   }
 }
 
+/* Line clamping for long text */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Device name prominence - optimized for space */
+.device-name-prominent {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+/* Enhanced button styles - more compact */
+.long-press-button {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.long-press-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.long-press-button:hover::before {
+  transform: translateX(100%);
+}
+
+.long-press-button:active {
+  transform: scale(0.98) translateZ(0);
+}
+
+.long-press-button:disabled {
+  transform: none !important;
+}
+
+/* Logo container enhancements - more compact */
+.manufacturer-logo-container {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.manufacturer-logo-container:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile touch optimization */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
 /* Mobile optimized pulse (smaller amplitude) */
 @keyframes gentle-pulse-mobile {
   0% {
@@ -21,7 +102,7 @@
     opacity: 0.7;
   }
   50% {
-    transform: scale(1.03);
+    transform: scale(1.02);
     opacity: 1;
   }
   100% {
@@ -38,31 +119,40 @@
   .animate-gentle-pulse {
     animation: gentle-pulse-mobile 3s ease-in-out infinite;
   }
+  
+  .device-name-prominent {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  
+  .manufacturer-logo-container {
+    padding: 4px 6px;
+  }
 }
 
 /* Subtle breathing effect for the cards */
 @keyframes breath {
   0% {
-    box-shadow: 0 10px 30px -15px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 25px -12px rgba(59, 130, 246, 0.3);
   }
   50% {
-    box-shadow: 0 15px 40px -15px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 12px 35px -12px rgba(59, 130, 246, 0.5);
   }
   100% {
-    box-shadow: 0 10px 30px -15px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 25px -12px rgba(59, 130, 246, 0.3);
   }
 }
 
 /* Mobile optimized breathing (more subtle) */
 @keyframes breath-mobile {
   0% {
-    box-shadow: 0 8px 20px -12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 20px -10px rgba(59, 130, 246, 0.3);
   }
   50% {
-    box-shadow: 0 10px 25px -12px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 8px 25px -10px rgba(59, 130, 246, 0.4);
   }
   100% {
-    box-shadow: 0 8px 20px -12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 20px -10px rgba(59, 130, 246, 0.3);
   }
 }
 
@@ -79,72 +169,72 @@
 /* Lock button animations */
 @keyframes unlock-animation {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15) rotate(15deg); }
+  50% { transform: scale(1.1) rotate(10deg); }
   100% { transform: scale(1); }
 }
 
 @keyframes lock-animation {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15) rotate(-15deg); }
+  50% { transform: scale(1.1) rotate(-10deg); }
   100% { transform: scale(1); }
 }
 
 /* Mobile optimized lock animations (smaller amplitude) */
 @keyframes unlock-animation-mobile {
   0% { transform: scale(1); }
-  50% { transform: scale(1.1) rotate(10deg); }
+  50% { transform: scale(1.05) rotate(8deg); }
   100% { transform: scale(1); }
 }
 
 @keyframes lock-animation-mobile {
   0% { transform: scale(1); }
-  50% { transform: scale(1.1) rotate(-10deg); }
+  50% { transform: scale(1.05) rotate(-8deg); }
   100% { transform: scale(1); }
 }
 
 .unlock-animate {
-  animation: unlock-animation 0.5s ease-in-out;
+  animation: unlock-animation 0.4s ease-in-out;
 }
 
 .lock-animate {
-  animation: lock-animation 0.5s ease-in-out;
+  animation: lock-animation 0.4s ease-in-out;
 }
 
 @media (max-width: 640px) {
   .unlock-animate {
-    animation: unlock-animation-mobile 0.5s ease-in-out;
+    animation: unlock-animation-mobile 0.4s ease-in-out;
   }
 
   .lock-animate {
-    animation: lock-animation-mobile 0.5s ease-in-out;
+    animation: lock-animation-mobile 0.4s ease-in-out;
   }
 }
 
-/* Glow effects - more subtle per screenshot */
+/* Glow effects - subtle and space-efficient */
 .glow-green {
-  filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.4));
+  filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.4));
 }
 
 .glow-red {
-  filter: drop-shadow(0 0 3px rgba(248, 113, 113, 0.4));
+  filter: drop-shadow(0 0 2px rgba(248, 113, 113, 0.4));
 }
 
 .glow-blue {
-  filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.4));
+  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.4));
 }
 
 /* Mobile optimized glow (reduced intensity) */
 @media (max-width: 640px) {
   .glow-green {
-    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.3));
+    filter: drop-shadow(0 0 1px rgba(74, 222, 128, 0.3));
   }
 
   .glow-red {
-    filter: drop-shadow(0 0 2px rgba(248, 113, 113, 0.3));
+    filter: drop-shadow(0 0 1px rgba(248, 113, 113, 0.3));
   }
 
   .glow-blue {
-    filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.3));
+    filter: drop-shadow(0 0 1px rgba(96, 165, 250, 0.3));
   }
 }
 
@@ -184,24 +274,6 @@
   }
 }
 
-/* Custom scrollbar for card content */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: rgba(31, 41, 55, 0.4);
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgba(75, 85, 99, 0.5);
-  border-radius: 20px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(107, 114, 128, 0.7);
-}
-
 /* Touch-friendly tap targets for mobile */
 @media (max-width: 640px) {
   .tap-target {
@@ -213,20 +285,14 @@
 /* Mobile-specific transitions for smoother performance */
 @media (max-width: 640px) {
   .mobile-transition {
-    transition: all 0.2s ease-out;
+    transition: all 0.15s ease-out;
     will-change: transform, opacity;
   }
   
   .mobile-hardware-accelerated {
     transform: translateZ(0);
     backface-visibility: hidden;
-  }
-}
-
-/* Performance optimizations for mobile animations */
-@media (max-width: 640px) {
-  .reduce-motion {
-    animation-duration: 50% !important;
-    transition-duration: 50% !important;
+    -webkit-backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
   }
 }

@@ -20,9 +20,7 @@ const CACHE_STRATEGIES = {
 
 // Critical resources to preload
 const CRITICAL_RESOURCES = [
-  '/assets/react-vendor',
-  '/assets/main',
-  '/assets/icons'
+  // Static resources only - dynamic chunks are handled by Vite
 ];
 
 // Install event - preload critical resources
@@ -40,15 +38,6 @@ self.addEventListener('install', (event) => {
         console.log('[SW] Initializing expiry cache');
         return cache;
       }),
-      // Preload critical resources in background
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'PRELOAD_CRITICAL',
-            resources: CRITICAL_RESOURCES
-          });
-        });
-      })
     ]).then(() => self.skipWaiting())
   );
 });
