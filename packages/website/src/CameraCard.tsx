@@ -6,6 +6,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from 'react';
+import { useMetrics } from './hooks/useMetrics';
 import { logger } from './utils/Logger';
 import type { CameraDevice } from './components/CameraPage';
 import cameraConnectionService from './services/CameraConnectionService';
@@ -16,6 +17,9 @@ export type CameraCardProps = {
 
 const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize metrics tracking for this camera
+  const { trackCameraStreamStartup, trackCameraConnectionTime, trackCameraStreamError } = useMetrics('CameraCard');
 
   useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
 
@@ -26,6 +30,10 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
   const cameraNameRef = useRef(camera.name);
   const maxRetries = 400;
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Camera metrics tracking
+  const streamStartTimeRef = useRef<number | null>(null);
+  const connectionStartTimeRef = useRef<number | null>(null);
 
   const localOfferOptions = {
     offerToReceiveVideo: true,
@@ -76,12 +84,33 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
           logger.debug('[ontrack] Received remote track');
           videoRef.current.srcObject = event.streams[0];
           setIsLoading(false); // Video is now loading/playing
+          
+          // Track successful camera stream startup
+          if (streamStartTimeRef.current) {
+            const startupTime = performance.now() - streamStartTimeRef.current;
+            trackCameraStreamStartup('nest', camera.name, startupTime, true);
+            streamStartTimeRef.current = null;
+          }
+          
+          // Track successful connection time
+          if (connectionStartTimeRef.current) {
+            const connectionTime = performance.now() - connectionStartTimeRef.current;
+            trackCameraConnectionTime('nest', camera.name, connectionTime, true);
+            connectionStartTimeRef.current = null;
+          }
         }
       };
 
       // PeerConnection state
       peerConnection.onconnectionstatechange = () => {
         logger.debug('[PeerConnection state]:', peerConnection.connectionState);
+
+        // Track connection failures
+        if (peerConnection.connectionState === 'failed') {
+          trackCameraStreamError('nest', camera.name, 'connection-failed');
+        } else if (peerConnection.connectionState === 'disconnected') {
+          trackCameraStreamError('nest', camera.name, 'connection-disconnected');
+        }
 
         // If you want to forcibly re-init on certain states:
         if (
@@ -165,12 +194,15 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
       if (retryAttempt >= maxRetries) {
         logger.error('[getLiveStream] Max retries reached.');
         setIsLoading(false);
+        trackCameraStreamError('nest', camera.name, 'max-retries-reached');
         return;
       }
 
-      // Show loading on first attempt
+      // Show loading on first attempt and start timing
       if (retryAttempt === 0) {
         setIsLoading(true);
+        streamStartTimeRef.current = performance.now();
+        connectionStartTimeRef.current = performance.now();
       }
 
       await initializePeerConnection();
@@ -194,6 +226,21 @@ const CameraCard = forwardRef<HTMLDivElement, CameraCardProps>(({ camera }, ref)
               mediaSessionIdRef.current = connectionState.sessionId;
               scheduleRenewal(connectionState.expiresAt);
               setIsLoading(false);
+              
+              // Track successful camera stream startup
+              if (streamStartTimeRef.current) {
+                const startupTime = performance.now() - streamStartTimeRef.current;
+                trackCameraStreamStartup('nest', camera.name, startupTime, true);
+                streamStartTimeRef.current = null;
+              }
+              
+              // Track successful connection time
+              if (connectionStartTimeRef.current) {
+                const connectionTime = performance.now() - connectionStartTimeRef.current;
+                trackCameraConnectionTime('nest', camera.name, connectionTime, true);
+                connectionStartTimeRef.current = null;
+              }
+              
               return;
             }
           } catch (error) {

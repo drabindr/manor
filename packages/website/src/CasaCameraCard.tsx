@@ -1,9 +1,22 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from 'react';
+import { useMetrics } from './hooks/useMetrics';
 import Hls from 'hls.js';
 import { logger } from './utils/Logger';
 import cameraConnectionService from './services/CameraConnectionService';
 
 const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
+  // Initialize metrics tracking
+  const { 
+    trackLoadStart, 
+    trackLoadEnd, 
+    trackApiCall, 
+    trackInteraction,
+    trackCameraStreamStartup,
+    trackCameraConnectionTime,
+    trackCameraStreamQuality,
+    trackCameraStreamError
+  } = useMetrics('CasaCameraCard');
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -15,6 +28,11 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
   const wsReconnectDelay = 500; // Reduced from 1000ms for faster reconnection
   const runId = useRef(Date.now());
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Camera metrics tracking
+  const streamStartTimeRef = useRef<number | null>(null);
+  const connectionStartTimeRef = useRef<number | null>(null);
+  const bufferingEventsRef = useRef<number>(0);
 
   useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
 
@@ -48,8 +66,14 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
     const videoElement = videoRef.current;
     if (!videoElement) {
       logger.error('Video element not found');
+      trackCameraStreamError('manor', 'casa-camera', 'no-video-element');
       return;
     }
+    
+    // Start timing metrics
+    streamStartTimeRef.current = performance.now();
+    connectionStartTimeRef.current = performance.now();
+    bufferingEventsRef.current = 0;
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -86,8 +110,25 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
           .then(() => {
             resetRetryCount();
             setIsLoading(false); // Video started playing
+            
+            // Track successful camera stream startup
+            if (streamStartTimeRef.current) {
+              const startupTime = performance.now() - streamStartTimeRef.current;
+              trackCameraStreamStartup('manor', 'casa-camera', startupTime, true);
+              streamStartTimeRef.current = null;
+            }
+            
+            // Track successful connection time
+            if (connectionStartTimeRef.current) {
+              const connectionTime = performance.now() - connectionStartTimeRef.current;
+              trackCameraConnectionTime('manor', 'casa-camera', connectionTime, true);
+              connectionStartTimeRef.current = null;
+            }
           })
-          .catch((error) => logger.error('Error playing video:', error));
+          .catch((error) => {
+            logger.error('Error playing video:', error);
+            trackCameraStreamError('manor', 'casa-camera', 'play-error');
+          });
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -103,14 +144,17 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 logger.warn('Network error encountered. Retrying HLS load...');
+                trackCameraStreamError('manor', 'casa-camera', 'network-error');
                 retryHlsLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 logger.warn('Media error encountered. Attempting to recover...');
+                trackCameraStreamError('manor', 'casa-camera', 'media-error');
                 hls.recoverMediaError();
                 break;
               default:
                 logger.warn('Fatal error encountered. Retrying HLS load...');
+                trackCameraStreamError('manor', 'casa-camera', 'fatal-error');
                 retryHlsLoad();
                 break;
             }
@@ -130,11 +174,29 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
           .then(() => {
             resetRetryCount();
             setIsLoading(false); // Video started playing
+            
+            // Track successful camera stream startup (Safari)
+            if (streamStartTimeRef.current) {
+              const startupTime = performance.now() - streamStartTimeRef.current;
+              trackCameraStreamStartup('manor', 'casa-camera', startupTime, true);
+              streamStartTimeRef.current = null;
+            }
+            
+            // Track successful connection time (Safari)
+            if (connectionStartTimeRef.current) {
+              const connectionTime = performance.now() - connectionStartTimeRef.current;
+              trackCameraConnectionTime('manor', 'casa-camera', connectionTime, true);
+              connectionStartTimeRef.current = null;
+            }
           })
-          .catch((error) => logger.error('Error playing video:', error));
+          .catch((error) => {
+            logger.error('Error playing video:', error);
+            trackCameraStreamError('manor', 'casa-camera', 'safari-play-error');
+          });
       });
     } else {
       logger.error('This browser does not support HLS');
+      trackCameraStreamError('manor', 'casa-camera', 'hls-not-supported');
     }
 
     videoElement.addEventListener('pause', () => {
@@ -156,11 +218,23 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
 
     videoElement.addEventListener('stalled', () => {
       logger.warn('Video stalled. Attempting to recover...');
+      bufferingEventsRef.current += 1;
+      
+      // Track quality based on buffering events
+      let quality: 'low' | 'medium' | 'high' = 'high';
+      if (bufferingEventsRef.current > 5) {
+        quality = 'low';
+      } else if (bufferingEventsRef.current > 2) {
+        quality = 'medium';
+      }
+      trackCameraStreamQuality('manor', 'casa-camera', quality, bufferingEventsRef.current);
+      
       videoElement
         .play()
         .catch((error) => {
           logger.error('Error recovering from stall:', error);
           logger.warn('Attempting full HLS reload due to stall recovery failure...');
+          trackCameraStreamError('manor', 'casa-camera', 'stall-recovery-failed');
           retryHlsLoad();
         });
     });
@@ -170,8 +244,10 @@ const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
       const vidError = videoElement.error;
       if (vidError && vidError.code === MediaError.MEDIA_ERR_ABORTED) {
         logger.warn('Media aborted error encountered. Attempting full reload of HLS stream...');
+        trackCameraStreamError('manor', 'casa-camera', 'media-aborted');
       } else {
         logger.warn('Non-abort video error encountered, retrying HLS load...');
+        trackCameraStreamError('manor', 'casa-camera', 'video-error');
       }
       retryHlsLoad();
     });

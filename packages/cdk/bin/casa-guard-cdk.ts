@@ -11,6 +11,7 @@ import { CasaAuthStack } from '../lib/casa-auth-stack';
 import { ManorWebsiteStack } from '../lib/manor-website-stack';
 import { ManorPublicWebsiteStack } from '../lib/manor-public-website-stack';
 import { ManorEmailStack } from '../lib/manor-email-stack';
+import { ManorMetricsDashboardStack } from '../lib/manor-metrics-dashboard-stack';
 
 const app = new cdk.App();
 
@@ -73,6 +74,7 @@ new CasaIntegrationsCdkStack(app, 'CasaIntegrationsCdkStack', {
   domainName: '720frontrd.mymanor.click',
 });
 new CasaCamerasDashboardsStack(app, 'CasaCamerasDashboardsStack', {});
+new ManorMetricsDashboardStack(app, 'ManorMetricsDashboardStack', {});
 new CasaAdminCdkStack(app, 'CasaAdminCdkStack', {});
 
 // Add dependencies
