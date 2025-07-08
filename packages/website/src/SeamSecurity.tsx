@@ -426,6 +426,17 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
     }
   }, []);
 
+  // Get device icon based on name
+  const getDeviceIcon = (deviceName: string): string => {
+    const name = deviceName.toLowerCase();
+    if (name.includes('front') && name.includes('door')) {
+      return '🚪'; // Door emoji
+    } else if (name.includes('back') || name.includes('patio')) {
+      return '🏖️'; // Patio umbrella emoji
+    }
+    return '🔒'; // Default lock emoji
+  };
+
   // Refresh data
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -474,7 +485,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
 
   if (loading) {
     return (
-      <div className="w-full max-w-full bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-4">
+      <div className="w-full max-w-full bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-4 animate-breath">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
           <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-900/30 mb-2">
             <SchlageLogo className="w-8 h-8 text-blue-400" />
@@ -491,7 +502,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
 
   if (error && devices.length === 0) {
     return (
-      <div className="w-full max-w-full bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-4">
+      <div className="w-full max-w-full bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-4 animate-breath">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
           <div className="w-16 h-16 flex items-center justify-center rounded-full bg-red-900/30 mb-2">
             <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -514,7 +525,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
   }
 
   return (
-    <div className="w-full max-w-full px-1 sm:px-0">
+    <div className="w-full max-w-full">
       {/* Error display */}
       {error && (
         <div className="bg-gradient-to-br from-[#300] to-[#200] rounded-xl border border-red-500/30 p-2.5 mb-3 mx-0">
@@ -539,115 +550,121 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
           return (
             <div
               key={device.device_id}
-              className="bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-[#1e293b]/40 p-3 sm:p-4 transition-all duration-300 flex flex-col h-full min-h-[180px] sm:min-h-[200px]"
+              className="bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-[#1e293b]/40 p-3 sm:p-4 transition-all duration-300 flex flex-col h-full min-h-[180px] sm:min-h-[200px] animate-breath"
             >
               {/* Optimized ultra-compact layout */}
               <div className="flex flex-col h-full space-y-2 sm:space-y-3">
                 {/* Header: Device name with compact manufacturer logo inline */}
                 <div className="flex items-center justify-between">
-                  <h3 className="device-name-prominent text-white text-lg sm:text-xl md:text-2xl font-bold leading-tight truncate flex-1 mr-2">
-                    {device.display_name}
+                  <h3 className={`device-name-prominent text-lg sm:text-xl md:text-2xl font-bold leading-tight truncate flex-1 mr-2 ${
+                    device.properties.online ? 'text-white' : 'text-gray-500'
+                  }`}>
+                    <span className="flex items-center space-x-2">
+                      <span className="text-xl sm:text-2xl">{getDeviceIcon(device.display_name)}</span>
+                      <span>{device.display_name}</span>
+                    </span>
                   </h3>
-                  <div className="manufacturer-logo-container p-1.5 sm:p-2 rounded-lg flex-shrink-0">
+                  <div className="manufacturer-logo-container flex-shrink-0">
                     {device.properties.model?.manufacturer_display_name?.toLowerCase().includes('yale') ? (
-                      <YaleLogo className="h-6 w-auto sm:h-8 sm:w-auto md:h-10 md:w-auto" />
+                      <YaleLogo className={`h-6 w-auto sm:h-8 sm:w-auto md:h-10 md:w-auto ${
+                        device.properties.online ? '' : 'opacity-50 grayscale'
+                      }`} />
                     ) : (
-                      <SchlageLogo className="h-6 w-auto sm:h-8 sm:w-auto md:h-10 md:w-auto" />
+                      <SchlageLogo className={`h-4 w-auto sm:h-6 sm:w-auto md:h-7 md:w-auto ${
+                        device.properties.online ? '' : 'opacity-50 grayscale'
+                      }`} />
                     )}
                   </div>
                 </div>
                 
-                {/* Compact status indicators in a single row */}
-                <div className="flex items-center justify-between text-xs sm:text-sm">
-                  {/* Lock status with small icon */}
-                  <div className={`flex items-center space-x-1.5 py-1.5 px-2.5 rounded-lg border ${
+                {/* Compact status indicators - simplified layout with proper overflow handling */}
+                <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0 overflow-hidden">
+                  {/* Lock status with larger icon */}
+                  <div className={`flex items-center space-x-2 py-2 px-3 rounded-lg border flex-shrink-0 ${
                     device.properties.locked 
                       ? 'bg-red-500/20 border-red-400/40 text-red-300' 
                       : 'bg-green-500/20 border-green-400/40 text-green-300'
-                  }`}>
+                  } ${!device.properties.online ? 'opacity-50 grayscale' : ''}`}>
                     {device.properties.locked 
-                      ? <UilLock className="w-3 h-3 sm:w-4 sm:h-4" /> 
-                      : <UilLockOpenAlt className="w-3 h-3 sm:w-4 sm:h-4" />
+                      ? <UilLock className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                      : <UilLockOpenAlt className="w-5 h-5 sm:w-6 sm:h-6" />
                     }
                     <span className="font-medium">{device.properties.locked ? 'Locked' : 'Unlocked'}</span>
                   </div>
                   
-                  {/* Online status - compact */}
-                  <div className={`flex items-center space-x-1 py-1.5 px-2 rounded-lg ${
-                    device.properties.online 
-                      ? 'bg-green-500/15 text-green-300' 
-                      : 'bg-red-500/15 text-red-300'
-                  }`}>
-                    <div className={`w-2 h-2 rounded-full ${
-                      device.properties.online ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-                    }`}></div>
-                    <span className="font-medium">{device.properties.online ? 'Online' : 'Offline'}</span>
-                  </div>
-                  
-                  {/* Battery level - ultra compact */}
+                  {/* Battery level - compact with constrained width and proper overflow handling */}
                   {device.properties.battery_level && (
-                    <div className="flex items-center space-x-1 bg-blue-500/15 text-blue-300 py-1.5 px-2 rounded-lg">
-                      <UilBolt className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="font-medium">{Math.round(device.properties.battery_level * 100)}%</span>
+                    <div className={`flex items-center space-x-1 bg-blue-500/15 text-blue-300 py-2 px-3 rounded-lg flex-shrink min-w-0 max-w-[80px] ${
+                      !device.properties.online ? 'opacity-50 grayscale' : ''
+                    }`}>
+                      <UilBolt className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="font-medium truncate text-xs">{Math.round(device.properties.battery_level * 100)}%</span>
                     </div>
                   )}
                 </div>
                 
                 {/* Large action button with long press - takes most of the space */}
                 <div className="flex-1 flex items-end">
-                  <button
-                    onMouseDown={() => !processingDevices[device.device_id] && handleLongPressStart(device.device_id, device.properties.locked ? 'unlock' : 'lock')}
-                    onMouseUp={handleLongPressEnd}
-                    onMouseLeave={handleLongPressEnd}
-                    onTouchStart={() => handleTouchStart(device.device_id, device.properties.locked ? 'unlock' : 'lock')}
-                    onTouchEnd={handleTouchEnd}
-                    disabled={processingDevices[device.device_id]}
-                    className={`
-                      long-press-button relative overflow-hidden px-3 py-4 sm:py-5 rounded-xl text-base sm:text-lg font-bold transition-all duration-200 flex items-center justify-center border-2 backdrop-blur-sm
-                      ${processingDevices[device.device_id]
-                        ? 'bg-gray-800/60 text-gray-400 cursor-not-allowed border-gray-700/50'
-                        : device.properties.locked
-                          ? 'bg-gradient-to-br from-green-500/80 to-green-600/90 hover:from-green-400/90 hover:to-green-500/100 active:from-green-600/90 active:to-green-700/100 text-white border-green-400/60 shadow-lg shadow-green-500/25'
-                          : 'bg-gradient-to-br from-red-500/80 to-red-600/90 hover:from-red-400/90 hover:to-red-500/100 active:from-red-600/90 active:to-red-700/100 text-white border-red-400/60 shadow-lg shadow-red-500/25'
-                      }
-                      w-full min-h-[50px] sm:min-h-[60px] touch-manipulation mobile-transition mobile-hardware-accelerated
-                      ${longPressDeviceId === device.device_id ? 'scale-[0.98] shadow-inner' : 'transform active:scale-95'}
-                    `}
-                    style={{
-                      transform: 'translateZ(0)',
-                      WebkitTransform: 'translateZ(0)',
-                      backfaceVisibility: 'hidden',
-                      WebkitBackfaceVisibility: 'hidden',
-                      WebkitTapHighlightColor: 'transparent'
-                    }}
-                  >
-                    {/* Long press progress bar */}
-                    {longPressDeviceId === device.device_id && (
-                      <div 
-                        className={`absolute bottom-0 left-0 h-1.5 transition-all duration-75 rounded-b-xl ${
-                          device.properties.locked
-                            ? 'bg-gradient-to-r from-green-300 to-green-200 shadow-lg shadow-green-300/60' 
-                            : 'bg-gradient-to-r from-red-300 to-red-200 shadow-lg shadow-red-300/60'
-                        }`}
-                        style={{ width: `${longPressProgress}%` }}
-                      />
-                    )}
-
-                    {/* Button content */}
-                    <div className="relative z-10 flex items-center justify-center">
-                      {processingDevices[device.device_id] && (
-                        <span className="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 border-2 border-t-transparent border-white rounded-full" />
-                      )}
-                      <span className="drop-shadow-lg">
-                        {processingDevices[device.device_id]
-                          ? (device.properties.locked ? 'Unlocking...' : 'Locking...')
-                          : longPressDeviceId === device.device_id
-                            ? `Hold to ${device.properties.locked ? 'Unlock' : 'Lock'}...`
-                            : (device.properties.locked ? 'Hold to Unlock' : 'Hold to Lock')
-                        }
-                      </span>
+                  {!device.properties.online ? (
+                    /* Offline state - disabled button */
+                    <div className="w-full px-3 py-4 sm:py-5 rounded-xl text-base sm:text-lg font-bold flex items-center justify-center border-2 bg-gray-800/40 text-gray-500 border-gray-700/30 cursor-not-allowed">
+                      <span className="drop-shadow-lg">Device Offline</span>
                     </div>
-                  </button>
+                  ) : (
+                    <button
+                      onMouseDown={() => !processingDevices[device.device_id] && handleLongPressStart(device.device_id, device.properties.locked ? 'unlock' : 'lock')}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
+                      onTouchStart={() => handleTouchStart(device.device_id, device.properties.locked ? 'unlock' : 'lock')}
+                      onTouchEnd={handleTouchEnd}
+                      disabled={processingDevices[device.device_id]}
+                      className={`
+                        long-press-button relative overflow-hidden px-3 py-4 sm:py-5 rounded-xl text-base sm:text-lg font-bold transition-all duration-200 flex items-center justify-center border-2 backdrop-blur-sm
+                        ${processingDevices[device.device_id]
+                          ? 'bg-gray-800/60 text-gray-400 cursor-not-allowed border-gray-700/50'
+                          : device.properties.locked
+                            ? 'bg-gradient-to-br from-green-500/80 to-green-600/90 hover:from-green-400/90 hover:to-green-500/100 active:from-green-600/90 active:to-green-700/100 text-white border-green-400/60 shadow-lg shadow-green-500/25'
+                            : 'bg-gradient-to-br from-red-500/80 to-red-600/90 hover:from-red-400/90 hover:to-red-500/100 active:from-red-600/90 active:to-red-700/100 text-white border-red-400/60 shadow-lg shadow-red-500/25'
+                        }
+                        w-full min-h-[50px] sm:min-h-[60px] touch-manipulation mobile-transition mobile-hardware-accelerated
+                        ${longPressDeviceId === device.device_id ? 'scale-[0.98] shadow-inner' : 'transform active:scale-95'}
+                      `}
+                      style={{
+                        transform: 'translateZ(0)',
+                        WebkitTransform: 'translateZ(0)',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                    >
+                      {/* Long press progress bar */}
+                      {longPressDeviceId === device.device_id && (
+                        <div 
+                          className={`absolute bottom-0 left-0 h-1.5 transition-all duration-75 rounded-b-xl ${
+                            device.properties.locked
+                              ? 'bg-gradient-to-r from-green-300 to-green-200 shadow-lg shadow-green-300/60' 
+                              : 'bg-gradient-to-r from-red-300 to-red-200 shadow-lg shadow-red-300/60'
+                          }`}
+                          style={{ width: `${longPressProgress}%` }}
+                        />
+                      )}
+
+                      {/* Button content */}
+                      <div className="relative z-10 flex items-center justify-center">
+                        {processingDevices[device.device_id] && (
+                          <span className="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 border-2 border-t-transparent border-white rounded-full" />
+                        )}
+                        <span className="drop-shadow-lg">
+                          {processingDevices[device.device_id]
+                            ? (device.properties.locked ? 'Unlocking...' : 'Locking...')
+                            : longPressDeviceId === device.device_id
+                              ? `Hold to ${device.properties.locked ? 'Unlock' : 'Lock'}...`
+                              : (device.properties.locked ? 'Hold to Unlock' : 'Hold to Lock')
+                          }
+                        </span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -657,7 +674,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
 
       {/* Empty State */}
       {devices.length === 0 && !loading && (
-        <div className="bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-5">
+        <div className="bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-xl shadow-xl border border-[#1e293b]/40 p-5 animate-breath">
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/70 rounded-full p-4 sm:p-5 w-16 sm:w-20 h-16 sm:h-20 mb-4 sm:mb-6 flex items-center justify-center border border-gray-700/30 shadow-inner">
               <UilShieldCheck size={30} className="text-gray-500 sm:hidden" />

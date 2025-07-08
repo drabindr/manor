@@ -145,7 +145,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             WebView(
-                url: "https://720frontrd.mymanor.click",
+                url: EndpointManager.shared.webAppURL,
                 refreshTrigger: refreshWebView,
                 onWebViewCreated: { webView in
                     // Store webView reference for potential use
