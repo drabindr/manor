@@ -89,8 +89,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               }}
             />
             
-            {/* Simple house name text */}
-            <span className="veedu-text text-lg xs:text-xl sm:text-2xl font-black text-liquid-primary tracking-wide drop-shadow-md transition-all duration-300 text-optimized whitespace-nowrap"
+            {/* Simple house name text - optimized for iPhone 14 Pro */}
+            <span className="veedu-text house-dropdown text-lg xs:text-xl sm:text-2xl font-black text-liquid-primary tracking-wide drop-shadow-md transition-all duration-300 text-optimized whitespace-nowrap"
                   style={{
                     background: "linear-gradient(135deg, rgba(255, 91, 4, 1), rgba(244, 212, 124, 1))",
                     WebkitBackgroundClip: "text",
@@ -112,7 +112,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           >
             {getArmModeDisplay()}
           </div>
-          <AlarmControls {...alarmControlsProps} />
+          <div className="alarm-controls">
+            <AlarmControls {...alarmControlsProps} />
+          </div>
         </div>
       </div>
     </div>
