@@ -50,6 +50,58 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* iPhone 14 Pro specific optimizations for smart lock widget */
+@media only screen and (min-width: 376px) and (max-width: 393px) and (orientation: portrait) {
+  /* Make smart lock cards more compact */
+  .smart-lock-widget {
+    min-height: 160px !important; /* Reduced from 180px */
+    padding: 12px !important; /* Reduced padding */
+  }
+  
+  /* Compact device name */
+  .device-name-prominent {
+    font-size: 1rem !important; /* Smaller device name */
+    line-height: 1.2 !important;
+  }
+  
+  /* Smaller manufacturer logos */
+  .manufacturer-logo-container svg {
+    max-height: 20px !important;
+    max-width: 32px !important;
+  }
+  
+  /* More compact status indicators */
+  .smart-lock-status {
+    gap: 6px !important;
+  }
+  
+  .smart-lock-status > div {
+    padding: 6px 8px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  /* Compact action button */
+  .long-press-button {
+    min-height: 44px !important; /* Reduced from 50px */
+    padding: 8px 12px !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Adjust battery indicator */
+  .max-w-\[80px\] {
+    max-width: 60px !important;
+  }
+  
+  /* Compact space between elements */
+  .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 6px !important;
+  }
+  
+  .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 8px !important;
+  }
+}
+
 .long-press-button::before {
   content: '';
   position: absolute;

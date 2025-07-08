@@ -550,7 +550,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
           return (
             <div
               key={device.device_id}
-              className="bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-[#1e293b]/40 p-3 sm:p-4 transition-all duration-300 flex flex-col h-full min-h-[180px] sm:min-h-[200px] animate-breath"
+              className="smart-lock-widget bg-gradient-to-br from-[#0e1726]/95 to-[#0a1120]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-[#1e293b]/40 p-3 sm:p-4 transition-all duration-300 flex flex-col h-full min-h-[180px] sm:min-h-[200px] animate-breath"
             >
               {/* Optimized ultra-compact layout */}
               <div className="flex flex-col h-full space-y-2 sm:space-y-3">
@@ -578,7 +578,7 @@ const SeamSecurity: React.FC<SeamSecurityProps> = () => {
                 </div>
                 
                 {/* Compact status indicators - simplified layout with proper overflow handling */}
-                <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0 overflow-hidden">
+                <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0 overflow-hidden smart-lock-status">
                   {/* Lock status with larger icon */}
                   <div className={`flex items-center space-x-2 py-2 px-3 rounded-lg border flex-shrink-0 ${
                     device.properties.locked 
