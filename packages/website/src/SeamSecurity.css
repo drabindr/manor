@@ -74,20 +74,15 @@
   transform: none !important;
 }
 
-/* Logo container enhancements - more compact */
+/* Logo container enhancements - clean, no border design */
 .manufacturer-logo-container {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  /* Removed all background, border, and shadow styling for clean look */
   transition: all 0.3s ease;
 }
 
 .manufacturer-logo-container:hover {
-  background: rgba(255, 255, 255, 0.18);
+  /* Subtle hover effect without background or border */
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Mobile touch optimization */
@@ -123,10 +118,6 @@
   .device-name-prominent {
     font-size: 1rem;
     line-height: 1.2;
-  }
-  
-  .manufacturer-logo-container {
-    padding: 4px 6px;
   }
 }
 

@@ -452,12 +452,12 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
     return (
       <div className="w-full h-full flex flex-col space-y-4 mt-2">
         {/* USER HOME STATUS */}
-        <div className="mx-4 mb-4">
+        <div className="mb-4">
           {renderUserHomeStatusContent()}
         </div>
 
         {/* EVENT HISTORY CARD */}
-        <div className="mx-4 mb-4 bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-800/40 transition-all duration-200 flex-grow animate-breath">
+        <div className="mb-4 bg-gradient-to-br from-gray-900/95 to-gray-950/95 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-800/40 transition-all duration-200 flex-grow animate-breath">
           {/* Card Title */}
           <div className="flex justify-between items-center p-4 border-b border-gray-800/30 bg-gradient-to-r from-gray-900/50 to-gray-950/50">
             <div className="flex items-center space-x-3">

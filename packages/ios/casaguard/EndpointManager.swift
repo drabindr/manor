@@ -96,10 +96,10 @@ class EndpointManager {
     private let prodUserHomeStatesURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod/user-home-states"
     private let prodAPNSBaseURL = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/apns"
     
-    // TEST ENDPOINTS - Replace with actual test endpoints when available
-    private let testWebAppURL = "http://casa-guard-webapp-test.s3-website-us-east-1.amazonaws.com/" // Placeholder
-    private let testUserHomeStatesURL = "https://test-api.example.com/user-home-states" // Placeholder
-    private let testAPNSBaseURL = "https://test-api.example.com/apns" // Placeholder
+    // TEST ENDPOINTS - Development environment endpoints
+    private let testWebAppURL = "http://192.168.86.78:3000/"
+    private let testUserHomeStatesURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/dev/user-home-states"
+    private let testAPNSBaseURL = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/dev/apns"
     
     // Toggle environment
     func toggleEnvironment() {
