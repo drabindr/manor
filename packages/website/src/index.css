@@ -953,7 +953,70 @@ code {
 }
 
 @media screen and (min-width: 376px) and (max-width: 393px) {
-  /* iPhone 15 Pro specific optimizations */
+  /* iPhone 14 Pro (390px) and iPhone 15 Pro (393px) specific optimizations */
+  .veedu-text { 
+    font-size: 1.125rem !important; /* 18px - larger for iPhone 14 Pro */
+    letter-spacing: 0.025em !important;
+    font-weight: 900 !important;
+  }
+  
+  /* Header text optimizations for iPhone 14 Pro */
+  .house-dropdown .veedu-text {
+    font-size: 1.25rem !important; /* 20px */
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Make house logo larger for iPhone 14 Pro */
+  .status-indicator {
+    width: 3.5rem !important; /* 56px - larger than default 48px */
+    height: 3.5rem !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .status-indicator:hover {
+    transform: scale(1.1) translateZ(0) !important;
+  }
+  
+  .status-indicator:active {
+    transform: scale(0.95) translateZ(0) !important;
+  }
+  
+  /* Make alarm control buttons smaller for iPhone 14 Pro */
+  .alarm-controls button {
+    min-width: 90px !important; /* Reduced from 120px */
+    min-height: 42px !important; /* Reduced from 48px */
+    padding: 0.5rem 0.75rem !important; /* Reduced padding */
+    font-size: 0.8rem !important; /* Smaller text */
+  }
+  
+  .alarm-controls .flex {
+    min-width: 90px !important; /* Reduced from 120px */
+    min-height: 42px !important; /* Reduced from 48px */
+  }
+  
+  /* Adjust ARM STAY button specifically */
+  .alarm-controls button[style*="minWidth: '80px'"] {
+    min-width: 60px !important; /* Reduced from 80px */
+    min-height: 42px !important; /* Reduced from 48px */
+    padding: 0.5rem 0.5rem !important; /* Reduced padding */
+  }
+  
+  /* Adjust dropdown arrow button */
+  .alarm-controls button[style*="minWidth: '44px'"] {
+    min-width: 36px !important; /* Reduced from 44px */
+    min-height: 42px !important; /* Reduced from 48px */
+  }
+  
+  /* Make arm mode display smaller for iPhone 14 Pro */
+  .top-app-bar [class*="min-w-"][class*="text-center"] {
+    min-width: 45px !important; /* Reduced from 55px */
+    padding: 0.25rem 0.5rem !important; /* Reduced padding */
+    font-size: 0.7rem !important; /* Smaller text */
+  }
+  
   .thermostat-controls {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
