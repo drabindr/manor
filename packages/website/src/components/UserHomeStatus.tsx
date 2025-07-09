@@ -7,13 +7,25 @@ interface UserHomeStatusProps {
   userId: string;
   displayName?: string;
   homeId: string;
+  enabled?: boolean; // Add enabled status
   onDisplayNameUpdate?: (userId: string, newDisplayName: string) => void;
+  onDeviceStatusUpdate?: (userId: string, enabled: boolean) => void; // Add device status update handler
 }
 
-const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, displayName, homeId, onDisplayNameUpdate }) => {
+const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ 
+  status, 
+  userId, 
+  displayName, 
+  homeId, 
+  enabled = true, // Default to enabled
+  onDisplayNameUpdate,
+  onDeviceStatusUpdate 
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(displayName || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [currentEnabled, setCurrentEnabled] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   
   // Admin API URL
@@ -132,6 +144,42 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
     triggerHaptic('light');
   }, [triggerHaptic]);
 
+  // Handle device status toggle
+  const handleDeviceStatusToggle = async () => {
+    if (!onDeviceStatusUpdate) return;
+    
+    setIsUpdatingStatus(true);
+    setError(null);
+    triggerHaptic('medium');
+
+    try {
+      const newEnabledStatus = !currentEnabled;
+      
+      // Use the admin API to update the device status
+      await axios.put(`${ADMIN_API_BASE_URL}/device-status`, {
+        userId,
+        homeId,
+        enabled: newEnabledStatus,
+      });
+      
+      console.log(`Device status for ${userId} updated to ${newEnabledStatus ? 'enabled' : 'disabled'}.`);
+      
+      // Update local state
+      setCurrentEnabled(newEnabledStatus);
+      
+      // Call the parent callback
+      onDeviceStatusUpdate(userId, newEnabledStatus);
+      
+      triggerHaptic('light');
+    } catch (err) {
+      console.error("Error updating device status:", err);
+      setError(`Failed to update device status: ${err instanceof Error ? err.message : "Unknown error"}`);
+      triggerHaptic('heavy');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   // Render edit mode
   if (isEditing) {
     return (
@@ -243,7 +291,32 @@ const UserHomeStatus: React.FC<UserHomeStatusProps> = ({ status, userId, display
             </button>
           </div>
         </div>
-        {getStatusIndicator()}
+        <div className="flex items-center space-x-2">
+          {/* Device enable/disable toggle */}
+          <button
+            className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 min-h-[28px] min-w-[70px] touch-manipulation active:scale-95 ${
+              currentEnabled 
+                ? 'bg-green-600/80 hover:bg-green-500 text-white' 
+                : 'bg-gray-600/80 hover:bg-gray-500 text-gray-300'
+            }`}
+            style={{
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeviceStatusToggle();
+            }}
+            disabled={isUpdatingStatus}
+          >
+            {isUpdatingStatus ? (
+              <span className="inline-block w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              currentEnabled ? 'ON' : 'OFF'
+            )}
+          </button>
+          {getStatusIndicator()}
+        </div>
       </div>
     </div>
   );

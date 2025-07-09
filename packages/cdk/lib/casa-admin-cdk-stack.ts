@@ -101,11 +101,43 @@ export class CasaAdminCdkStack extends cdk.Stack {
       }
     });
 
+    // Create Lambda function to get device status
+    const getDeviceStatusLambda = new NodejsFunction(this, "GetDeviceStatusHandler", {
+      entry: "lambda/casa-admin/userHomeStateHandler.ts",
+      handler: "getDeviceStatusHandler",
+      runtime: lambda.Runtime.NODEJS_LATEST,
+      environment: {
+        USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
+      },
+      bundling: {
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
+      }
+    });
+
+    // Create Lambda function to update device status
+    const updateDeviceStatusLambda = new NodejsFunction(this, "UpdateDeviceStatusHandler", {
+      entry: "lambda/casa-admin/userHomeStateHandler.ts",
+      handler: "updateDeviceStatusHandler",
+      runtime: lambda.Runtime.NODEJS_LATEST,
+      environment: {
+        USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
+      },
+      bundling: {
+        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        minify: true,
+        platform: 'linux',
+      }
+    });
+
     // Grant the Lambda permission to read/write the tables.
     homesTable.grantReadWriteData(mainLambda);
     homesTable.grantReadWriteData(homeStatusLambda);
     userHomeStatesTable.grantReadWriteData(userHomeStateLambda);
     userHomeStatesTable.grantReadWriteData(saveDisplayNameLambda);
+    userHomeStatesTable.grantReadWriteData(getDeviceStatusLambda);
+    userHomeStatesTable.grantReadWriteData(updateDeviceStatusLambda);
 
     // Allow the Lambda to create/update/delete SSM parameters and get parameters by path.
     mainLambda.addToRolePolicy(
@@ -214,6 +246,7 @@ export class CasaAdminCdkStack extends cdk.Stack {
 
     // Define the /user-home-states resource.
     const userHomeStatesResource = adminApi.root.addResource("user-home-states");
+    userHomeStatesResource.addMethod("GET", new LambdaIntegration(userHomeStateLambda));
     userHomeStatesResource.addMethod("POST", new LambdaIntegration(userHomeStateLambda));
     userHomeStatesResource.addMethod("OPTIONS", corsIntegration, {
       methodResponses: [methodResponse],
@@ -223,6 +256,14 @@ export class CasaAdminCdkStack extends cdk.Stack {
     const saveDisplayNameResource = adminApi.root.addResource("saveDisplayName");
     saveDisplayNameResource.addMethod("POST", new LambdaIntegration(saveDisplayNameLambda));
     saveDisplayNameResource.addMethod("OPTIONS", corsIntegration, {
+      methodResponses: [methodResponse],
+    });
+
+    // Define the /device-status resource.
+    const deviceStatusResource = adminApi.root.addResource("device-status");
+    deviceStatusResource.addMethod("GET", new LambdaIntegration(getDeviceStatusLambda));
+    deviceStatusResource.addMethod("PUT", new LambdaIntegration(updateDeviceStatusLambda));
+    deviceStatusResource.addMethod("OPTIONS", corsIntegration, {
       methodResponses: [methodResponse],
     });
 

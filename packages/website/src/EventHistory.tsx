@@ -102,6 +102,7 @@ type UserHomeStatusType = {
   homeId: string;
   state: 'home' | 'away' | null;
   displayName?: string;
+  enabled?: boolean;
 };
 
 // Helper function to format dates for grouping events by day
@@ -151,7 +152,7 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
             ":homeId": homeId,
           },
           // Add projection expression to ensure we get all needed attributes
-          ProjectionExpression: "userId, homeId, #state, displayName",
+          ProjectionExpression: "userId, homeId, #state, displayName, enabled",
           ExpressionAttributeNames: {
             "#state": "state" // 'state' is a reserved word in DynamoDB
           }
@@ -166,7 +167,8 @@ const EventHistory = forwardRef<EventHistoryRef, EventHistoryProps>(
           userId: item.userId,
           homeId: item.homeId,
           state: item.state,
-          displayName: item.displayName || undefined // Explicitly handle displayName
+          displayName: item.displayName || undefined, // Explicitly handle displayName
+          enabled: item.enabled !== false // Default to true if not set, false only if explicitly false
         }));
         
         // Compare with current state to prevent unnecessary re-renders

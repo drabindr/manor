@@ -93,8 +93,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if response.actionIdentifier == "DISARM_ACTION" {
-            let locationVM = LocationViewModel()
-            locationVM.setHome()
+            // Since we use hardcoded location, we can directly update the home state
+            HomeLocationManager.shared.updateUserHomeState(state: "home")
         }
         
         let userInfo = response.notification.request.content.userInfo
@@ -119,11 +119,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     private func handleNotificationAction(_ actionType: String, userInfo: [AnyHashable: Any]) {
         switch actionType {
         case "setHome":
-            let locationVM = LocationViewModel()
-            locationVM.setHome()
+            HomeLocationManager.shared.updateUserHomeState(state: "home")
         case "setAway":
-            let locationVM = LocationViewModel()
-            locationVM.setAway()
+            HomeLocationManager.shared.updateUserHomeState(state: "away")
         case "refreshWebView":
             NotificationCenter.default.post(name: Notification.Name("RefreshWebView"), object: nil)
         default:
@@ -163,8 +161,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             
             var authCode: String?
             var state: String?
-            var error: String?
-            var errorDescription: String?
             
             for item in queryItems {
                 switch item.name {
@@ -172,10 +168,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     authCode = item.value
                 case "state":
                     state = item.value
-                case "error":
-                    error = item.value
-                case "error_description":
-                    errorDescription = item.value
+                case "error", "error_description":
+                    // Handle errors silently for now
+                    break
                 default:
                     break
                 }

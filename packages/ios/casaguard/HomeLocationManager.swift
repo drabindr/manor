@@ -9,18 +9,38 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
     static let shared = HomeLocationManager()
     
     private let locationManager = CLLocationManager()
-    private var completion: ((CLLocationCoordinate2D?) -> Void)?
     private let userId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown_user"
     private let log = OSLog(subsystem: Bundle.main.bundleIdentifier!, category: "HomeLocationManager")
+    
+    // Hardcoded home location for 720 Front Rd, Pickering, Ontario
+    private let homeLocation = CLLocationCoordinate2D(latitude: 43.8192224, longitude: -79.0870727)
+    private let homeRegionRadius: CLLocationDistance = 200
 
     private override init() {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         
+        // Request location permissions
+        if locationManager.authorizationStatus != .authorizedAlways {
+            locationManager.requestAlwaysAuthorization()
+        }
+        
+        // Start monitoring the hardcoded home location immediately
+        startMonitoringHomeRegion(center: homeLocation)
+        
+        // Register user in occupancy database on app startup
+        registerUserInDatabase()
+        
         NotificationCenter.default.addObserver(self, 
             selector: #selector(environmentChanged), 
             name: Notification.Name("EnvironmentChanged"), 
+            object: nil)
+        
+        // Listen for authentication completion to re-register user
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(authenticationCompleted),
+            name: Notification.Name("HandleOAuthCallback"),
             object: nil)
     }
     
@@ -29,23 +49,73 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     @objc private func environmentChanged() {
-        // Environment changed for HomeLocationManager
+        // Re-register user when environment changes
+        registerUserInDatabase()
     }
     
-    func setHomeLocation(completion: @escaping (CLLocationCoordinate2D?) -> Void) {
-        self.completion = completion
-        requestPermissionsAndStartUpdating()
+    @objc private func authenticationCompleted() {
+        // Re-register user when authentication completes
+        registerUserInDatabase()
     }
     
-    private func requestPermissionsAndStartUpdating() {
-        if locationManager.authorizationStatus != .authorizedAlways {
-            locationManager.requestAlwaysAuthorization()
+    private func registerUserInDatabase() {
+        // Get current location to determine initial home state
+        locationManager.requestLocation()
+    }
+    
+    private func determineHomeStateAndRegister() {
+        guard let currentLocation = locationManager.location else {
+            print("No location available for registration")
+            return
         }
-        locationManager.startUpdatingLocation()
+        
+        let homeLocationCL = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
+        let distance = currentLocation.distance(from: homeLocationCL)
+        let isHome = distance <= homeRegionRadius
+        let homeState = isHome ? "home" : "away"
+        
+        print("Registering user in database with initial state: \(homeState)")
+        print("Distance from home: \(distance) meters")
+        
+        // Call the backend to register/update user
+        updateUserHomeState(state: homeState)
+    }
+    
+    // Public method to register user after authentication
+    func registerUserAfterAuth(userId: String? = nil, displayName: String? = nil) {
+        print("User authentication completed - registering in occupancy database")
+        
+        // Check if we have location permissions
+        guard locationManager.authorizationStatus == .authorizedAlways || 
+              locationManager.authorizationStatus == .authorizedWhenInUse else {
+            print("Location permissions not granted - requesting location for user registration")
+            locationManager.requestLocation()
+            return
+        }
+        
+        // Try to get current location, or use last known location
+        if let currentLocation = locationManager.location {
+            let homeLocationCL = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
+            let distance = currentLocation.distance(from: homeLocationCL)
+            let isHome = distance <= homeRegionRadius
+            let homeState = isHome ? "home" : "away"
+            
+            print("Registering authenticated user with state: \(homeState) (distance: \(distance)m)")
+            
+            // Use provided userId and displayName if available
+            if let userId = userId {
+                updateUserHomeState(state: homeState, userId: userId, displayName: displayName)
+            } else {
+                updateUserHomeState(state: homeState)
+            }
+        } else {
+            print("No location available - requesting location for user registration")
+            locationManager.requestLocation()
+        }
     }
     
     private func startMonitoringHomeRegion(center: CLLocationCoordinate2D) {
-        let region = CLCircularRegion(center: center, radius: 200, identifier: "HomeRegion")
+        let region = CLCircularRegion(center: center, radius: homeRegionRadius, identifier: "HomeRegion")
         region.notifyOnEntry = true
         region.notifyOnExit = true
         locationManager.startMonitoring(for: region)
@@ -109,8 +179,12 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
     
-    private func updateUserHomeState(state: String) {
-        guard let url = URL(string: EndpointManager.shared.userHomeStatesURL) else { return }
+    func updateUserHomeState(state: String) {
+        guard let url = URL(string: EndpointManager.shared.userHomeStatesURL) else { 
+            os_log("Invalid URL for updating user home state", log: self.log, type: .error)
+            return 
+        }
+        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -123,9 +197,81 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, _, error in
+        os_log("Updating user home state to: %{public}@", log: self.log, type: .info, state)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                os_log("Error updating user home state: %{public}@", type: .error, error.localizedDescription)
+                os_log("Error updating user home state: %{public}@", log: self.log, type: .error, error.localizedDescription)
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                os_log("Location update response status: %{public}d", log: self.log, type: .info, httpResponse.statusCode)
+                
+                if httpResponse.statusCode == 403 {
+                    os_log("Authentication required for location update - user may not be logged in with Google", log: self.log, type: .info)
+                    
+                    // Send notification to user that they need to log in
+                    DispatchQueue.main.async {
+                        self.sendNotification(title: "Authentication Required", body: "Please log in to track your location", isCritical: false, withVibration: false)
+                    }
+                } else if httpResponse.statusCode == 200 {
+                    os_log("Location update successful: %{public}@", log: self.log, type: .info, state)
+                } else {
+                    os_log("Location update failed with status: %{public}d", log: self.log, type: .error, httpResponse.statusCode)
+                }
+            }
+        }.resume()
+    }
+    
+    // Overloaded method to update user home state with custom userId and displayName
+    func updateUserHomeState(state: String, userId: String, displayName: String? = nil) {
+        guard let url = URL(string: EndpointManager.shared.userHomeStatesURL) else { 
+            os_log("Invalid URL for updating user home state", log: self.log, type: .error)
+            return 
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        var body: [String: Any] = [
+            "userId": userId,
+            "homeId": "720frontrd",
+            "state": state
+        ]
+        
+        // Add displayName if provided
+        if let displayName = displayName {
+            body["displayName"] = displayName
+        }
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        os_log("Updating user home state to: %{public}@ for userId: %{public}@ with displayName: %{public}@", 
+               log: self.log, type: .info, state, userId, displayName ?? "nil")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                os_log("Error updating user home state: %{public}@", log: self.log, type: .error, error.localizedDescription)
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                os_log("Location update response status: %{public}d", log: self.log, type: .info, httpResponse.statusCode)
+                
+                if httpResponse.statusCode == 403 {
+                    os_log("Authentication required for location update - user may not be logged in with Google", log: self.log, type: .info)
+                    
+                    // Send notification to user that they need to log in
+                    DispatchQueue.main.async {
+                        self.sendNotification(title: "Authentication Required", body: "Please log in to track your location", isCritical: false, withVibration: false)
+                    }
+                } else if httpResponse.statusCode == 200 {
+                    os_log("Location update successful: %{public}@ for user: %{public}@", log: self.log, type: .info, state, userId)
+                } else {
+                    os_log("Location update failed with status: %{public}d", log: self.log, type: .error, httpResponse.statusCode)
+                }
             }
         }.resume()
     }
@@ -209,22 +355,10 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     // MARK: - CLLocationManagerDelegate
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let currentLoc = locations.first else { return }
-        locationManager.stopUpdatingLocation()
-        startMonitoringHomeRegion(center: currentLoc.coordinate)
-        completion?(currentLoc.coordinate)
-        completion = nil
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        os_log("Location update failed: %{public}@", type: .error, error.localizedDescription)
-        completion?(nil)
-        completion = nil
-    }
-    
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         guard region.identifier == "HomeRegion" else { return }
+        
+        os_log("Entered home region - user arrived home", log: self.log, type: .info)
         
         // Check if home is armed before determining notification type
         checkHomeArmedStatus { [weak self] isArmed in
@@ -237,7 +371,7 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
                     self?.sendNotification(title: "Home", body: "Arriving", isCritical: false, withVibration: false)
                 }
                 
-                // Always update the home state regardless of armed status
+                // Always try to update the home state
                 self?.updateUserHomeState(state: "home")
             }
         }
@@ -245,7 +379,57 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         guard region.identifier == "HomeRegion" else { return }
+        
+        os_log("Exited home region - user left home", log: self.log, type: .info)
+        
         sendNotification(title: "Home", body: "Departing")
         updateUserHomeState(state: "away")
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        os_log("Location authorization changed: %{public}d", log: self.log, type: .info, status.rawValue)
+        
+        switch status {
+        case .authorizedAlways:
+            os_log("Location authorization: Always - starting region monitoring", log: self.log, type: .info)
+            startMonitoringHomeRegion(center: homeLocation)
+        case .authorizedWhenInUse:
+            os_log("Location authorization: When in use - requesting always authorization", log: self.log, type: .info)
+            locationManager.requestAlwaysAuthorization()
+        case .denied, .restricted:
+            os_log("Location authorization denied/restricted", log: self.log, type: .error)
+        case .notDetermined:
+            os_log("Location authorization not determined - requesting authorization", log: self.log, type: .info)
+            locationManager.requestAlwaysAuthorization()
+        @unknown default:
+            os_log("Unknown location authorization status", log: self.log, type: .error)
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        os_log("Location manager failed with error: %{public}@", log: self.log, type: .error, error.localizedDescription)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+        os_log("Region monitoring failed for region %{public}@: %{public}@", log: self.log, type: .error, region?.identifier ?? "unknown", error.localizedDescription)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {
+        os_log("Started monitoring region: %{public}@", log: self.log, type: .info, region.identifier)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let currentLocation = locations.last else { return }
+        
+        let homeLocationCL = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
+        let distance = currentLocation.distance(from: homeLocationCL)
+        let isHome = distance <= homeRegionRadius
+        
+        os_log("Location updated: %{public}@, Distance from home: %.2f meters, State: %{public}@", 
+               log: self.log, type: .info, 
+               currentLocation.description, distance, isHome ? "home" : "away")
+        
+        // Call the registration method when location is updated
+        determineHomeStateAndRegister()
     }
 }
