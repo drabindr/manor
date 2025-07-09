@@ -94,11 +94,13 @@ class EndpointManager {
     // PRODUCTION ENDPOINTS
     private let prodWebAppURL = "https://720frontrd.mymanor.click/"
     private let prodUserHomeStatesURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod/user-home-states"
+    private let prodDeviceStatusURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/prod/device-status"
     private let prodAPNSBaseURL = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/prod/apns"
     
     // TEST ENDPOINTS - Development environment endpoints
     private let testWebAppURL = "http://192.168.86.78:3000/"
     private let testUserHomeStatesURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/dev/user-home-states"
+    private let testDeviceStatusURL = "https://nocd1rav49.execute-api.us-east-1.amazonaws.com/dev/device-status"
     private let testAPNSBaseURL = "https://m3jx6c8bh2.execute-api.us-east-1.amazonaws.com/dev/apns"
     
     // Toggle environment
@@ -119,6 +121,10 @@ class EndpointManager {
     
     var userHomeStatesURL: String {
         return currentEnvironment == .production ? prodUserHomeStatesURL : testUserHomeStatesURL
+    }
+    
+    var deviceStatusURL: String {
+        return currentEnvironment == .production ? prodDeviceStatusURL : testDeviceStatusURL
     }
     
     var apnsBaseURL: String {

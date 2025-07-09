@@ -23,120 +23,8 @@ class AppleSignInManager: ObservableObject {
     }
 }
 
-class LocationViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
-    @Published var homeCoordinate: CLLocationCoordinate2D?
-    private let locationManager = CLLocationManager()
-    private var isRequestingLocation = false
-    private var apiUrl: String {
-        return EndpointManager.shared.userHomeStatesURL
-    }
-    private let userId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown_user"
-    
-    override init() {
-        super.init()
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        
-        NotificationCenter.default.addObserver(self, 
-            selector: #selector(environmentChanged), 
-            name: Notification.Name("EnvironmentChanged"), 
-            object: nil)
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-    
-    @objc private func environmentChanged() {
-        // Environment changed notification handler
-    }
-    
-    func requestHomeLocation() {
-        guard !isRequestingLocation else { return }
-        isRequestingLocation = true
-        
-        let status = locationManager.authorizationStatus
-        if status == .notDetermined {
-            locationManager.requestAlwaysAuthorization()
-        } else if status == .denied || status == .restricted {
-            sendNotification(title: "Error", body: "Location services are disabled. Please enable them in settings.")
-            isRequestingLocation = false
-            return
-        } else {
-            locationManager.requestLocation()
-        }
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        if status == .authorizedAlways || status == .authorizedWhenInUse {
-            locationManager.requestLocation()
-        } else if status == .denied || status == .restricted {
-            sendNotification(title: "Error", body: "Location services are disabled. Please enable them in settings.")
-            isRequestingLocation = false
-        }
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        homeCoordinate = locations.first?.coordinate
-        if homeCoordinate != nil {
-            HomeLocationManager.shared.setHomeLocation { _ in }
-            updateUserHomeState(state: "home")
-        } else {
-            sendNotification(title: "Error", body: "Failed to get location.")
-        }
-        isRequestingLocation = false
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        homeCoordinate = nil
-        sendNotification(title: "Error", body: "Failed to get location: \(error.localizedDescription)")
-        isRequestingLocation = false
-    }
-    
-    private func sendNotification(title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        
-        let request = UNNotificationRequest(identifier: UUID().uuidString,
-                                            content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
-    }
-    
-    private func updateUserHomeState(state: String) {
-        guard let url = URL(string: apiUrl) else { return }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body: [String: Any] = [
-            "userId": userId,
-            "homeId": "720frontrd",
-            "state": state
-        ]
-        
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            // Error handling silently
-        }.resume()
-    }
-    
-    func setHome() {
-        updateUserHomeState(state: "home")
-    }
-    
-    func setAway() {
-        updateUserHomeState(state: "away")
-    }
-}
-
 struct ContentView: View {
-    @StateObject private var locationVM = LocationViewModel()
-    @AppStorage("isHomeLocationSet") private var isHomeLocationSet: Bool = false
-    @AppStorage("homeLatitude") private var homeLatitude: Double = 0.0
-    @AppStorage("homeLongitude") private var homeLongitude: Double = 0.0
+    @AppStorage("isHomeLocationSet") private var isHomeLocationSet: Bool = true // Default to true since we use hardcoded location
     @State private var refreshWebView: Int = 0
     @State private var signInStatusMessage: String?
     @State private var showSignInStatus: Bool = false
@@ -157,21 +45,6 @@ struct ContentView: View {
                 .background(Color(.systemBackground))
                 .edgesIgnoringSafeArea([.top])
             
-            if !isHomeLocationSet {
-                VStack {
-                    Spacer()
-                    Button("Set Home Location") {
-                        locationVM.requestHomeLocation()
-                    }
-                    .padding()
-                    .background(Color.blue.opacity(0.9))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .padding(.bottom, 40)
-                }
-                .background(Color.black.opacity(0.3))
-            }
-
             if showSignInStatus, let message = signInStatusMessage {
                 VStack {
                     Spacer()
@@ -187,23 +60,14 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Check if home location is set
-            if homeLatitude != 0.0 && homeLongitude != 0.0 {
-                isHomeLocationSet = true
-            }
+            // Home location is now hardcoded to 720 Front Rd, Pickering, Ontario
+            isHomeLocationSet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ApplicationDidBecomeActive"))) { _ in
             refreshWebView += 1
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("RefreshWebView"))) { _ in
             refreshWebView += 1
-        }
-        .onReceive(locationVM.$homeCoordinate) { coordinate in
-            if let coordinate = coordinate {
-                homeLatitude = coordinate.latitude
-                homeLongitude = coordinate.longitude
-                isHomeLocationSet = true
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EnvironmentChanged"))) { _ in
             // Refresh WebView when environment changes
@@ -576,15 +440,35 @@ struct WebView: UIViewRepresentable {
                     }
                 }
             }
+            
+            // Register user in occupancy database when web app finishes loading
+            // This covers cases where user is already authenticated
+            os_log("Web app finished loading - attempting user registration", log: OSLog.default, type: .info)
+            DispatchQueue.main.async {
+                // Try to extract user info from the web app
+                self.extractUserInfoFromWebApp(webView: webView)
+            }
         }
         
         // Add error handling for WebView loading failures
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            // Handle navigation failure
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                // Navigation was cancelled - this is normal during auth flows
+                os_log("WebView navigation cancelled (normal during auth): %{public}@", log: OSLog.default, type: .debug, error.localizedDescription)
+            } else {
+                os_log("WebView navigation failed: %{public}@", log: OSLog.default, type: .error, error.localizedDescription)
+            }
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            // Handle provisional navigation failure
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                // Provisional navigation was cancelled - this is normal during auth flows
+                os_log("WebView provisional navigation cancelled (normal during auth): %{public}@", log: OSLog.default, type: .debug, error.localizedDescription)
+            } else {
+                os_log("WebView provisional navigation failed: %{public}@", log: OSLog.default, type: .error, error.localizedDescription)
+            }
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -661,8 +545,20 @@ struct WebView: UIViewRepresentable {
                 case .canceled:
                     // User canceled
                     break
-                case .failed, .invalidResponse, .notHandled, .unknown, .notInteractive:
-                    // Handle other errors
+                case .failed:
+                    // Authorization failed
+                    break
+                case .invalidResponse:
+                    // Invalid response
+                    break
+                case .notHandled:
+                    // Not handled
+                    break
+                case .unknown:
+                    // Unknown error
+                    break
+                case .notInteractive:
+                    // Not interactive
                     break
                 @unknown default:
                     // Handle future error cases
@@ -705,6 +601,111 @@ struct WebView: UIViewRepresentable {
             
             // Post notification for any observers
             NotificationCenter.default.post(name: Notification.Name("HandleOAuthCallback"), object: nil)
+            
+            // Directly register user in occupancy database after successful OAuth callback
+            os_log("OAuth callback processed - registering user in occupancy database", log: OSLog.default, type: .info)
+            DispatchQueue.main.async {
+                HomeLocationManager.shared.registerUserAfterAuth()
+            }
+        }
+        
+        // Method to extract user information from the web app
+        private func extractUserInfoFromWebApp(webView: WKWebView) {
+            let script = """
+                // Try to get user info from various sources
+                function getUserInfo() {
+                    let userInfo = {};
+                    
+                    // Check localStorage for user data
+                    try {
+                        const storedUser = localStorage.getItem('user') || localStorage.getItem('auth_user');
+                        if (storedUser) {
+                            const userData = JSON.parse(storedUser);
+                            userInfo.userId = userData.sub || userData.id || userData.userId;
+                            userInfo.email = userData.email;
+                            userInfo.firstName = userData.given_name || userData.first_name || userData.name?.split(' ')[0];
+                            userInfo.lastName = userData.family_name || userData.last_name || userData.name?.split(' ')[1];
+                            userInfo.displayName = userData.name || userData.given_name || userData.first_name;
+                        }
+                    } catch (e) {
+                        console.log('Error parsing stored user data:', e);
+                    }
+                    
+                    // Check for Google user info
+                    if (window.gapi && window.gapi.auth2) {
+                        const authInstance = window.gapi.auth2.getAuthInstance();
+                        if (authInstance && authInstance.isSignedIn.get()) {
+                            const user = authInstance.currentUser.get();
+                            const profile = user.getBasicProfile();
+                            userInfo.userId = user.getId();
+                            userInfo.email = profile.getEmail();
+                            userInfo.firstName = profile.getGivenName();
+                            userInfo.lastName = profile.getFamilyName();
+                            userInfo.displayName = profile.getName();
+                        }
+                    }
+                    
+                    // Check sessionStorage
+                    try {
+                        const sessionUser = sessionStorage.getItem('user') || sessionStorage.getItem('auth_user');
+                        if (sessionUser && !userInfo.userId) {
+                            const userData = JSON.parse(sessionUser);
+                            userInfo.userId = userData.sub || userData.id || userData.userId;
+                            userInfo.email = userData.email;
+                            userInfo.firstName = userData.given_name || userData.first_name || userData.name?.split(' ')[0];
+                            userInfo.lastName = userData.family_name || userData.last_name || userData.name?.split(' ')[1];
+                            userInfo.displayName = userData.name || userData.given_name || userData.first_name;
+                        }
+                    } catch (e) {
+                        console.log('Error parsing session user data:', e);
+                    }
+                    
+                    return userInfo;
+                }
+                
+                getUserInfo();
+            """
+            
+            webView.evaluateJavaScript(script) { [weak self] result, error in
+                if let error = error {
+                    os_log("Error extracting user info: %{public}@", log: OSLog.default, type: .error, error.localizedDescription)
+                    // Fallback to regular registration
+                    HomeLocationManager.shared.registerUserAfterAuth()
+                    return
+                }
+                
+                if let userInfoDict = result as? [String: Any] {
+                    let userId = userInfoDict["userId"] as? String
+                    let email = userInfoDict["email"] as? String
+                    let firstName = userInfoDict["firstName"] as? String
+                    let displayName = userInfoDict["displayName"] as? String
+                    
+                    os_log("Extracted user info - userId: %{public}@, email: %{public}@, firstName: %{public}@, displayName: %{public}@", 
+                           log: OSLog.default, type: .info, 
+                           userId ?? "nil", email ?? "nil", firstName ?? "nil", displayName ?? "nil")
+                    
+                    if let userId = userId, let firstName = firstName {
+                        // Store user info for HomeLocationManager
+                        UserDefaults.standard.set(userId, forKey: "authenticated_user_id")
+                        UserDefaults.standard.set(firstName, forKey: "authenticated_user_first_name")
+                        UserDefaults.standard.set(displayName ?? firstName, forKey: "authenticated_user_display_name")
+                        if let email = email {
+                            UserDefaults.standard.set(email, forKey: "authenticated_user_email")
+                        }
+                        
+                        // Register user with extracted info
+                        HomeLocationManager.shared.registerUserAfterAuth(userId: userId, displayName: firstName)
+                    } else {
+                        os_log("Could not extract userId or firstName from web app", log: OSLog.default, type: .info)
+                        // Fallback to regular registration
+                        HomeLocationManager.shared.registerUserAfterAuth()
+                    }
+                } else {
+                    os_log("No user info found in web app", log: OSLog.default, type: .info)
+                    // Fallback to regular registration
+                    HomeLocationManager.shared.registerUserAfterAuth()
+                }
+            }
         }
     }
 }

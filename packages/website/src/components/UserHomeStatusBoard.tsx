@@ -8,6 +8,7 @@ interface UserHomeStatusType {
   homeId: string;
   state: 'home' | 'away' | null;
   displayName?: string;
+  enabled?: boolean; // Add enabled status
 }
 
 interface UserHomeStatusBoardProps {
@@ -16,6 +17,7 @@ interface UserHomeStatusBoardProps {
   isLoading?: boolean;
   error?: string | null;
   onDisplayNameUpdate?: (userId: string, newDisplayName: string) => void;
+  onDeviceStatusUpdate?: (userId: string, enabled: boolean) => void; // Add device status update handler
 }
 
 const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
@@ -23,7 +25,8 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
   homeId,
   isLoading = false,
   error = null,
-  onDisplayNameUpdate
+  onDisplayNameUpdate,
+  onDeviceStatusUpdate
 }) => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
@@ -49,10 +52,12 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
     }
   }, []);
 
-  // Get users at home and away
-  const usersAtHome = userHomeStatuses.filter(user => user.state === 'home');
-  const usersAway = userHomeStatuses.filter(user => user.state === 'away');
-  const unknownUsers = userHomeStatuses.filter(user => user.state === null || user.state === undefined);
+  // Get users at home and away (only count enabled devices)
+  const enabledUsers = userHomeStatuses.filter(user => user.enabled !== false);
+  const usersAtHome = enabledUsers.filter(user => user.state === 'home');
+  const usersAway = enabledUsers.filter(user => user.state === 'away');
+  const unknownUsers = enabledUsers.filter(user => user.state === null || user.state === undefined);
+  const disabledUsers = userHomeStatuses.filter(user => user.enabled === false);
 
   // Loading state
   if (isLoading) {
@@ -131,6 +136,7 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
                 : 'Empty'
               }
               {usersAway.length > 0 && ` • ${usersAway.length} away`}
+              {disabledUsers.length > 0 && ` • ${disabledUsers.length} disabled`}
             </p>
           </div>
         </div>
@@ -140,6 +146,7 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
           {userHomeStatuses.slice(0, 4).map((user) => {
             const displayName = user.displayName || user.userId.substring(0, 2).toUpperCase();
             const isHome = user.state === 'home';
+            const isEnabled = user.enabled !== false; // Default to enabled if not specified
             
             return (
               <div
@@ -156,21 +163,30 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
               >
                 {/* User avatar with status emoji overlay */}
                 <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                  isHome 
-                    ? 'bg-gradient-to-r from-green-500/30 to-green-600/40 border-green-500/70 text-green-200' 
-                    : 'bg-gradient-to-r from-blue-500/30 to-blue-600/40 border-blue-500/70 text-blue-200'
+                  !isEnabled 
+                    ? 'bg-gradient-to-r from-gray-500/30 to-gray-600/40 border-gray-500/70 text-gray-400 opacity-50' 
+                    : isHome 
+                      ? 'bg-gradient-to-r from-green-500/30 to-green-600/40 border-green-500/70 text-green-200' 
+                      : 'bg-gradient-to-r from-blue-500/30 to-blue-600/40 border-blue-500/70 text-blue-200'
                 } group-hover:shadow-lg`}>
                   {displayName}
                 </div>
                 
                 {/* Status emoji indicator - larger and clearer */}
                 <div className="absolute -bottom-1 -right-1 text-base bg-gray-900/60 rounded-full p-0.5">
-                  {isHome ? '🏡' : '🚗'}
+                  {!isEnabled ? '🚫' : isHome ? '🏡' : '🚗'}
                 </div>
+                
+                {/* Disabled overlay indicator */}
+                {!isEnabled && (
+                  <div className="absolute inset-0 bg-gray-900/20 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-gray-400">OFF</span>
+                  </div>
+                )}
                 
                 {/* Edit hint on hover */}
                 <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
-                  Tap to edit
+                  {isEnabled ? 'Tap to edit' : 'Tap to enable'}
                 </div>
               </div>
             );
@@ -215,9 +231,14 @@ const UserHomeStatusBoard: React.FC<UserHomeStatusBoardProps> = ({
               status={userHomeStatuses.find(u => u.userId === editingUserId)?.state || null}
               userId={editingUserId}
               displayName={userHomeStatuses.find(u => u.userId === editingUserId)?.displayName}
+              enabled={userHomeStatuses.find(u => u.userId === editingUserId)?.enabled}
               homeId={homeId}
               onDisplayNameUpdate={(userId, newName) => {
                 onDisplayNameUpdate?.(userId, newName);
+                setEditingUserId(null);
+              }}
+              onDeviceStatusUpdate={(userId, enabled) => {
+                onDeviceStatusUpdate?.(userId, enabled);
                 setEditingUserId(null);
               }}
             />
