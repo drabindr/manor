@@ -1,17 +1,156 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* General Animations */
+/* Enhanced Base Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced Animations */
 .fade-in { 
   animation: fadeIn 1s ease-in-out; 
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.fade-in-left {
+  animation: fadeInLeft 0.8s ease-out;
+}
+
+.fade-in-right {
+  animation: fadeInRight 0.8s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.6s ease-out;
+}
+
+.floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
 }
 
 @keyframes fadeIn { 
   from { opacity: 0; transform: translateY(20px); } 
   to { opacity: 1; transform: translateY(0); } 
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(251, 146, 60, 0.4); }
+  50% { box-shadow: 0 0 40px rgba(251, 146, 60, 0.8); }
+}
+
+/* Enhanced Gradient Backgrounds */
+.gradient-mesh-1 {
+  background: radial-gradient(circle at 20% 80%, rgba(251, 146, 60, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, rgba(245, 158, 11, 0.1) 0%, transparent 50%);
+}
+
+.gradient-mesh-2 {
+  background: radial-gradient(circle at 60% 70%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 70% 20%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+}
+
+/* Enhanced Button Styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95;
+}
+
+.btn-secondary {
+  @apply border-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:border-orange-400 font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95;
+}
+
+/* Enhanced Glass Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced Card Styles */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced Text Styles */
+.text-gradient {
+  background: linear-gradient(135deg, #f97316, #eab308, #22c55e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-hero {
+  background: linear-gradient(135deg, #ea580c, #d97706, #16a34a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced Dividers */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(251, 146, 60, 0.5), transparent);
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* Feature Icons */
@@ -91,23 +230,71 @@ body {
   animation-play-state: paused; 
 }
 
+/* Enhanced Brand Logo Containers */
+.brand-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 80px;
+  margin: 0 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.brand-logo-container:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.brand-logo-container img {
+  height: 40px;
+  width: auto;
+  max-width: 120px;
+  margin: 0;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+  object-fit: contain;
+}
+
+.brand-logo-container:hover img {
+  opacity: 1;
+}
+
 /* --- Interactive Screenshot Viewer Styles --- */
 .iphone-frame {
   width: 380px; 
   height: 775px;
-  background-image: linear-gradient(to bottom, #E5E7EB, #B0B4BC);
+  background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 50%, #B0B4BC 100%);
   border-radius: 55px; 
   padding: 16px;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25), inset 0 2px 4px 0 rgba(255,255,255,0.2);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+    inset 0 2px 4px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   position: relative; 
   margin: 0 auto; 
   border: 1px solid #9CA3AF;
+  transition: all 0.3s ease;
+}
+
+.iphone-frame:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 35px 70px -12px rgba(0, 0, 0, 0.35), 
+    inset 0 2px 4px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .iphone-frame::before, .iphone-frame::after {
   content: ''; 
   position: absolute; 
-  background-color: #A0A4AE;
+  background: linear-gradient(135deg, #A0A4AE, #8B8F99);
   border-radius: 3px; 
   box-shadow: inset 0 -1px 1px rgba(0,0,0,0.2);
 }
@@ -127,7 +314,7 @@ body {
 }
 
 .iphone-inner-bezel {
-  background-color: #111827; 
+  background: linear-gradient(135deg, #111827 0%, #1F2937 100%);
   height: 100%; 
   width: 100%;
   border-radius: 39px; 
@@ -135,6 +322,7 @@ body {
   display: flex; 
   align-items: center; 
   justify-content: center;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .iphone-screen {
@@ -144,7 +332,9 @@ body {
   border-radius: 35px;
   overflow: hidden; 
   position: relative; 
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+  box-shadow: 
+    inset 0 0 8px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .iphone-screen img {
@@ -152,7 +342,11 @@ body {
   height: 100%; 
   object-fit: cover; 
   display: block;
-  transition: opacity 0.3s ease-in-out;
+  transition: all 0.5s ease;
+}
+
+.iphone-screen:hover img {
+  transform: scale(1.02);
 }
 
 .iphone-notch {
@@ -162,22 +356,28 @@ body {
   transform: translateX(-50%);
   width: 140px; 
   height: 30px; 
-  background-color: #000000;
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
   border-radius: 15px; 
   z-index: 10;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* App Menu Bar */
+/* Enhanced App Menu Bar */
 .app-menu-bar {
   display: flex;
   gap: 0.5rem;
-  padding: 0.5rem;
+  padding: 0.75rem;
   margin-top: 1.5rem;
-  background-color: #E5E7EB;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 9999px;
   max-width: 380px;
   margin-left: auto;
   margin-right: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .menu-item {
@@ -190,21 +390,38 @@ body {
   color: #6B7280;
   background-color: transparent;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .menu-item:hover:not(.active) {
-  background-color: #F3F4F6;
+  background-color: rgba(243, 244, 246, 0.8);
+  transform: translateY(-2px);
 }
 
 .menu-item:active:not(.active) {
-  background-color: #E5E7EB;
+  background-color: rgba(229, 231, 235, 0.9);
+  transform: translateY(0);
 }
 
 .menu-item.active {
-  background-color: #FFFFFF;
-  color: #329A59;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+  color: #EA580C;
+  box-shadow: 
+    0 4px 12px rgba(234, 88, 12, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.menu-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.1), rgba(251, 146, 60, 0.1));
+  border-radius: 9999px;
 }
 
 .menu-item span { 
@@ -212,4 +429,6 @@ body {
   font-weight: 500; 
   display: block; 
   white-space: nowrap; 
+  position: relative;
+  z-index: 1;
 }
