@@ -223,6 +223,48 @@ class OutdoorLightingController:
             del self.device_grace_periods[device_alias]
             self.logger.debug(f"🧹 Cleaned up expired grace period for {device_alias}")
     
+    async def startup_device_check(self):
+        """Perform an immediate check of all devices on service startup to correct any incorrect states"""
+        self.logger.info("🔍 Performing startup device state check...")
+        
+        # Discover devices first
+        await self.discover_outdoor_devices()
+        
+        if not self.devices:
+            self.logger.warning("⚠️ No outdoor devices found during startup check")
+            return
+        
+        should_be_on = self.should_lights_be_on()
+        self.logger.info(f"🔍 Startup check: lights should be {'ON' if should_be_on else 'OFF'}")
+        
+        devices_corrected = False
+        for ip, device in self.devices.items():
+            try:
+                await device.update()
+                current_state = device.is_on
+                
+                if not should_be_on and current_state:
+                    # Light is on when it should be off - turn it off immediately
+                    await device.turn_off()
+                    self.logger.info(f"🔌 Startup correction: Turned OFF {device.alias} (was incorrectly ON)")
+                    devices_corrected = True
+                elif should_be_on and not current_state:
+                    # Light is off when it should be on - turn it on
+                    await device.turn_on()
+                    self.logger.info(f"💡 Startup correction: Turned ON {device.alias} (was incorrectly OFF)")
+                    devices_corrected = True
+                else:
+                    state_desc = "ON" if current_state else "OFF"
+                    self.logger.debug(f"✅ Startup check: {device.alias} is correctly {state_desc}")
+                    
+            except Exception as e:
+                self.logger.error(f"❌ Failed to check device {device.alias} during startup: {e}")
+        
+        if devices_corrected:
+            self.logger.info("✅ Startup device corrections completed")
+        else:
+            self.logger.info("✅ All devices were in correct state at startup")
+    
     async def check_and_control_device(self, device: Device) -> bool:
         """Check and control a single outdoor device with grace period support
         
@@ -293,6 +335,9 @@ class OutdoorLightingController:
         self.logger.info("🚀 Starting outdoor lighting automation...")
         self.logger.info(f"⏰ Base check interval: {self.check_interval} seconds")
         
+        # Initial startup check - immediately verify and correct device states
+        await self.startup_device_check()
+        
         while True:
             try:
                 # Re-scan devices periodically to catch new devices or recover from network issues
@@ -343,9 +388,16 @@ class OutdoorLightingController:
                 
                 # Calculate next check interval (smart scheduling)
                 current_interval = self.check_interval
+                
+                # Check if any devices are in grace periods - if so, don't extend intervals
+                has_active_grace_periods = bool(self.device_grace_periods)
+                
                 if aggressive_check:
                     # Check more frequently near schedule transitions
                     current_interval = min(self.check_interval, 60)  # Max 1 minute during transitions
+                elif has_active_grace_periods:
+                    # If devices are in grace periods, check every 2 minutes to ensure timely turn-off
+                    current_interval = min(self.check_interval, 120)  # Max 2 minutes when grace periods active
                 elif not devices_changed and self.check_interval > 60:
                     # If nothing changed and we're in a stable period, we can check less frequently
                     time_until_change = (next_change - now).total_seconds()
@@ -354,7 +406,11 @@ class OutdoorLightingController:
                 
                 # Log next check time
                 next_check = now + timedelta(seconds=current_interval)
-                self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s)")
+                if has_active_grace_periods:
+                    grace_devices = list(self.device_grace_periods.keys())
+                    self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s) - monitoring grace periods for: {', '.join(grace_devices)}")
+                else:
+                    self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s)")
                 
                 # Wait before next check
                 await asyncio.sleep(current_interval)
