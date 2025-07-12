@@ -3,15 +3,15 @@
 TP-Link Kasa Automated Outdoor Lighting Controller
 
 This script automatically manages outdoor lighting based on sunset times and schedule:
-- Turns OFF outdoor lights during daytime
 - Operates lights only from sunset to 9 PM
-- Turns OFF lights after 9 PM
+- If lights are turned on after 9 PM and before sunrise: 15-minute grace period before auto turn-off
+- If lights come online before sunset: 1-minute grace period before auto turn-off
 - Location: 720 Front Rd, Pickering, ON
 
 Features:
 - Smart scheduling with adaptive check intervals
-- Manual override protection during daytime
 - 15-minute grace period for after-hours manual activation
+- 1-minute grace period for devices coming online before sunset
 - Comprehensive logging and status reporting
 
 Requirements:
@@ -77,9 +77,11 @@ class OutdoorLightingController:
         self.last_schedule_change = None
         self.schedule_transition_times = []  # Times when lights should change state
         
-        # Grace period for after-hours manual activation (15 minutes)
-        self.after_hours_grace_period = 15 * 60  # 15 minutes in seconds
+        # Grace periods
+        self.after_hours_grace_period = 15 * 60  # 15 minutes in seconds for after 9pm
+        self.daytime_grace_period = 1 * 60  # 1 minute in seconds for before sunset
         self.device_grace_periods: Dict[str, datetime] = {}  # Track when devices were manually turned on during off-hours
+        self.device_daytime_grace_periods: Dict[str, datetime] = {}  # Track when devices come online before sunset
         
     async def discover_outdoor_devices(self) -> Dict[str, Device]:
         """Discover and filter outdoor lighting devices"""
@@ -166,7 +168,7 @@ class OutdoorLightingController:
         return tomorrow_sun['sunset']
     
     def should_check_aggressively(self) -> bool:
-        """Determine if we should check more frequently (near schedule transitions or during daytime only)"""
+        """Determine if we should check more frequently (near schedule transitions, during daytime, or when grace periods are active)"""
         if not self.schedule_transition_times:
             return True  # Check aggressively if we don't know the schedule yet
         
@@ -181,11 +183,14 @@ class OutdoorLightingController:
         time_until_change = (next_change - now).total_seconds()
         near_transition = 0 <= time_until_change <= 600  # 10 minutes
         
+        # Check aggressively when devices are in daytime grace periods (need quick response for 1-minute window)
+        has_daytime_grace_periods = bool(self.device_daytime_grace_periods)
+        
         # Only check aggressively during DAYTIME when lights should be OFF
         # After 9 PM, we give a 15-minute grace period, so no need for aggressive checking
         daytime_override_protection = not should_be_on and current_hour < sunset_hour
         
-        return near_transition or daytime_override_protection
+        return near_transition or daytime_override_protection or has_daytime_grace_periods
     
     def is_device_in_grace_period(self, device_alias: str) -> bool:
         """Check if a device is within its after-hours grace period"""
@@ -198,30 +203,64 @@ class OutdoorLightingController:
         
         return elapsed < self.after_hours_grace_period
     
+    def is_device_in_daytime_grace_period(self, device_alias: str) -> bool:
+        """Check if a device is within its daytime grace period (1 minute)"""
+        if device_alias not in self.device_daytime_grace_periods:
+            return False
+        
+        now = datetime.now(self.timezone)
+        grace_start = self.device_daytime_grace_periods[device_alias]
+        elapsed = (now - grace_start).total_seconds()
+        
+        return elapsed < self.daytime_grace_period
+    
     def start_device_grace_period(self, device_alias: str):
         """Start a 15-minute grace period for a device that was manually turned on after hours"""
         self.device_grace_periods[device_alias] = datetime.now(self.timezone)
         grace_end = datetime.now(self.timezone) + timedelta(seconds=self.after_hours_grace_period)
-        self.logger.info(f"🕐 Grace period started for {device_alias} - will auto-turn-off at {grace_end.strftime('%H:%M')}")
+        self.logger.info(f"🕐 After-hours grace period started for {device_alias} - will auto-turn-off at {grace_end.strftime('%H:%M')}")
+    
+    def start_device_daytime_grace_period(self, device_alias: str):
+        """Start a 1-minute grace period for a device that came online before sunset"""
+        self.device_daytime_grace_periods[device_alias] = datetime.now(self.timezone)
+        grace_end = datetime.now(self.timezone) + timedelta(seconds=self.daytime_grace_period)
+        self.logger.info(f"🕐 Daytime grace period started for {device_alias} - will auto-turn-off at {grace_end.strftime('%H:%M:%S')}")
     
     def clear_device_grace_period(self, device_alias: str):
         """Clear the grace period for a device"""
         if device_alias in self.device_grace_periods:
             del self.device_grace_periods[device_alias]
-            self.logger.debug(f"🧹 Cleared grace period for {device_alias}")
+            self.logger.debug(f"🧹 Cleared after-hours grace period for {device_alias}")
+    
+    def clear_device_daytime_grace_period(self, device_alias: str):
+        """Clear the daytime grace period for a device"""
+        if device_alias in self.device_daytime_grace_periods:
+            del self.device_daytime_grace_periods[device_alias]
+            self.logger.debug(f"🧹 Cleared daytime grace period for {device_alias}")
     
     def cleanup_expired_grace_periods(self) -> None:
-        """Clean up expired grace periods to keep dictionary tidy"""
+        """Clean up expired grace periods to keep dictionaries tidy"""
         now = datetime.now(self.timezone)
-        expired_devices = []
         
+        # Clean up after-hours grace periods
+        expired_devices = []
         for device_alias, start_time in self.device_grace_periods.items():
             if (now - start_time).total_seconds() > self.after_hours_grace_period:
                 expired_devices.append(device_alias)
         
         for device_alias in expired_devices:
             del self.device_grace_periods[device_alias]
-            self.logger.debug(f"🧹 Cleaned up expired grace period for {device_alias}")
+            self.logger.debug(f"🧹 Cleaned up expired after-hours grace period for {device_alias}")
+        
+        # Clean up daytime grace periods
+        expired_daytime_devices = []
+        for device_alias, start_time in self.device_daytime_grace_periods.items():
+            if (now - start_time).total_seconds() > self.daytime_grace_period:
+                expired_daytime_devices.append(device_alias)
+        
+        for device_alias in expired_daytime_devices:
+            del self.device_daytime_grace_periods[device_alias]
+            self.logger.debug(f"🧹 Cleaned up expired daytime grace period for {device_alias}")
     
     async def startup_device_check(self):
         """Perform an immediate check of all devices on service startup to correct any incorrect states"""
@@ -283,44 +322,73 @@ class OutdoorLightingController:
             if should_be_on and not current_state:
                 await device.turn_on()
                 self.logger.info(f"💡 Turned ON: {device.alias} (scheduled lighting time)")
-                # Clear any existing grace period since lights should be on now
+                # Clear any existing grace periods since lights should be on now
                 self.clear_device_grace_period(device.alias)
+                self.clear_device_daytime_grace_period(device.alias)
                 return True
                 
             elif not should_be_on and current_state:
-                # Light is on when it should be off - check if this is a grace period situation
-                if current_hour >= 21:  # After 9 PM
-                    # Check if device is in grace period
+                # Light is on when it should be off - check different scenarios
+                
+                # Check if we're before sunset (daytime)
+                sun_times = self.get_sun_times()
+                sunrise_time = sun_times['sunrise']
+                sunset_time = sun_times['sunset']
+                
+                if now < sunset_time and now > sunrise_time:
+                    # Daytime - device came online before sunset
+                    if self.is_device_in_daytime_grace_period(device.alias):
+                        # Device is in daytime grace period, don't turn it off yet
+                        remaining_time = self.daytime_grace_period - (now - self.device_daytime_grace_periods[device.alias]).total_seconds()
+                        remaining_seconds = int(remaining_time)
+                        self.logger.debug(f"🕐 {device.alias} in daytime grace period - {remaining_seconds} seconds remaining")
+                        return False
+                    elif device.alias in self.device_daytime_grace_periods:
+                        # Daytime grace period has expired, turn off the light
+                        await device.turn_off()
+                        self.clear_device_daytime_grace_period(device.alias)
+                        now_time = now.strftime('%H:%M:%S')
+                        self.logger.info(f"🔌 Turned OFF: {device.alias} (daytime grace period expired at {now_time})")
+                        return True
+                    else:
+                        # This is a new device coming online during daytime - start a 1-minute grace period
+                        self.start_device_daytime_grace_period(device.alias)
+                        return False
+                        
+                elif current_hour >= 21:  # After 9 PM
+                    # Check if device is in after-hours grace period
                     if self.is_device_in_grace_period(device.alias):
                         # Device is in grace period, don't turn it off yet
                         remaining_time = self.after_hours_grace_period - (now - self.device_grace_periods[device.alias]).total_seconds()
                         remaining_minutes = int(remaining_time / 60)
-                        self.logger.debug(f"🕐 {device.alias} in grace period - {remaining_minutes} minutes remaining")
+                        self.logger.debug(f"🕐 {device.alias} in after-hours grace period - {remaining_minutes} minutes remaining")
                         return False
                     elif device.alias in self.device_grace_periods:
                         # Grace period has expired, turn off the light
                         await device.turn_off()
                         self.clear_device_grace_period(device.alias)
                         now_time = now.strftime('%H:%M')
-                        self.logger.info(f"🔌 Turned OFF: {device.alias} (grace period expired at {now_time})")
+                        self.logger.info(f"🔌 Turned OFF: {device.alias} (after-hours grace period expired at {now_time})")
                         return True
                     else:
-                        # This is a new manual activation - start a grace period
+                        # This is a new manual activation after hours - start a 15-minute grace period
                         self.start_device_grace_period(device.alias)
                         return False
                 else:
-                    # Daytime override - turn off immediately
+                    # Between sunrise and sunset but before scheduled time, or some other edge case
                     await device.turn_off()
                     now_time = now.strftime('%H:%M')
-                    self.logger.info(f"🔌 Turned OFF: {device.alias} (manual override detected at {now_time} - daytime)")
+                    self.logger.info(f"🔌 Turned OFF: {device.alias} (outside scheduled hours at {now_time})")
                     self.clear_device_grace_period(device.alias)
+                    self.clear_device_daytime_grace_period(device.alias)
                     return True
                 
             else:
                 # Device is in correct state
                 if current_state:
-                    # Light is on and should be on - clear any grace period
+                    # Light is on and should be on - clear any grace periods
                     self.clear_device_grace_period(device.alias)
+                    self.clear_device_daytime_grace_period(device.alias)
                 
                 state_desc = "ON" if current_state else "OFF"
                 self.logger.debug(f"✅ {device.alias} is correctly {state_desc}")
@@ -391,13 +459,17 @@ class OutdoorLightingController:
                 
                 # Check if any devices are in grace periods - if so, don't extend intervals
                 has_active_grace_periods = bool(self.device_grace_periods)
+                has_active_daytime_grace_periods = bool(self.device_daytime_grace_periods)
                 
                 if aggressive_check:
                     # Check more frequently near schedule transitions
                     current_interval = min(self.check_interval, 60)  # Max 1 minute during transitions
                 elif has_active_grace_periods:
-                    # If devices are in grace periods, check every 2 minutes to ensure timely turn-off
+                    # If devices are in after-hours grace periods, check every 2 minutes to ensure timely turn-off
                     current_interval = min(self.check_interval, 120)  # Max 2 minutes when grace periods active
+                elif has_active_daytime_grace_periods:
+                    # If devices are in daytime grace periods, check every 10 seconds to ensure timely turn-off
+                    current_interval = min(self.check_interval, 10)  # Max 10 seconds when daytime grace periods active
                 elif not devices_changed and self.check_interval > 60:
                     # If nothing changed and we're in a stable period, we can check less frequently
                     time_until_change = (next_change - now).total_seconds()
@@ -406,9 +478,11 @@ class OutdoorLightingController:
                 
                 # Log next check time
                 next_check = now + timedelta(seconds=current_interval)
-                if has_active_grace_periods:
+                if has_active_grace_periods or has_active_daytime_grace_periods:
                     grace_devices = list(self.device_grace_periods.keys())
-                    self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s) - monitoring grace periods for: {', '.join(grace_devices)}")
+                    daytime_grace_devices = list(self.device_daytime_grace_periods.keys())
+                    all_grace_devices = grace_devices + daytime_grace_devices
+                    self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s) - monitoring grace periods for: {', '.join(all_grace_devices)}")
                 else:
                     self.logger.info(f"⏰ Next check at: {next_check.strftime('%H:%M:%S')} (interval: {current_interval}s)")
                 
