@@ -305,6 +305,36 @@ export class AuthService {
     return this.tokens.accessToken;
   }
 
+  // Get ID token if available and not expired
+  getIdToken(): string | null {
+    if (!this.tokens) {
+      console.warn('No tokens available');
+      return null;
+    }
+
+    if (this.isTokenExpired()) {
+      console.warn('ID token is expired');
+      return null;
+    }
+
+    return this.tokens.idToken;
+  }
+
+  // Get authorization headers for API requests
+  getAuthHeaders(): { [key: string]: string } {
+    const idToken = this.getIdToken();
+    
+    if (!idToken) {
+      console.log('No ID token available for authorization headers');
+      return {};
+    }
+
+    return {
+      'Authorization': `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
   // Refresh tokens
   async refreshTokens(): Promise<void> {
     if (!this.tokens?.refreshToken) {

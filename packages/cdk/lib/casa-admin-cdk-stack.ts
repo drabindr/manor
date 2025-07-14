@@ -12,6 +12,7 @@ import { Table, AttributeType, ProjectionType } from "aws-cdk-lib/aws-dynamodb";
 import { PolicyStatement, Role, FederatedPrincipal } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CfnIdentityPool } from "aws-cdk-lib/aws-cognito";
+import { Fn } from "aws-cdk-lib";
 import { saveDisplayNameHandler } from "../lambda/casa-admin/userHomeStateHandler";
 
 export class CasaAdminCdkStack extends cdk.Stack {
@@ -78,6 +79,8 @@ export class CasaAdminCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_LATEST,
       environment: {
         USER_HOME_STATES_TABLE: userHomeStatesTable.tableName,
+        USER_POOL_ID: Fn.importValue('CasaGuardUserPoolId'),
+        USER_POOL_CLIENT_ID: Fn.importValue('CasaGuardUserPoolClientId'),
       },
       bundling: {
         externalModules: ['@aws-sdk/*', 'aws-sdk'],

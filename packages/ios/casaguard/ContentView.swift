@@ -293,12 +293,20 @@ struct WebView: UIViewRepresentable {
         var lastRefresh: Int = 0
         weak var webView: WKWebView?
         private var isAppleSignInInProgress = false
+        private var userInfoRetryCount: Int = 0
+        private var userInfoRetryTimer: Timer? = nil
 
         static let appleSignInDidComplete = Notification.Name("appleSignInDidComplete")
         static let appleSignInDidFail = Notification.Name("appleSignInDidFail")
         
         init(_ parent: WebView) {
             self.parent = parent
+        }
+        
+        deinit {
+            // Clean up timer when coordinator is deallocated
+            userInfoRetryTimer?.invalidate()
+            userInfoRetryTimer = nil
         }
         
         // MARK: - ASAuthorizationControllerPresentationContextProviding
@@ -616,16 +624,40 @@ struct WebView: UIViewRepresentable {
                 function getUserInfo() {
                     let userInfo = {};
                     
-                    // Check localStorage for user data
+                    // Check localStorage for user data - look in casa_guard_auth_state first
                     try {
-                        const storedUser = localStorage.getItem('user') || localStorage.getItem('auth_user');
+                        let storedUser = localStorage.getItem('casa_guard_auth_state');
+                        let userData = null;
+                        
                         if (storedUser) {
-                            const userData = JSON.parse(storedUser);
+                            const authState = JSON.parse(storedUser);
+                            userData = authState.user;
+                        } else {
+                            // Fallback to legacy storage keys
+                            storedUser = localStorage.getItem('user') || localStorage.getItem('auth_user');
+                            if (storedUser) {
+                                userData = JSON.parse(storedUser);
+                            }
+                        }
+                        
+                        if (userData) {
                             userInfo.userId = userData.sub || userData.id || userData.userId;
                             userInfo.email = userData.email;
-                            userInfo.firstName = userData.given_name || userData.first_name || userData.name?.split(' ')[0];
-                            userInfo.lastName = userData.family_name || userData.last_name || userData.name?.split(' ')[1];
-                            userInfo.displayName = userData.name || userData.given_name || userData.first_name;
+                            userInfo.firstName = userData.givenName || userData.given_name || userData.first_name || userData.name?.split(' ')[0];
+                            userInfo.lastName = userData.familyName || userData.family_name || userData.last_name || userData.name?.split(' ')[1];
+                            userInfo.displayName = userData.name || userData.givenName || userData.given_name || userData.first_name;
+                            
+                            // Also extract token information if available
+                            if (storedUser) {
+                                try {
+                                    const authState = JSON.parse(storedUser);
+                                    if (authState.tokens && authState.tokens.idToken) {
+                                        userInfo.idToken = authState.tokens.idToken;
+                                    }
+                                } catch (e) {
+                                    console.log('Error parsing token data:', e);
+                                }
+                            }
                         }
                     } catch (e) {
                         console.log('Error parsing stored user data:', e);
@@ -645,16 +677,28 @@ struct WebView: UIViewRepresentable {
                         }
                     }
                     
-                    // Check sessionStorage
+                    // Check sessionStorage - look in casa_guard_auth_state first
                     try {
-                        const sessionUser = sessionStorage.getItem('user') || sessionStorage.getItem('auth_user');
-                        if (sessionUser && !userInfo.userId) {
-                            const userData = JSON.parse(sessionUser);
+                        let sessionUser = sessionStorage.getItem('casa_guard_auth_state');
+                        let userData = null;
+                        
+                        if (sessionUser) {
+                            const authState = JSON.parse(sessionUser);
+                            userData = authState.user;
+                        } else {
+                            // Fallback to legacy storage keys
+                            sessionUser = sessionStorage.getItem('user') || sessionStorage.getItem('auth_user');
+                            if (sessionUser) {
+                                userData = JSON.parse(sessionUser);
+                            }
+                        }
+                        
+                        if (userData && !userInfo.userId) {
                             userInfo.userId = userData.sub || userData.id || userData.userId;
                             userInfo.email = userData.email;
-                            userInfo.firstName = userData.given_name || userData.first_name || userData.name?.split(' ')[0];
-                            userInfo.lastName = userData.family_name || userData.last_name || userData.name?.split(' ')[1];
-                            userInfo.displayName = userData.name || userData.given_name || userData.first_name;
+                            userInfo.firstName = userData.givenName || userData.given_name || userData.first_name || userData.name?.split(' ')[0];
+                            userInfo.lastName = userData.familyName || userData.family_name || userData.last_name || userData.name?.split(' ')[1];
+                            userInfo.displayName = userData.name || userData.givenName || userData.given_name || userData.first_name;
                         }
                     } catch (e) {
                         console.log('Error parsing session user data:', e);
@@ -663,7 +707,21 @@ struct WebView: UIViewRepresentable {
                     return userInfo;
                 }
                 
-                getUserInfo();
+                const result = getUserInfo();
+                // Add idToken to result if available
+                try {
+                    const authState = localStorage.getItem('casa_guard_auth_state');
+                    if (authState) {
+                        const parsedState = JSON.parse(authState);
+                        if (parsedState.tokens && parsedState.tokens.idToken) {
+                            result.idToken = parsedState.tokens.idToken;
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error extracting idToken:', e);
+                }
+                
+                result;
             """
             
             webView.evaluateJavaScript(script) { [weak self] result, error in
@@ -679,10 +737,11 @@ struct WebView: UIViewRepresentable {
                     let email = userInfoDict["email"] as? String
                     let firstName = userInfoDict["firstName"] as? String
                     let displayName = userInfoDict["displayName"] as? String
+                    let idToken = userInfoDict["idToken"] as? String
                     
-                    os_log("Extracted user info - userId: %{public}@, email: %{public}@, firstName: %{public}@, displayName: %{public}@", 
+                    os_log("Extracted user info - userId: %{public}@, email: %{public}@, firstName: %{public}@, displayName: %{public}@, hasIdToken: %{public}@", 
                            log: OSLog.default, type: .info, 
-                           userId ?? "nil", email ?? "nil", firstName ?? "nil", displayName ?? "nil")
+                           userId ?? "nil", email ?? "nil", firstName ?? "nil", displayName ?? "nil", idToken != nil ? "yes" : "no")
                     
                     if let userId = userId, let firstName = firstName {
                         // Store user info for HomeLocationManager
@@ -692,19 +751,74 @@ struct WebView: UIViewRepresentable {
                         if let email = email {
                             UserDefaults.standard.set(email, forKey: "authenticated_user_email")
                         }
+                        if let idToken = idToken {
+                            UserDefaults.standard.set(idToken, forKey: "authenticated_user_id_token")
+                        }
+                        
+                        // Successfully extracted user info - stop retrying
+                        self?.userInfoRetryTimer?.invalidate()
+                        self?.userInfoRetryTimer = nil
+                        self?.userInfoRetryCount = 0
                         
                         // Register user with extracted info
                         HomeLocationManager.shared.registerUserAfterAuth(userId: userId, displayName: firstName)
+                    } else if let userId = userId {
+                        // We have userId but no firstName - start retry logic
+                        os_log("Found userId but no firstName - starting retry logic (attempt %{public}d)", log: OSLog.default, type: .info, self?.userInfoRetryCount ?? 0)
+                        self?.startUserInfoRetryTimer(webView: webView)
+                        
+                        // Still store what we have
+                        UserDefaults.standard.set(userId, forKey: "authenticated_user_id")
+                        if let email = email {
+                            UserDefaults.standard.set(email, forKey: "authenticated_user_email")
+                        }
+                        if let idToken = idToken {
+                            UserDefaults.standard.set(idToken, forKey: "authenticated_user_id_token")
+                        }
+                        
+                        // Register user without displayName for now
+                        HomeLocationManager.shared.registerUserAfterAuth(userId: userId, displayName: nil)
                     } else {
                         os_log("Could not extract userId or firstName from web app", log: OSLog.default, type: .info)
+                        // Start retry logic in case auth completes later
+                        self?.startUserInfoRetryTimer(webView: webView)
+                        
                         // Fallback to regular registration
                         HomeLocationManager.shared.registerUserAfterAuth()
                     }
                 } else {
                     os_log("No user info found in web app", log: OSLog.default, type: .info)
+                    // Start retry logic in case auth completes later
+                    self?.startUserInfoRetryTimer(webView: webView)
+                    
                     // Fallback to regular registration
                     HomeLocationManager.shared.registerUserAfterAuth()
                 }
+            }
+        }
+        
+        private func startUserInfoRetryTimer(webView: WKWebView) {
+            // Only start retry if we haven't exceeded max attempts
+            guard userInfoRetryCount < 10 else {
+                os_log("Max retry attempts reached for user info extraction", log: OSLog.default, type: .info)
+                return
+            }
+            
+            // Stop any existing timer
+            userInfoRetryTimer?.invalidate()
+            
+            // Increment retry count
+            userInfoRetryCount += 1
+            
+            // Start a timer that retries every 5 seconds, with exponential backoff
+            let retryDelay = min(5.0 * Double(userInfoRetryCount), 30.0) // Max 30 second delay
+            
+            os_log("Starting user info retry timer - attempt %{public}d in %{public}.1f seconds", 
+                   log: OSLog.default, type: .info, userInfoRetryCount, retryDelay)
+            
+            userInfoRetryTimer = Timer.scheduledTimer(withTimeInterval: retryDelay, repeats: false) { [weak self] _ in
+                os_log("Retrying user info extraction - attempt %{public}d", log: OSLog.default, type: .info, self?.userInfoRetryCount ?? 0)
+                self?.extractUserInfoFromWebApp(webView: webView)
             }
         }
     }
