@@ -235,6 +235,14 @@ class HomeLocationManager: NSObject, CLLocationManagerDelegate {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Try to get the authentication token from UserDefaults (stored by the web app)
+        if let idToken = UserDefaults.standard.string(forKey: "authenticated_user_id_token") {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            os_log("Using stored ID token for authentication", log: self.log, type: .info)
+        } else {
+            os_log("No ID token found - proceeding without authentication", log: self.log, type: .info)
+        }
+        
         var body: [String: Any] = [
             "userId": userId,
             "homeId": "720frontrd",
