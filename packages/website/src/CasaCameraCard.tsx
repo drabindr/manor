@@ -1,351 +1,82 @@
-import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from 'react';
-import { useMetrics } from './hooks/useMetrics';
-import Hls from 'hls.js';
-import { logger } from './utils/Logger';
-import cameraConnectionService from './services/CameraConnectionService';
+import React, { forwardRef } from 'react';
+import HlsCameraCard, { HlsCameraConfig } from './HlsCameraCard';
 
-const CasaCameraCard = forwardRef<HTMLDivElement>((props, ref) => {
-  // Initialize metrics tracking
-  const { 
-    trackLoadStart, 
-    trackLoadEnd, 
-    trackApiCall, 
-    trackInteraction,
-    trackCameraStreamStartup,
-    trackCameraConnectionTime,
-    trackCameraStreamQuality,
-    trackCameraStreamError
-  } = useMetrics('CasaCameraCard');
+export interface CasaCameraConfig {
+  streamId: string;
+  streamPath: string;
+  streamType: 'casa' | 'doorbell';
+  websocketUrl?: string;
+  startCommand: string;
+  stopCommand: string;
+  displayName: string;
+  iconColor?: string;
+}
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryTimeout = useRef<number | null>(null);
-  const retryCount = useRef<number>(0);
-  const maxRetryCount = 1000;
-  const retryInterval = 200; // Reduced from 500ms for faster retries
-  const wsReconnectDelay = 500; // Reduced from 1000ms for faster reconnection
-  const runId = useRef(Date.now());
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Camera metrics tracking
-  const streamStartTimeRef = useRef<number | null>(null);
-  const connectionStartTimeRef = useRef<number | null>(null);
-  const bufferingEventsRef = useRef<number>(0);
+interface CasaCameraCardProps {
+  config?: CasaCameraConfig;
+}
 
-  useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
-
-  const resetRetryCount = () => {
-    retryCount.current = 0;
+const CasaCameraCard = forwardRef<HTMLDivElement, CasaCameraCardProps>(({ config }, ref) => {
+  // Default to main casa camera config if none provided
+  const defaultConfig: CasaCameraConfig = {
+    streamId: 'camera_main',
+    streamPath: 'live-stream',
+    streamType: 'casa',
+    startCommand: 'start_live_stream',
+    stopCommand: 'stop_live_stream',
+    displayName: 'Casa Camera',
+    iconColor: 'text-blue-400'
   };
 
-  function retryHlsLoad(): void {
-    if (retryCount.current >= maxRetryCount) {
-      logger.error(`Max retry attempts (${maxRetryCount}) reached. Unable to load stream.`);
-      return;
-    }
+  const finalConfig = { ...defaultConfig, ...config };
+  
+  const hlsConfig: HlsCameraConfig = {
+    streamId: finalConfig.streamId,
+    streamPath: finalConfig.streamPath,
+    streamType: finalConfig.streamType,
+    websocketUrl: finalConfig.websocketUrl || 'wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod',
+    startCommand: finalConfig.startCommand,
+    stopCommand: finalConfig.stopCommand,
+    displayName: finalConfig.displayName,
+    icon: finalConfig.streamType === 'doorbell' ? (
+      <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className={finalConfig.iconColor || "text-orange-400"}
+      >
+        <path d="M6 16V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/>
+        <path d="M6 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
+        <path d="M14 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
+        <path d="M12 8v4"/>
+        <path d="M12 16h.01"/>
+      </svg>
+    ) : (
+      <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className={finalConfig.iconColor || "text-blue-400"}
+      >
+        <path d="M23 7l-7 5 7 5V7z"/>
+        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+      </svg>
+    )
+  };
 
-    if (retryTimeout.current) {
-      window.clearTimeout(retryTimeout.current);
-    }
-
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    retryTimeout.current = window.setTimeout(() => {
-      retryCount.current += 1;
-      logger.debug(`Retrying HLS load attempt ${retryCount.current}`);
-      loadHlsStream();
-    }, retryInterval);
-  }
-
-  function loadHlsStream(): void {
-    const videoElement = videoRef.current;
-    if (!videoElement) {
-      logger.error('Video element not found');
-      trackCameraStreamError('manor', 'casa-camera', 'no-video-element');
-      return;
-    }
-    
-    // Start timing metrics
-    streamStartTimeRef.current = performance.now();
-    connectionStartTimeRef.current = performance.now();
-    bufferingEventsRef.current = 0;
-
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    // Check if we should use the pre-established runId
-    const preConnection = cameraConnectionService.getCasaCameraConnection();
-    if (preConnection?.runId && preConnection.isConnected) {
-      runId.current = preConnection.runId;
-      logger.info('Using pre-established Casa camera stream runId:', runId.current);
-    }
-
-    const streamUrl = `https://casa-cameras-data.s3.amazonaws.com/live-stream/${runId.current}/stream.m3u8`;
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        liveSyncDuration: 0.3, // Reduced for lower latency
-        liveMaxLatencyDuration: 1.5, // Reduced for lower latency
-        maxLiveSyncPlaybackRate: 1.5,
-        lowLatencyMode: true, // Enable for better performance
-        autoStartLoad: true,
-        maxBufferLength: 10, // Reduced for faster start
-        maxMaxBufferLength: 20, // Reduced for faster start
-      });
-
-      hlsRef.current = hls;
-      hls.loadSource(streamUrl);
-      hls.attachMedia(videoElement);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoElement
-          .play()
-          .then(() => {
-            resetRetryCount();
-            setIsLoading(false); // Video started playing
-            
-            // Track successful camera stream startup
-            if (streamStartTimeRef.current) {
-              const startupTime = performance.now() - streamStartTimeRef.current;
-              trackCameraStreamStartup('manor', 'casa-camera', startupTime, true);
-              streamStartTimeRef.current = null;
-            }
-            
-            // Track successful connection time
-            if (connectionStartTimeRef.current) {
-              const connectionTime = performance.now() - connectionStartTimeRef.current;
-              trackCameraConnectionTime('manor', 'casa-camera', connectionTime, true);
-              connectionStartTimeRef.current = null;
-            }
-          })
-          .catch((error) => {
-            logger.error('Error playing video:', error);
-            trackCameraStreamError('manor', 'casa-camera', 'play-error');
-          });
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        // Filter out 403 Forbidden errors for segment files
-        const isSegmentNotFoundError = 
-          data.response && 
-          data.response.code === 403 && 
-          data.url && 
-          data.url.includes('segment_');
-        
-        if (!isSegmentNotFoundError) {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                logger.warn('Network error encountered. Retrying HLS load...');
-                trackCameraStreamError('manor', 'casa-camera', 'network-error');
-                retryHlsLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                logger.warn('Media error encountered. Attempting to recover...');
-                trackCameraStreamError('manor', 'casa-camera', 'media-error');
-                hls.recoverMediaError();
-                break;
-              default:
-                logger.warn('Fatal error encountered. Retrying HLS load...');
-                trackCameraStreamError('manor', 'casa-camera', 'fatal-error');
-                retryHlsLoad();
-                break;
-            }
-          } else {
-            // Only log non-segment errors
-            if (!(data.url && data.url.includes('segment_'))) {
-              logger.warn('Non-fatal HLS error encountered:', data);
-            }
-          }
-        }
-      });
-    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-      videoElement.src = streamUrl;
-      videoElement.addEventListener('loadedmetadata', () => {
-        videoElement
-          .play()
-          .then(() => {
-            resetRetryCount();
-            setIsLoading(false); // Video started playing
-            
-            // Track successful camera stream startup (Safari)
-            if (streamStartTimeRef.current) {
-              const startupTime = performance.now() - streamStartTimeRef.current;
-              trackCameraStreamStartup('manor', 'casa-camera', startupTime, true);
-              streamStartTimeRef.current = null;
-            }
-            
-            // Track successful connection time (Safari)
-            if (connectionStartTimeRef.current) {
-              const connectionTime = performance.now() - connectionStartTimeRef.current;
-              trackCameraConnectionTime('manor', 'casa-camera', connectionTime, true);
-              connectionStartTimeRef.current = null;
-            }
-          })
-          .catch((error) => {
-            logger.error('Error playing video:', error);
-            trackCameraStreamError('manor', 'casa-camera', 'safari-play-error');
-          });
-      });
-    } else {
-      logger.error('This browser does not support HLS');
-      trackCameraStreamError('manor', 'casa-camera', 'hls-not-supported');
-    }
-
-    videoElement.addEventListener('pause', () => {
-      if (!videoElement.ended) {
-        logger.debug('Video paused. Attempting to resume playback...');
-        videoElement
-          .play()
-          .catch((error) => logger.error('Error resuming video:', error));
-      }
-    });
-
-    videoElement.addEventListener('ended', () => {
-      logger.debug('Video ended. Attempting to restart playback...');
-      videoElement.currentTime = 0;
-      videoElement
-        .play()
-        .catch((error) => logger.error('Error restarting video:', error));
-    });
-
-    videoElement.addEventListener('stalled', () => {
-      logger.warn('Video stalled. Attempting to recover...');
-      bufferingEventsRef.current += 1;
-      
-      // Track quality based on buffering events
-      let quality: 'low' | 'medium' | 'high' = 'high';
-      if (bufferingEventsRef.current > 5) {
-        quality = 'low';
-      } else if (bufferingEventsRef.current > 2) {
-        quality = 'medium';
-      }
-      trackCameraStreamQuality('manor', 'casa-camera', quality, bufferingEventsRef.current);
-      
-      videoElement
-        .play()
-        .catch((error) => {
-          logger.error('Error recovering from stall:', error);
-          logger.warn('Attempting full HLS reload due to stall recovery failure...');
-          trackCameraStreamError('manor', 'casa-camera', 'stall-recovery-failed');
-          retryHlsLoad();
-        });
-    });
-
-    videoElement.addEventListener('error', (e) => {
-      logger.error('Video element error:', e);
-      const vidError = videoElement.error;
-      if (vidError && vidError.code === MediaError.MEDIA_ERR_ABORTED) {
-        logger.warn('Media aborted error encountered. Attempting full reload of HLS stream...');
-        trackCameraStreamError('manor', 'casa-camera', 'media-aborted');
-      } else {
-        logger.warn('Non-abort video error encountered, retrying HLS load...');
-        trackCameraStreamError('manor', 'casa-camera', 'video-error');
-      }
-      retryHlsLoad();
-    });
-  }
-
-  function connectWebSocket(): void {
-    // First, try to use pre-established connection
-    const preConnection = cameraConnectionService.getCasaCameraConnection();
-    
-    if (preConnection?.websocket && 
-        preConnection.websocket.readyState === WebSocket.OPEN && 
-        preConnection.isConnected) {
-      logger.info('Using pre-established WebSocket connection');
-      wsRef.current = preConnection.websocket;
-      runId.current = preConnection.runId;
-      resetRetryCount();
-      // Connection is already established and stream started
-      return;
-    }
-
-    // Fallback to creating new connection
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
-
-    const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      logger.info('WebSocket connection opened');
-      resetRetryCount();
-      ws.send(JSON.stringify({ action: 'start_live_stream', runId: runId.current }));
-    };
-
-    ws.onclose = () => {
-      logger.info('WebSocket connection closed');
-      if (retryCount.current < maxRetryCount) {
-        retryCount.current += 1;
-        logger.debug(`Retrying WebSocket connection attempt ${retryCount.current}`);
-        setTimeout(connectWebSocket, wsReconnectDelay);
-      } else {
-        logger.error('Max WebSocket reconnection attempts reached.');
-      }
-    };
-
-    ws.onerror = () => {
-      logger.error('WebSocket encountered an error. Attempting to reconnect...');
-      ws.close();
-      setTimeout(connectWebSocket, wsReconnectDelay);
-    };
-  }
-
-  useEffect(() => {
-    // Start WebSocket and HLS loading in parallel for faster startup
-    connectWebSocket();
-    loadHlsStream();
-
-    const pingInterval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ action: 'ping' }));
-      }
-    }, 30000);
-
-    const currentRunId = runId.current;
-
-    return () => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ action: 'stop_live_stream', runId: currentRunId }));
-      }
-      if (wsRef.current) wsRef.current.close();
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-      if (retryTimeout.current) window.clearTimeout(retryTimeout.current);
-      clearInterval(pingInterval);
-      resetRetryCount();
-    };
-  }, []);
-
-  return (
-    <div ref={containerRef} className="w-full h-full bg-black relative">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
-          <div className="text-white text-sm flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Loading camera...
-          </div>
-        </div>
-      )}
-      <video
-        ref={videoRef}
-        controls
-        autoPlay
-        muted
-        playsInline
-        className="w-full h-full object-contain bg-black"
-      ></video>
-    </div>
-  );
+  return <HlsCameraCard ref={ref} config={hlsConfig} />;
 });
+
+CasaCameraCard.displayName = 'CasaCameraCard';
 
 export default CasaCameraCard;
