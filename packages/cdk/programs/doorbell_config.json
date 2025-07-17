@@ -8,7 +8,7 @@
   "cloudwatch_namespace": "CasaCameraStream",
   "ffmpeg_settings": {
     "video_codec": "libx264",
-    "video_preset": "fast",
+    "video_preset": "ultrafast",
     "audio_codec": "aac",
     "audio_bitrate": "128k",
     "scale": "1280:720",

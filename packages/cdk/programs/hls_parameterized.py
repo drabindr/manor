@@ -156,7 +156,7 @@ class HLSStreamManager:
             "ffmpeg",
             "-rtsp_transport", "tcp",
             "-i", self.rtsp_url,
-            "-vf", f"format=yuv420p{',scale=' + settings['scale'] if settings['scale'] else ''}",
+            "-vf", f"scale={settings['scale']},format=yuv420p" if settings['scale'] else "format=yuv420p",
             "-c:v", settings['video_codec'],
             "-preset", settings['video_preset'],
             "-tune", "zerolatency",
@@ -236,6 +236,10 @@ class HLSStreamManager:
             self.emit_metric("UploadDuration", upload_duration, "Seconds", dimensions)
             logging.info("Uploaded %s %s to S3 in %.2f seconds.", self.stream_id, s3_key, upload_duration)
 
+            # Clean up old segments after uploading new playlist
+            if filename.endswith('.m3u8'):
+                self.cleanup_old_segments()
+
             os.remove(file_path)
             logging.info("Removed local %s file %s after successful upload.", self.stream_id, file_path)
 
@@ -249,6 +253,51 @@ class HLSStreamManager:
         finally:
             if filename in self.upload_in_progress:
                 self.upload_in_progress[filename] = False
+                
+    def cleanup_old_segments(self):
+        """Clean up old segments from S3 that are no longer in the current playlist."""
+        try:
+            # Get current playlist to see which segments are still needed
+            playlist_key = f"{self.stream_id}-stream/playlist.m3u8"
+            response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=playlist_key)
+            playlist_content = response['Body'].read().decode('utf-8')
+            
+            # Extract segment filenames from playlist
+            current_segments = set()
+            for line in playlist_content.split('\n'):
+                line = line.strip()
+                if line.endswith('.ts'):
+                    current_segments.add(line)
+            
+            # List all segments in S3 for this stream
+            prefix = f"{self.stream_id}-stream/"
+            response = self.s3_client.list_objects_v2(Bucket=self.s3_bucket, Prefix=prefix)
+            
+            if 'Contents' in response:
+                segments_to_delete = []
+                for obj in response['Contents']:
+                    key = obj['Key']
+                    filename = os.path.basename(key)
+                    
+                    # If it's a segment file and not in current playlist, mark for deletion
+                    if filename.endswith('.ts') and filename not in current_segments:
+                        segments_to_delete.append({'Key': key})
+                
+                # Delete old segments in batches
+                if segments_to_delete:
+                    # Limit to deleting max 50 old segments at once to avoid overwhelming S3
+                    segments_to_delete = segments_to_delete[:50]
+                    
+                    delete_response = self.s3_client.delete_objects(
+                        Bucket=self.s3_bucket,
+                        Delete={'Objects': segments_to_delete}
+                    )
+                    
+                    deleted_count = len(segments_to_delete)
+                    logging.info("Cleaned up %d old %s segments from S3", deleted_count, self.stream_id)
+                    
+        except Exception as e:
+            logging.warning("Error cleaning up old %s segments: %s", self.stream_id, e)
                 
     def upload_to_s3(self):
         """Continuously upload files to S3."""
@@ -384,11 +433,12 @@ class HLSStreamManager:
                             action = msg.get("action")
                             run_id = msg.get("runId")
                             stream_type = msg.get("streamType")
+                            stream_id_from_msg = msg.get("streamId")
 
-                        # Check if message is for this stream
+                        # Check if message is for this stream - be more strict with routing
                         if (stream_type == self.stream_id or 
-                            action in [stream_commands['start'], stream_commands['stop']] or
-                            not stream_type):  # Handle legacy messages without stream type
+                            stream_id_from_msg == self.stream_id or
+                            (action in [stream_commands['start'], stream_commands['stop']] and not stream_type and not stream_id_from_msg)):  # Handle legacy messages
                             
                             if action == stream_commands['start'] and run_id:
                                 logging.info("Received start %s stream action with run_id: %s", self.stream_id, run_id)
