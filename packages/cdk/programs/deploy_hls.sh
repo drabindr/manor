@@ -33,21 +33,14 @@ print_error() {
 }
 
 # Check if we're in the correct directory
-if [[ "$PWD" == *"/manor" ]]; then
-    # If we're in the manor directory or a subdirectory, adjust the path
-    # Find the relative path to manor root
-    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-    if [[ "$SCRIPT_DIR" == *"/packages/cdk/programs" ]]; then
-        # We are running the script directly from programs directory
-        LOCAL_PROGRAMS_PATH="."
-    else
-        # We are running from somewhere else, use the defined path
-        LOCAL_PROGRAMS_PATH="packages/cdk/programs"
-    fi
-else
-    print_error "Please run this script from the manor project or a subdirectory"
-    exit 1
-fi
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+MANOR_ROOT=$(echo "$SCRIPT_DIR" | sed 's|/packages/cdk/programs||')
+LOCAL_PROGRAMS_PATH="${SCRIPT_DIR}"
+
+# Print diagnostics for debugging
+print_status "Script running from: $SCRIPT_DIR"
+print_status "Manor root detected as: $MANOR_ROOT"
+print_status "Using programs path: $LOCAL_PROGRAMS_PATH"
 
 # Copy files to casa5
 print_status "Copying files to casa5..."
