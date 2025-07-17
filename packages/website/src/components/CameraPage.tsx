@@ -335,7 +335,16 @@ const CameraPage: React.FC<CameraPageProps> = ({
             </div>
           </div>
           <div className="group h-full">
-            <CasaCameraCard ref={casaCameraRef} />
+            <CasaCameraCard 
+              ref={casaCameraRef} 
+              config={{
+                streamId: 'camera_main',
+                streamPath: 'camera_main-stream',
+                startCommand: 'start_live_stream',
+                stopCommand: 'stop_live_stream',
+                displayName: 'Casa Camera'
+              }}
+            />
             {/* Enhanced Casa Camera Control Buttons */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 camera-button-container">
               <button
@@ -403,13 +412,11 @@ const CameraPage: React.FC<CameraPageProps> = ({
             <CasaCameraCard 
               ref={doorbellCameraRef} 
               config={{
-                streamId: 'doorbell_camera',
+                streamId: 'doorbell',
                 streamPath: 'doorbell-stream',
-                streamType: 'doorbell',
                 startCommand: 'start_doorbell_stream',
                 stopCommand: 'stop_doorbell_stream',
-                displayName: 'Doorbell Camera',
-                iconColor: 'text-orange-400'
+                displayName: 'Doorbell Camera'
               }}
             />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 camera-button-container">

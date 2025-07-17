@@ -40,14 +40,6 @@ class HLSStreamManager:
         # Set up logging
         self.setup_logging()
         
-        # AWS credentials
-        self.aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-        self.aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-        
-        if not self.aws_access_key_id or not self.aws_secret_access_key:
-            logging.error("AWS credentials not found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.")
-            sys.exit(1)
-        
         # Global variables
         self.s3_client = None
         self.cloudwatch_client = None
@@ -79,18 +71,11 @@ class HLSStreamManager:
         """Initialize AWS clients."""
         for attempt in range(retries):
             try:
-                self.s3_client = boto3.client(
-                    's3',
-                    aws_access_key_id=self.aws_access_key_id,
-                    aws_secret_access_key=self.aws_secret_access_key,
-                    region_name=self.region_name
-                )
-                self.cloudwatch_client = boto3.client(
-                    'cloudwatch',
-                    aws_access_key_id=self.aws_access_key_id,
-                    aws_secret_access_key=self.aws_secret_access_key,
-                    region_name=self.region_name
-                )
+                self.s3_client = boto3.client('s3', region_name=self.region_name)
+                self.cloudwatch_client = boto3.client('cloudwatch', region_name=self.region_name)
+                
+                # Test the credentials by making a simple call
+                self.s3_client.list_buckets()
                 logging.info("AWS clients initialized for %s stream.", self.stream_id)
                 return
             except (NoCredentialsError, BotoCoreError, ClientError, EndpointConnectionError) as e:
@@ -223,11 +208,13 @@ class HLSStreamManager:
         filename = os.path.basename(file_path)
         try:
             start_upload = time.time()
-            s3_key = f"{self.s3_prefix}{filename}"
-
+            
+            # Upload directly to root level with consistent naming
             if filename.endswith('.m3u8'):
+                s3_key = f"{self.stream_id}-stream/playlist.m3u8"
                 content_type = 'application/vnd.apple.mpegurl'
             else:
+                s3_key = f"{self.stream_id}-stream/{filename}"
                 content_type = 'video/MP2T'
 
             self.s3_client.upload_file(
@@ -239,6 +226,7 @@ class HLSStreamManager:
                     'CacheControl': 'no-cache, no-store, must-revalidate',
                 }
             )
+            
             upload_duration = time.time() - start_upload
             
             dimensions = [
@@ -326,7 +314,7 @@ class HLSStreamManager:
             self.stop_uploading()
 
         self.current_run_id = run_id
-        self.s3_prefix = f"{self.stream_id}-stream/{run_id}/"
+        self.s3_prefix = f"{self.stream_id}-stream/"
         self.start_time = time.time()
         
         dimensions = [

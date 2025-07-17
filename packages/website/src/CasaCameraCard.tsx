@@ -1,15 +1,12 @@
-import React, { forwardRef } from 'react';
-import HlsCameraCard, { HlsCameraConfig } from './HlsCameraCard';
+import React, { useRef, useEffect, useState, forwardRef } from 'react';
+import Hls from 'hls.js';
 
 export interface CasaCameraConfig {
   streamId: string;
   streamPath: string;
-  streamType: 'casa' | 'doorbell';
-  websocketUrl?: string;
   startCommand: string;
   stopCommand: string;
   displayName: string;
-  iconColor?: string;
 }
 
 interface CasaCameraCardProps {
@@ -21,60 +18,199 @@ const CasaCameraCard = forwardRef<HTMLDivElement, CasaCameraCardProps>(({ config
   const defaultConfig: CasaCameraConfig = {
     streamId: 'camera_main',
     streamPath: 'live-stream',
-    streamType: 'casa',
     startCommand: 'start_live_stream',
     stopCommand: 'stop_live_stream',
-    displayName: 'Casa Camera',
-    iconColor: 'text-blue-400'
+    displayName: 'Casa Camera'
   };
 
   const finalConfig = { ...defaultConfig, ...config };
-  
-  const hlsConfig: HlsCameraConfig = {
-    streamId: finalConfig.streamId,
-    streamPath: finalConfig.streamPath,
-    streamType: finalConfig.streamType,
-    websocketUrl: finalConfig.websocketUrl || 'wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod',
-    startCommand: finalConfig.startCommand,
-    stopCommand: finalConfig.stopCommand,
-    displayName: finalConfig.displayName,
-    icon: finalConfig.streamType === 'doorbell' ? (
-      <svg 
-        width="16" 
-        height="16" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-        className={finalConfig.iconColor || "text-orange-400"}
-      >
-        <path d="M6 16V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/>
-        <path d="M6 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
-        <path d="M14 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
-        <path d="M12 8v4"/>
-        <path d="M12 16h.01"/>
-      </svg>
-    ) : (
-      <svg 
-        width="16" 
-        height="16" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-        className={finalConfig.iconColor || "text-blue-400"}
-      >
-        <path d="M23 7l-7 5 7 5V7z"/>
-        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-      </svg>
-    )
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const retryTimeout = useRef<number | null>(null);
+  const retryCount = useRef<number>(0);
+  const maxRetryCount = 10;
+  const retryInterval = 200;
+  const wsReconnectDelay = 500;
+
+  const runId = useRef(Date.now());
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Forward the ref
+  useEffect(() => {
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(containerRef.current);
+      } else {
+        ref.current = containerRef.current;
+      }
+    }
+  }, [ref]);
+
+  const loadHlsStream = () => {
+    const videoElement = videoRef.current;
+    if (!videoElement) {
+      console.error('Video element not found');
+      return;
+    }
+
+    const streamUrl = `https://casa-cameras-data.s3.amazonaws.com/${finalConfig.streamPath}/playlist.m3u8`;
+    console.log(`Loading ${finalConfig.displayName} stream from: ${streamUrl}`);
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        liveSyncDuration: 0.3,
+        liveMaxLatencyDuration: 0.7,
+        maxLiveSyncPlaybackRate: 1.2,
+        lowLatencyMode: true,
+      });
+
+      hlsRef.current = hls;
+
+      hls.loadSource(streamUrl);
+      hls.attachMedia(videoElement);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoElement.play().then(() => {
+          setIsLoading(false);
+          console.log(`${finalConfig.displayName} stream started`);
+        }).catch((error) => {
+          console.error(`Error playing ${finalConfig.displayName} video:`, error);
+        });
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error(`HLS Fatal Error for ${finalConfig.displayName}:`, data);
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error(`Fatal network error for ${finalConfig.displayName}, trying to recover...`);
+              retryHlsLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error(`Fatal media error for ${finalConfig.displayName}, trying to recover...`);
+              hls.recoverMediaError();
+              break;
+            default:
+              console.error(`Unrecoverable error for ${finalConfig.displayName}:`, data);
+              retryHlsLoad();
+              break;
+          }
+        }
+      });
+    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+      videoElement.src = streamUrl;
+      videoElement.addEventListener('loadedmetadata', () => {
+        videoElement.play().then(() => {
+          setIsLoading(false);
+        }).catch((error) => {
+          console.error(`Error playing ${finalConfig.displayName} video:`, error);
+        });
+      });
+    } else {
+      console.error('This browser does not support HLS');
+    }
   };
 
-  return <HlsCameraCard ref={ref} config={hlsConfig} />;
+  const retryHlsLoad = () => {
+    if (retryCount.current >= maxRetryCount) {
+      console.error(`Max retry attempts (${maxRetryCount}) reached for ${finalConfig.displayName}. Unable to load stream.`);
+      return;
+    }
+
+    if (retryTimeout.current) {
+      window.clearTimeout(retryTimeout.current);
+    }
+
+    console.info(`Retrying ${finalConfig.displayName} HLS load, attempt ${retryCount.current + 1}/${maxRetryCount}...`);
+
+    retryTimeout.current = window.setTimeout(() => {
+      retryCount.current += 1;
+      loadHlsStream();
+    }, retryInterval);
+  };
+
+  const connectWebSocket = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log(`WebSocket is already open for ${finalConfig.displayName}`);
+      return;
+    }
+
+    const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log(`WebSocket connection opened for ${finalConfig.displayName}`);
+      retryCount.current = 0;
+      ws.send(JSON.stringify({ 
+        action: finalConfig.startCommand, 
+        runId: runId.current,
+        streamId: finalConfig.streamId
+      }));
+    };
+
+    ws.onclose = () => {
+      console.log(`WebSocket connection closed for ${finalConfig.displayName}`);
+      if (retryCount.current < maxRetryCount) {
+        retryCount.current += 1;
+        console.log(`Reconnecting ${finalConfig.displayName} WebSocket, attempt ${retryCount.current}`);
+        setTimeout(connectWebSocket, wsReconnectDelay);
+      } else {
+        console.error(`Max WebSocket reconnection attempts reached for ${finalConfig.displayName}.`);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error(`WebSocket error for ${finalConfig.displayName}:`, error);
+      ws.close();
+    };
+  };
+
+  useEffect(() => {
+    console.log(`Initializing ${finalConfig.displayName} stream...`);
+    connectWebSocket();
+    setTimeout(loadHlsStream, 2000); // Give WebSocket command time to process
+
+    return () => {
+      console.log(`Cleaning up ${finalConfig.displayName} stream...`);
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ 
+          action: finalConfig.stopCommand, 
+          runId: runId.current,
+          streamId: finalConfig.streamId
+        }));
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (hlsRef.current) hlsRef.current.destroy();
+      if (retryTimeout.current) window.clearTimeout(retryTimeout.current);
+      retryCount.current = 0;
+    };
+  }, [finalConfig.streamId]);
+
+  return (
+    <div ref={containerRef} className="relative h-full w-full">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/80 z-10 rounded-xl">
+          <div className="text-white text-sm flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <span>Loading stream...</span>
+          </div>
+        </div>
+      )}
+      <video 
+        ref={videoRef} 
+        className="w-full h-full object-cover rounded-xl"
+        controls 
+        autoPlay 
+        muted 
+        playsInline
+      />
+    </div>
+  );
 });
 
 CasaCameraCard.displayName = 'CasaCameraCard';
