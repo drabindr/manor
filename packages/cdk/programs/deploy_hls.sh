@@ -48,8 +48,7 @@ scp "$LOCAL_PROGRAMS_PATH/hls_parameterized.py" "$REMOTE_USER@$REMOTE_HOST:$REMO
 scp "$LOCAL_PROGRAMS_PATH/camera_main_config.json" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
 scp "$LOCAL_PROGRAMS_PATH/doorbell_config.json" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
 
-# Copy the standalone doorbell script (backup)
-scp "$LOCAL_PROGRAMS_PATH/hls_doorbell.py" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
+
 
 print_status "Files copied successfully"
 
@@ -61,7 +60,7 @@ ssh "$REMOTE_USER@$REMOTE_HOST" << 'EOF'
     crontab -l > /tmp/crontab_backup_$(date +%Y%m%d_%H%M%S)
     
     # Remove old HLS entries
-    crontab -l | grep -v "hls.py" | grep -v "hls_doorbell.py" | grep -v "hls_parameterized.py" > /tmp/new_crontab
+    crontab -l | grep -v "hls_parameterized.py" > /tmp/new_crontab
     
     # Add new entries for both camera and doorbell
     cat >> /tmp/new_crontab << 'CRON_ENTRIES'
