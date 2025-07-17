@@ -15,7 +15,7 @@
     "deploy:infrastructure": "npm run deploy:infrastructure --workspace=@manor/cdk",
     "deploy:website": "npm run deploy:website:ci --workspace=@manor/cdk",
     "deploy:public-website": "npm run deploy --workspace=@manor/public-website",
-    "deploy:casa5": "cd packages/cdk/programs && ./deploy_hls.sh",
+    "deploy:casa5": "./packages/cdk/programs/deploy_hls.sh",
     "install:all": "npm install --workspaces",
     "ios:build": "npm run build --workspace=@manor/ios",
     "ios:build:debug": "npm run build:debug --workspace=@manor/ios",
