@@ -61,6 +61,31 @@ export class CasaGuardCdkStack extends cdk.Stack {
       })
     );
 
+    // Add a bucket policy to allow public read access to the doorbell-stream directory
+    camerasDataBucket.addToResourcePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:GetObject'],
+        principals: [new AnyPrincipal()],
+        resources: [`${camerasDataBucket.bucketArn}/doorbell-stream/*`],
+      })
+    );
+
+    // Add a bucket policy to allow public listing of stream directories
+    camerasDataBucket.addToResourcePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:ListBucket'],
+        principals: [new AnyPrincipal()],
+        resources: [camerasDataBucket.bucketArn],
+        conditions: {
+          StringLike: {
+            's3:prefix': ['live-stream/*', 'doorbell-stream/*']
+          }
+        }
+      })
+    );
+
     const camerasDailyAggData = new Bucket(this, 'CamerasDailyAggBucket', {
       bucketName: 'casa-cameras-daily-aggregate',
       lifecycleRules: [
