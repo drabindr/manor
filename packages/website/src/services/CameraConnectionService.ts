@@ -18,9 +18,18 @@ export interface CasaCameraConnectionState {
   error?: string;
 }
 
+export interface DoorbellCameraConnectionState {
+  isConnecting: boolean;
+  isConnected: boolean;
+  websocket?: WebSocket;
+  runId: number;
+  error?: string;
+}
+
 class CameraConnectionService {
   private nestCameraConnections = new Map<string, CameraConnectionState>();
   private casaCameraConnection: CasaCameraConnectionState | null = null;
+  private doorbellCameraConnection: DoorbellCameraConnectionState | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private cleanupScheduled = false;
@@ -61,6 +70,9 @@ class CameraConnectionService {
       
       // Start Casa camera connection immediately
       await this._preConnectCasaCamera();
+      
+      // Start doorbell camera connection
+      await this._preConnectDoorbellCamera();
       
       // Get camera list and start pre-connecting to Nest cameras
       await this._preloadNestCameras();
@@ -158,6 +170,92 @@ class CameraConnectionService {
         if (this.casaCameraConnection) {
           this.casaCameraConnection.isConnecting = false;
           this.casaCameraConnection.error = error instanceof Error ? error.message : 'Unknown error';
+        }
+        resolve(); // Don't reject on error, just continue with degraded functionality
+      }
+    });
+  }
+
+  /**
+   * Pre-establish Doorbell camera WebSocket connection
+   */
+  private async _preConnectDoorbellCamera(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const runId = Date.now();
+      this.doorbellCameraConnection = {
+        isConnecting: true,
+        isConnected: false,
+        runId,
+      };
+
+      let connectionTimeout: NodeJS.Timeout | undefined;
+
+      try {
+        const ws = new WebSocket('wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod');
+        
+        // Set connection timeout
+        connectionTimeout = setTimeout(() => {
+          logger.warn('[CameraConnectionService] Doorbell camera WebSocket connection timeout');
+          ws.close();
+          if (this.doorbellCameraConnection) {
+            this.doorbellCameraConnection.isConnecting = false;
+            this.doorbellCameraConnection.error = 'Connection timeout';
+          }
+          resolve(); // Don't reject on timeout, just resolve to continue
+        }, this.connectionTimeout);
+        
+        ws.onopen = () => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.info('[CameraConnectionService] Doorbell camera WebSocket pre-connected');
+          if (this.doorbellCameraConnection) {
+            this.doorbellCameraConnection.isConnecting = false;
+            this.doorbellCameraConnection.isConnected = true;
+            this.doorbellCameraConnection.websocket = ws;
+            
+            // Start the doorbell stream immediately
+            try {
+              ws.send(JSON.stringify({ action: 'start_doorbell_stream', runId }));
+            } catch (sendError) {
+              logger.error('[CameraConnectionService] Failed to send doorbell stream start command:', sendError);
+            }
+          }
+          resolve();
+        };
+
+        ws.onclose = () => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.info('[CameraConnectionService] Doorbell camera WebSocket pre-connection closed');
+          if (this.doorbellCameraConnection) {
+            this.doorbellCameraConnection.isConnected = false;
+            this.doorbellCameraConnection.websocket = undefined;
+          }
+          resolve(); // Don't treat close as error during initialization
+        };
+
+        ws.onerror = (error) => {
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+          }
+          logger.error('[CameraConnectionService] Doorbell camera WebSocket pre-connection error:', error);
+          if (this.doorbellCameraConnection) {
+            this.doorbellCameraConnection.isConnecting = false;
+            this.doorbellCameraConnection.error = 'WebSocket connection failed';
+          }
+          resolve(); // Don't reject on error, just continue with degraded functionality
+        };
+
+      } catch (error) {
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+        }
+        logger.error('[CameraConnectionService] Failed to pre-connect Doorbell camera:', error);
+        if (this.doorbellCameraConnection) {
+          this.doorbellCameraConnection.isConnecting = false;
+          this.doorbellCameraConnection.error = error instanceof Error ? error.message : 'Unknown error';
         }
         resolve(); // Don't reject on error, just continue with degraded functionality
       }
@@ -289,6 +387,13 @@ class CameraConnectionService {
   }
 
   /**
+   * Get Doorbell camera connection state
+   */
+  getDoorbellCameraConnection(): DoorbellCameraConnectionState | null {
+    return this.doorbellCameraConnection;
+  }
+
+  /**
    * Start stream for a specific camera using pre-established connection
    */
   async startCameraStream(cameraName: string): Promise<void> {
@@ -415,6 +520,16 @@ class CameraConnectionService {
       }
       this.casaCameraConnection = null;
 
+      // Clean up Doorbell camera connection
+      if (this.doorbellCameraConnection?.websocket) {
+        try {
+          this.doorbellCameraConnection.websocket.close();
+        } catch (error) {
+          logger.warn('[CameraConnectionService] Error closing Doorbell camera WebSocket:', error);
+        }
+      }
+      this.doorbellCameraConnection = null;
+
       // Clear initialization state
       this.initialized = false;
       this.initPromise = null;
@@ -433,12 +548,14 @@ class CameraConnectionService {
     initialized: boolean; 
     nestConnections: number; 
     casaConnected: boolean;
+    doorbellConnected: boolean;
     initInProgress: boolean;
   } {
     return {
       initialized: this.initialized,
       nestConnections: this.nestCameraConnections.size,
       casaConnected: this.casaCameraConnection?.isConnected ?? false,
+      doorbellConnected: this.doorbellCameraConnection?.isConnected ?? false,
       initInProgress: this.initMutex.size > 0
     };
   }
