@@ -65,7 +65,7 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
   private createCameraStreamWidgets(): GraphWidget[] {
     const namespace = 'CasaCameraStream';
 
-    // Define specific metrics for Camera Live Stream
+    // Define metrics for both camera and doorbell streams
     const connectionStatusMetric = new Metric({
       namespace,
       metricName: 'ConnectionStatus',
@@ -104,24 +104,37 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
     // Create widgets for Camera Stream metrics
     return [
       new GraphWidget({
-        title: 'Camera Stream - Connection Status',
+        title: 'Camera Stream - Connection Status (All Streams)',
         left: [connectionStatusMetric],
         leftYAxis: {
           min: 0,
           max: 1,
         } as YAxisProps,
+        width: 12,
+      }),
+      new GraphWidget({
+        title: 'Camera Stream - Connection Status by Stream Type',
+        left: [connectionStatusMetric],
+        leftYAxis: {
+          min: 0,
+          max: 1,
+        } as YAxisProps,
+        width: 12,
       }),
       new GraphWidget({
         title: 'Camera Stream - Average Upload Duration (seconds)',
         left: [uploadDurationMetric],
+        width: 12,
       }),
       new GraphWidget({
         title: 'Camera Stream - Stream Duration (seconds)',
         left: [streamDurationMetric],
+        width: 12,
       }),
       new GraphWidget({
         title: 'Camera Stream - Upload Failures',
         left: [uploadFailuresMetric],
+        width: 12,
       }),
       new GraphWidget({
         title: 'Camera Stream - FFmpeg Restarts',
@@ -129,6 +142,7 @@ export class CasaCamerasDashboardsStack extends cdk.Stack {
         leftYAxis: {
           min: 0,
         } as YAxisProps,
+        width: 12,
       }),
     ];
   }

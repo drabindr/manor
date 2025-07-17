@@ -70,6 +70,8 @@ const FullscreenCamera: React.FC<FullscreenCameraProps> = ({
   const cameraName =
     expandedCameraName === 'CasaCam'
       ? 'Casa Camera'
+      : expandedCameraName === 'Doorbell'
+      ? 'Doorbell Camera'
       : cameraObj?.customName || cameraObj?.parentRelations?.[0]?.displayName || 'Camera';
 
   const portalRoot = document.getElementById('fullscreen-root');

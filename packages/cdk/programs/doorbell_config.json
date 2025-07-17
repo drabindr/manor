@@ -1,0 +1,22 @@
+{
+  "stream_id": "doorbell",
+  "stream_type": "doorbell",
+  "rtsp_url": "rtsp://admin:Manor123!@192.168.86.79:554/cam/realmonitor?channel=1&subtype=0",
+  "websocket_url": "wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod",
+  "s3_bucket": "casa-cameras-data",
+  "region_name": "us-east-1",
+  "cloudwatch_namespace": "CasaCameraStream",
+  "ffmpeg_settings": {
+    "video_codec": "libx264",
+    "video_preset": "ultrafast",
+    "audio_codec": "aac",
+    "audio_bitrate": "128k",
+    "scale": "1280:720",
+    "hls_time": "2",
+    "hls_list_size": "6"
+  },
+  "stream_commands": {
+    "start": "start_doorbell_stream",
+    "stop": "stop_doorbell_stream"
+  }
+}
