@@ -157,6 +157,7 @@ const CasaGuard: React.FC = () => {
   // Refs
   const cameraRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const casaCameraRef = useRef<HTMLDivElement | null>(null);
+  const doorbellCameraRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const originalParentRef = useRef<ParentNode | null>(null);
   const originalNextSiblingRef = useRef<Node | null>(null);
@@ -481,6 +482,8 @@ const CasaGuard: React.FC = () => {
     fullscreenElement =
       expandedCameraName === "CasaCam"
         ? casaCameraRef.current
+        : expandedCameraName === "Doorbell"
+        ? doorbellCameraRef.current
         : cameraRefs.current[expandedCameraName] || null;
   }
 
@@ -489,6 +492,8 @@ const CasaGuard: React.FC = () => {
     const el =
       expandedCameraName === "CasaCam"
         ? casaCameraRef.current
+        : expandedCameraName === "Doorbell"
+        ? doorbellCameraRef.current
         : cameraRefs.current[expandedCameraName];
     if (!el) return;
     const fullscreenContainer = document.getElementById("fullscreen-camera-container");
@@ -525,6 +530,7 @@ const CasaGuard: React.FC = () => {
         onExpandCamera={handleExpandCamera} // Use the non-memoized function here
         cameraRefs={cameraRefs}
         casaCameraRef={casaCameraRef}
+        doorbellCameraRef={doorbellCameraRef}
       />
     ),
     devices: <DeviceControl key="devices-component" />,
