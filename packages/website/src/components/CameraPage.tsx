@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UilVideo, UilHistory, UilClock } from "@iconscout/react-unicons";
 import CameraCard from '../CameraCard';
-import CasaCameraCard from '../CasaCameraCard';
+import CasaCameraCard, { CasaCameraConfig } from '../CasaCameraCard';
 import { sortCamerasWithTimeContext } from '../utils/cameraUtils';
 
 export type CameraDevice = {
@@ -17,13 +17,15 @@ interface CameraPageProps {
   onExpandCamera: (cameraName: string) => void;
   cameraRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   casaCameraRef: React.MutableRefObject<HTMLDivElement | null>;
+  doorbellCameraRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const CameraPage: React.FC<CameraPageProps> = ({ 
   cameras, 
   onExpandCamera, 
   cameraRefs, 
-  casaCameraRef 
+  casaCameraRef,
+  doorbellCameraRef 
 }) => {
   // Track screen size for responsive behavior
   const [isMobile, setIsMobile] = useState(false);
@@ -333,7 +335,16 @@ const CameraPage: React.FC<CameraPageProps> = ({
             </div>
           </div>
           <div className="group h-full">
-            <CasaCameraCard ref={casaCameraRef} />
+            <CasaCameraCard 
+              ref={casaCameraRef} 
+              config={{
+                streamId: 'camera_main',
+                streamPath: 'live-stream',
+                startCommand: 'start_live_stream',
+                stopCommand: 'stop_live_stream',
+                displayName: 'Casa Camera'
+              }}
+            />
             {/* Enhanced Casa Camera Control Buttons */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 camera-button-container">
               <button
@@ -369,6 +380,59 @@ const CameraPage: React.FC<CameraPageProps> = ({
               >
                 <UilHistory size={isMobile ? 16 : 18} />
                 <span className="font-medium button-text hidden sm:inline ml-2 sm:ml-0">History</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Doorbell Camera Card */}
+        <div
+          onClick={() => {
+            onExpandCamera("Doorbell");
+            triggerHaptic('medium');
+          }}
+          className={`camera-card relative transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.96] cursor-pointer rounded-xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-gray-800/50 hover:ring-blue-500/30 hover:shadow-blue-900/20 group touch-manipulation will-change-transform ${
+            cameraViewMode === "list" ? "aspect-video" : ""
+          }`}
+          style={{
+            transform: "translateZ(0)",
+            WebkitTransform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden"
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-30 group-hover:opacity-60 transition-opacity duration-300 z-10"></div>
+          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 z-20 bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium border border-gray-700/60 shadow-xl">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shadow-lg shadow-orange-500/50"></div>
+              <span className="text-xs sm:text-sm text-white font-medium">Doorbell Camera</span>
+            </div>
+          </div>
+          <div className="group h-full">
+            <CasaCameraCard 
+              ref={doorbellCameraRef} 
+              config={{
+                streamId: 'doorbell',
+                streamPath: 'doorbell-stream',
+                startCommand: 'start_doorbell_stream',
+                stopCommand: 'stop_doorbell_stream',
+                displayName: 'Doorbell Camera'
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 camera-button-container">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpandCamera("Doorbell");
+                  triggerHaptic('medium');
+                }}
+                className="bg-black/70 hover:bg-black/85 active:bg-black/95 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full border border-gray-700/50 backdrop-blur-sm transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center sm:space-x-2 shadow-xl camera-button touch-manipulation min-w-[44px] sm:min-w-[100px] min-h-[44px]"
+                aria-label="Open Doorbell Camera in fullscreen"
+              >
+                <svg width={isMobile ? 16 : 18} height={isMobile ? 16 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                <span className="font-medium button-text hidden sm:inline ml-2 sm:ml-0">Fullscreen</span>
               </button>
             </div>
           </div>
