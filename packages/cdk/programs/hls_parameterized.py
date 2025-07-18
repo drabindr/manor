@@ -135,37 +135,23 @@ class HLSStreamManager:
             time.sleep(1800)
             
     def run_ffmpeg(self, output_dir_path):
-        """Launch FFmpeg with configurable settings."""
+        """Launch FFmpeg with the same settings as main branch."""
         m3u8_filename = "stream.m3u8"
         
-        # Default FFmpeg settings
-        default_settings = {
-            'video_codec': 'libx264',
-            'video_preset': 'ultrafast',
-            'audio_codec': 'aac',
-            'audio_bitrate': '128k',
-            'scale': None,
-            'hls_time': '2',
-            'hls_list_size': '6'
-        }
-        
-        # Merge with user settings
-        settings = {**default_settings, **self.ffmpeg_settings}
-        
+        # Use the exact same FFmpeg command as main branch for consistency
         ffmpeg_command = [
             "ffmpeg",
             "-rtsp_transport", "tcp",
             "-i", self.rtsp_url,
-            "-vf", f"scale={settings['scale']},format=yuv420p" if settings['scale'] else "format=yuv420p",
-            "-c:v", settings['video_codec'],
-            "-preset", settings['video_preset'],
+            "-vf", "format=yuv420p",
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-c:a", settings['audio_codec'],
-            "-b:a", settings['audio_bitrate'],
+            "-c:a", "aac",
             "-g", "30",
             "-f", "hls",
-            "-hls_time", settings['hls_time'],
-            "-hls_list_size", settings['hls_list_size'],
+            "-hls_time", "2",
+            "-hls_list_size", "6",
             "-hls_flags", "omit_endlist",
             "-hls_segment_filename", os.path.join(output_dir_path, "segment_%03d.ts"),
             os.path.join(output_dir_path, m3u8_filename)
@@ -196,7 +182,7 @@ class HLSStreamManager:
             logging.info("FFmpeg %s process terminated.", self.stream_id)
             
     def upload_file_to_s3(self, file_path):
-        """Upload a single file to S3."""
+        """Upload a single file to S3 with main branch structure."""
         if not self.s3_client:
             logging.error("S3 client not initialized. Cannot upload.")
             return
@@ -209,13 +195,14 @@ class HLSStreamManager:
         try:
             start_upload = time.time()
             
-            # Upload directly to root level with consistent naming
+            # Use the same S3 key structure as main branch
+            s3_key = f"{self.s3_prefix}{filename}"
+            
+            # Decide content type
             if filename.endswith('.m3u8'):
-                s3_key = f"{self.stream_id}-stream/playlist.m3u8"
                 content_type = 'application/vnd.apple.mpegurl'
             else:
-                s3_key = f"{self.stream_id}-stream/{filename}"
-                content_type = 'video/MP2T'
+                content_type = 'video/MP2T'  # for .ts segments
 
             self.s3_client.upload_file(
                 file_path,
@@ -234,14 +221,11 @@ class HLSStreamManager:
                 {'Name': 'StreamId', 'Value': self.stream_id}
             ]
             self.emit_metric("UploadDuration", upload_duration, "Seconds", dimensions)
-            logging.info("Uploaded %s %s to S3 in %.2f seconds.", self.stream_id, s3_key, upload_duration)
+            logging.info("Uploaded %s to S3 in %.2f seconds.", s3_key, upload_duration)
 
-            # Clean up old segments after uploading new playlist
-            if filename.endswith('.m3u8'):
-                self.cleanup_old_segments()
-
+            # Remove the local file after successful upload (like main branch)
             os.remove(file_path)
-            logging.info("Removed local %s file %s after successful upload.", self.stream_id, file_path)
+            logging.info("Removed local file %s after successful upload.", file_path)
 
         except Exception as e:
             dimensions = [
@@ -363,7 +347,8 @@ class HLSStreamManager:
             self.stop_uploading()
 
         self.current_run_id = run_id
-        self.s3_prefix = f"{self.stream_id}-stream/"
+        # Use the same S3 path structure as main branch with run_id directories
+        self.s3_prefix = f"{self.config.get('s3_path', 'live-stream')}/{run_id}/"
         self.start_time = time.time()
         
         dimensions = [
@@ -428,30 +413,22 @@ class HLSStreamManager:
                         if event_data:
                             action = event_data.get("event")
                             run_id = event_data.get("runId")
-                            stream_type = event_data.get("streamType")
                         else:
+                            # fallback if 'event' is not present
                             action = msg.get("action")
                             run_id = msg.get("runId")
-                            stream_type = msg.get("streamType")
-                            stream_id_from_msg = msg.get("streamId")
 
-                        # Check if message is for this stream - be more strict with routing
-                        if (stream_type == self.stream_id or 
-                            stream_id_from_msg == self.stream_id or
-                            (action in [stream_commands['start'], stream_commands['stop']] and not stream_type and not stream_id_from_msg)):  # Handle legacy messages
-                            
-                            if action == stream_commands['start'] and run_id:
-                                logging.info("Received start %s stream action with run_id: %s", self.stream_id, run_id)
-                                self.start_uploading(run_id)
-                            elif action in [stream_commands['stop'], "client_disconnected"]:
-                                logging.info("Stopping %s stream due to %s.", self.stream_id, action)
-                                self.stop_uploading()
-                            elif action == "ping":
-                                logging.info("%s stream ping received.", self.stream_id)
-                            else:
-                                logging.debug("Ignoring non-%s action: %s", self.stream_id, action)
+                        # Use the same message handling as main branch
+                        if action == stream_commands['start'] and run_id:
+                            logging.info("Received start %s stream action with run_id: %s", self.stream_id, run_id)
+                            self.start_uploading(run_id)
+                        elif action in [stream_commands['stop'], "client_disconnected"]:
+                            logging.info("Stopping %s stream due to %s.", self.stream_id, action)
+                            self.stop_uploading()
+                        elif action == "ping":
+                            logging.info("%s stream ping received.", self.stream_id)
                         else:
-                            logging.debug("Ignoring message for different stream: %s", message[:100])
+                            logging.warning("Unknown action received for %s: %s", self.stream_id, action)
                             
                     except json.JSONDecodeError:
                         logging.error("Invalid %s message format: %s", self.stream_id, message)

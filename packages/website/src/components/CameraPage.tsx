@@ -339,7 +339,7 @@ const CameraPage: React.FC<CameraPageProps> = ({
               ref={casaCameraRef} 
               config={{
                 streamId: 'camera_main',
-                streamPath: 'camera_main-stream',
+                streamPath: 'live-stream',
                 startCommand: 'start_live_stream',
                 stopCommand: 'stop_live_stream',
                 displayName: 'Casa Camera'

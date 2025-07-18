@@ -56,7 +56,8 @@ const CasaCameraCard = forwardRef<HTMLDivElement, CasaCameraCardProps>(({ config
       return;
     }
 
-    const streamUrl = `https://casa-cameras-data.s3.amazonaws.com/${finalConfig.streamPath}/playlist.m3u8`;
+    // Use the same URL structure as main branch with runId-based directories
+    const streamUrl = `https://casa-cameras-data.s3.amazonaws.com/${finalConfig.streamPath}/${runId.current}/stream.m3u8`;
     console.log(`Loading ${finalConfig.displayName} stream from: ${streamUrl}`);
 
     if (Hls.isSupported()) {
@@ -144,10 +145,10 @@ const CasaCameraCard = forwardRef<HTMLDivElement, CasaCameraCardProps>(({ config
     ws.onopen = () => {
       console.log(`WebSocket connection opened for ${finalConfig.displayName}`);
       retryCount.current = 0;
+      // Use the same message structure as main branch
       ws.send(JSON.stringify({ 
         action: finalConfig.startCommand, 
-        runId: runId.current,
-        streamId: finalConfig.streamId
+        runId: runId.current
       }));
     };
 
@@ -178,8 +179,7 @@ const CasaCameraCard = forwardRef<HTMLDivElement, CasaCameraCardProps>(({ config
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ 
           action: finalConfig.stopCommand, 
-          runId: runId.current,
-          streamId: finalConfig.streamId
+          runId: runId.current
         }));
       }
       if (wsRef.current) {
