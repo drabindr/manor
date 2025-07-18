@@ -1,15 +1,5 @@
-#!/usr/bin/env python3
-"""
-Parameterized HLS Streaming Script for Casa Camera System
-
-Usage:
-    python3 hls.py --rtsp-url "rtsp://admin:pass@192.168.1.100:554/cam/realmonitor" --stream-path "live-stream" --stream-id "camera_main"
-    python3 hls.py --rtsp-url "rtsp://admin:pass@192.168.1.101:554/cam/realmonitor" --stream-path "doorbell-stream" --stream-id "doorbell"
-
-Environment Variables Required:
-    AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY
-"""
+# Deployment Commands:
+# scp programs/hls.py drabindr@casa5:/home/drabindr/hls.py && ssh drabindr@casa5 'sudo reboot'
 
 import subprocess
 import threading
@@ -25,36 +15,15 @@ import logging
 import psutil
 import signal
 import logging.handlers
-import argparse
 from concurrent.futures import ThreadPoolExecutor
 from botocore.exceptions import BotoCoreError, NoCredentialsError, EndpointConnectionError, ClientError
-
-def parse_arguments():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='HLS Streaming Script for Casa Camera System')
-    parser.add_argument('--rtsp-url', required=True, help='RTSP URL of the camera')
-    parser.add_argument('--stream-path', required=True, help='S3 path for the stream (e.g., "live-stream", "doorbell-stream")')
-    parser.add_argument('--stream-id', required=True, help='Stream identifier (e.g., "camera_main", "doorbell")')
-    parser.add_argument('--websocket-url', default="wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod", help='WebSocket URL')
-    parser.add_argument('--s3-bucket', default="casa-cameras-data", help='S3 bucket name')
-    parser.add_argument('--cloudwatch-namespace', default="CasaCameraStream", help='CloudWatch namespace')
-    parser.add_argument('--scale', help='Video scale filter (e.g., "640:480")')
-    parser.add_argument('--help-only', action='store_true', help='Show help and exit')
-    return parser.parse_args()
-
-# Parse arguments
-args = parse_arguments()
-
-if args.help_only:
-    print(__doc__)
-    sys.exit(0)
 
 # Set up directory for logs
 logs_dir = "./logs"
 os.makedirs(logs_dir, exist_ok=True)
 
 # Configure Logging
-log_filename = os.path.join(logs_dir, f"streaming_{args.stream_id}.log")
+log_filename = os.path.join(logs_dir, "streaming.log")
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(message)s',
@@ -65,17 +34,16 @@ logging.basicConfig(
     ]
 )
 
-# Configuration from command line arguments
-rtsp_url = args.rtsp_url
-websocket_url = args.websocket_url
-s3_bucket = args.s3_bucket
-stream_path = args.stream_path
-stream_id = args.stream_id
-cloudwatch_namespace = args.cloudwatch_namespace
-scale_filter = args.scale
+# RTSP URL of your camera
+rtsp_url = "rtsp://admin:casa1234@192.168.86.101:554/cam/realmonitor?channel=1&subtype=0"
 
-# AWS Configuration
+# WebSocket API URL
+websocket_url = os.getenv("WEBSOCKET_URL") or "wss://i376i8tps1.execute-api.us-east-1.amazonaws.com/prod"
+
+# AWS S3 and CloudWatch setup
+s3_bucket = "casa-cameras-data"
 region_name = 'us-east-1'
+cloudwatch_namespace = "CasaCameraStream"
 
 # Initialize AWS Credentials from Environment Variables
 aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -143,13 +111,7 @@ def emit_metric(metric_name, value, unit="Count"):
                 {
                     'MetricName': metric_name,
                     'Value': value,
-                    'Unit': unit,
-                    'Dimensions': [
-                        {
-                            'Name': 'StreamId',
-                            'Value': stream_id
-                        }
-                    ]
+                    'Unit': unit
                 },
             ]
         )
@@ -189,11 +151,11 @@ def run_ffmpeg(output_dir_path):
 
     m3u8_filename = "stream.m3u8"
 
-    # Build FFmpeg command
     ffmpeg_command = [
         "ffmpeg",
         "-rtsp_transport", "tcp",
         "-i", rtsp_url,
+        "-vf", "format=yuv420p",
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
@@ -207,24 +169,12 @@ def run_ffmpeg(output_dir_path):
         os.path.join(output_dir_path, m3u8_filename)
     ]
 
-    # Add video filter if scale is specified
-    if scale_filter:
-        # Insert video filter before codec
-        video_filter_index = ffmpeg_command.index("-c:v")
-        ffmpeg_command.insert(video_filter_index, "-vf")
-        ffmpeg_command.insert(video_filter_index + 1, f"scale={scale_filter},format=yuv420p")
-    else:
-        # Default format filter
-        video_filter_index = ffmpeg_command.index("-c:v")
-        ffmpeg_command.insert(video_filter_index, "-vf")
-        ffmpeg_command.insert(video_filter_index + 1, "format=yuv420p")
-
-    logging.info("Starting FFmpeg process for stream: %s", stream_id)
+    logging.info("Starting FFmpeg process.")
     ffmpeg_process = subprocess.Popen(ffmpeg_command, stderr=subprocess.PIPE, universal_newlines=True)
 
     # Start a thread to capture and log FFmpeg's stderr output
     threading.Thread(target=log_ffmpeg_errors, args=(ffmpeg_process,), daemon=True).start()
-    logging.info("FFmpeg process started for stream: %s", stream_id)
+    logging.info("FFmpeg process started.")
 
 def log_ffmpeg_errors(process):
     """Log FFmpeg stderr output line by line. This helps see if it stops producing output."""
@@ -239,11 +189,11 @@ def stop_ffmpeg():
     """Stop the FFmpeg process if it is running."""
     global ffmpeg_process
     if ffmpeg_process:
-        logging.info("Terminating FFmpeg process for stream: %s", stream_id)
+        logging.info("Terminating FFmpeg process...")
         ffmpeg_process.terminate()
         ffmpeg_process.wait()
         ffmpeg_process = None
-        logging.info("FFmpeg process terminated for stream: %s", stream_id)
+        logging.info("FFmpeg process terminated.")
 
 ##############################################################################
 #                         UPLOADING TO S3 LOGIC
@@ -312,7 +262,7 @@ def upload_to_s3():
 
     existing_files = {}  # filename -> (mtime, size)
 
-    logging.info("Starting S3 upload thread for stream: %s", stream_id)
+    logging.info("Starting S3 upload thread.")
     with ThreadPoolExecutor(max_workers=4) as executor:
         while is_uploading:
             try:
@@ -386,7 +336,7 @@ def start_uploading(run_id):
         stop_uploading()
 
     current_run_id = run_id
-    s3_prefix = f"{stream_path}/{run_id}/"
+    s3_prefix = f"live-stream/{run_id}/"
     start_time = time.time()
     emit_metric("ConnectionStatus", 1)
 
@@ -396,7 +346,7 @@ def start_uploading(run_id):
     # Start FFmpeg with the new output path
     run_ffmpeg(current_output_dir.name)
 
-    logging.info("Starting upload process with run_id: %s for stream: %s", run_id, stream_id)
+    logging.info("Starting upload process with run_id: %s", run_id)
     is_uploading = True
     threading.Thread(target=upload_to_s3, daemon=True).start()
 
@@ -411,7 +361,7 @@ def stop_uploading():
             emit_metric("StreamDuration", stream_duration, "Seconds")
             start_time = None
         emit_metric("ConnectionStatus", 0)
-        logging.info("Stopping upload process for stream: %s", stream_id)
+        logging.info("Stopping upload process.")
 
     # Stop FFmpeg
     stop_ffmpeg()
@@ -434,11 +384,11 @@ def websocket_worker():
     reconnect_interval = 5
 
     while True:
-        logging.info("Connecting to WebSocket for stream: %s", stream_id)
+        logging.info("Connecting to WebSocket...")
         try:
             # Set up event handlers
             def on_message(ws, message):
-                logging.info("Received WebSocket message for stream %s: %s", stream_id, message)
+                logging.info("Received WebSocket message: %s", message)
                 try:
                     msg = json.loads(message)
                     event_data = msg.get("event")
@@ -452,27 +402,27 @@ def websocket_worker():
                         run_id = msg.get("runId")
 
                     if action == "start_live_stream" and run_id:
-                        logging.info("Received start_live_stream action with run_id: %s for stream: %s", run_id, stream_id)
+                        logging.info("Received start_live_stream action with run_id: %s", run_id)
                         start_uploading(run_id)
                     elif action in ["stop_live_stream", "client_disconnected"]:
-                        logging.info("Stopping stream %s due to %s.", stream_id, action)
+                        logging.info("Stopping stream due to %s.", action)
                         stop_uploading()
                     elif action == "ping":
-                        logging.info("Ping received for stream: %s. Doing nothing.", stream_id)
+                        logging.info("Ping received. Doing nothing.")
                     else:
-                        logging.warning("Unknown action received for stream %s: %s", stream_id, action)
+                        logging.warning("Unknown action received: %s", action)
                 except json.JSONDecodeError:
-                    logging.error("Invalid message format for stream %s: %s", stream_id, message)
+                    logging.error("Invalid message format: %s", message)
 
             def on_error(ws, error):
-                logging.error("WebSocket error for stream %s: %s", stream_id, error)
+                logging.error("WebSocket error: %s", error)
 
             def on_close(ws, *args):
-                logging.info("WebSocket connection closed for stream: %s", stream_id)
+                logging.info("WebSocket connection closed.")
                 logging.info("Will reconnect in %d seconds...", reconnect_interval)
 
             def on_open(ws):
-                logging.info("WebSocket connection established for stream: %s", stream_id)
+                logging.info("WebSocket connection established.")
 
             ws_app = websocket.WebSocketApp(
                 websocket_url,
@@ -489,29 +439,16 @@ def websocket_worker():
             )
 
         except Exception as e:
-            logging.error("Exception in WebSocket connection for stream %s: %s", stream_id, e, exc_info=True)
+            logging.error("Exception in WebSocket connection: %s", e, exc_info=True)
 
         # Sleep before attempting another reconnect
         time.sleep(reconnect_interval)
 
 ##############################################################################
-#                            SIGNAL HANDLERS
-##############################################################################
-def signal_handler(signum, frame):
-    """Handle shutdown signals gracefully."""
-    logging.info("Received signal %d. Shutting down stream: %s", signum, stream_id)
-    stop_uploading()
-    sys.exit(0)
-
-# Setup signal handlers
-signal.signal(signal.SIGTERM, signal_handler)
-signal.signal(signal.SIGINT, signal_handler)
-
-##############################################################################
 #                               MAIN ENTRY
 ##############################################################################
 if __name__ == "__main__":
-    logging.info("Stream script starting for: %s", stream_id)
+    logging.info("Script starting...")
 
     # If your environment needs to wait for the network to come up, keep this.
     time.sleep(60)
